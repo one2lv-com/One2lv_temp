@@ -1,0 +1,97 @@
+@keyframes flame-flicker {
+  0%, 100% { transform: scaleY(1) scaleX(1); opacity: 0.92; }
+  25% { transform: scaleY(1.18) scaleX(0.88); opacity: 1; }
+  50% { transform: scaleY(0.88) scaleX(1.12); opacity: 0.82; }
+  75% { transform: scaleY(1.1) scaleX(0.95); opacity: 0.96; }
+}
+@keyframes panel-pulse {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+@keyframes led-blink {
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 4px currentColor); }
+  50% { opacity: 0.35; filter: none; }
+}
+@keyframes voice-ring {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+@keyframes tab-glow {
+  0%, 100% { box-shadow: 0 0 6px currentColor; }
+  50% { box-shadow: 0 0 14px currentColor; }
+}
+@keyframes scroll-up {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-50%); }
+}
+@keyframes ripple-out {
+  from { transform: translate(-50%, -50%) scale(0); opacity: 0.9; }
+  to   { transform: translate(-50%, -50%) scale(1);  opacity: 0; }
+}
+@keyframes ripple-out-b {
+  from { transform: translate(-50%, -50%) scale(0); opacity: 0.55; }
+  to   { transform: translate(-50%, -50%) scale(1.6); opacity: 0; }
+}
+@keyframes ripple-dot {
+  0%   { transform: translate(-50%, -50%) scale(1);   opacity: 0.9; }
+  100% { transform: translate(-50%, -50%) scale(0.1); opacity: 0; }
+}
+.click-ripple {
+  position: absolute;
+  width: 180px; height: 180px;
+  border-radius: 50%;
+  border: 1.5px solid var(--rc, #00ffff);
+  box-shadow: 0 0 18px var(--rc, #00ffff), inset 0 0 10px var(--rc, #00ffff33);
+  animation: ripple-out 0.7s cubic-bezier(0.15, 0.4, 0.2, 1) forwards;
+  pointer-events: none;
+}
+.click-ripple-b {
+  position: absolute;
+  width: 180px; height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--rc, #00ffff) 0%, transparent 65%);
+  opacity: 0.12;
+  animation: ripple-out-b 0.55s ease-out forwards;
+  pointer-events: none;
+}
+.click-ripple-dot {
+  position: absolute;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--rc, #00ffff);
+  box-shadow: 0 0 12px var(--rc, #00ffff);
+  animation: ripple-dot 0.4s ease-out forwards;
+  pointer-events: none;
+}
+.orbital-glow-wrap {
+  position: absolute;
+  top: 0; left: 0;
+  transition: filter 0.18s, transform 0.18s;
+  cursor: pointer;
+}
+.orbital-glow-wrap:hover {
+  filter: brightness(1.45) drop-shadow(0 0 10px #00ffff88);
+  transform: scale(1.05);
+}
+.flame-l { animation: flame-flicker 0.18s ease-in-out infinite; transform-origin: center top; }
+.flame-r { animation: flame-flicker 0.22s ease-in-out infinite 0.06s; transform-origin: center top; }
+.panel-live { animation: panel-pulse 2.1s ease-in-out infinite; }
+.led-active { animation: led-blink 1.4s ease-in-out infinite; }
+.voice-ring { animation: voice-ring 1.2s ease-out infinite; }
+input[type="range"].vol-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #00ffff66, #00ffff22);
+  cursor: pointer;
+  outline: none;
+}
+input[type="range"].vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: #00ffff;
+  box-shadow: 0 0 6px #00ffff;
+  cursor: pointer;
+}

@@ -1,0 +1,17 @@
+services:
+  api:
+    build: ./api
+    container_name: one2lvOs-api
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./logs:/app/logs
+    environment:
+      - NODE_ENV=production
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+    restart: always
+
+  sandbox:
+    build: ./sandbox
+    container_name: one2lvOs-sandbox
+    restart: always

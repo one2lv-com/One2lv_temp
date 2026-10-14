@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # Lumenis Reactor Core - L2 Skills Pipeline
+  reactor-core:
+    build:
+      context: ./∆Gemini_Root∆/core
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env.master
+    volumes:
+      - ./∆Gemini_Root∆:/app
+      - ./logs:/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Infinity Glasses HUD - AR Interface Gateway
+  infinity-glasses:
+    build:
+      context: ./∆Gemini_Root∆/ui
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env.master
+    depends_on:
+      - reactor-core
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Minimax AI System - Coach, Broadcaster, Second Player
+  minimax-ai:
+    build:
+      context: ./minimax
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_PORT=8080
+      - NODE_ID=one2lvos-minimax-docker
+      - NODE_ENV=production
+    env_file:
+      - ./minimax/.env
+    volumes:
+      - ./minimax:/app
+      - /app/node_modules
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MiniMax Integration API (Optional - requires valid NVIDIA keys)
+  minimax-integration-api:
+    build:
+      context: ./minimax-integration
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./minimax-integration/.env
+    restart: unless-stopped
+
+  # MiniMax Integration Bridge (Optional)
+  minimax-integration-bridge:
+    build:
+      context: ./minimax-integration
+      dockerfile: Dockerfile
+    command: node minimax_bridge.js
+    ports:
+      - "8002:8002"
+    depends_on:
+      - minimax-integration-api
+    env_file:
+      - ./minimax-integration/.env
+    restart: unless-stopped
+
+volumes:
+  logs:
+  node_modules:
+
+networks:
+  default:
+    name: one2lvos-network

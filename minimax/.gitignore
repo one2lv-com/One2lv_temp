@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+*.apk
+*.aab
+android/app/build/
+android/build/
+android/.gradle/
+
+# Local configuration
+.env
+.env.local
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# pnpm
+pnpm-store/
+.pnpm/
+pnpm-lock.yaml
+--store-dir

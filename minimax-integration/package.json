@@ -1,0 +1,24 @@
+{
+  "name": "minimax-integration",
+  "version": "1.0.0",
+  "description": "MiniMax AI Integration for One2lvos Sovereign Architecture",
+  "main": "minimax_bridge.js",
+  "scripts": {
+    "start": "node minimax_bridge.js",
+    "test": "node test_minimax.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1"
+  },
+  "keywords": [
+    "minimax",
+    "ai",
+    "one2lvos",
+    "nvidia"
+  ],
+  "author": "One2lv",
+  "license": "MIT"
+}

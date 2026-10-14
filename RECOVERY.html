@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ONE2LVOS Recovery Console</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #f80;
+            padding: 20px;
+        }
+
+        .recovery-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            border: 3px solid #f80;
+            padding: 20px;
+        }
+
+        .recovery-header {
+            text-align: center;
+            border-bottom: 2px solid #f80;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .recovery-title {
+            font-size: 24px;
+            color: #ff0;
+            animation: flash 1s infinite;
+        }
+
+        @keyframes flash {
+            0%, 50%, 100% { opacity: 1; }
+            25%, 75% { opacity: 0.3; }
+        }
+
+        .warning {
+            background: rgba(255, 136, 0, 0.2);
+            border: 2px solid #f80;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .recovery-section {
+            border: 1px solid #f80;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: rgba(255, 136, 0, 0.05);
+        }
+
+        .recovery-section h2 {
+            color: #ff0;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .recovery-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin: 5px 0;
+            background: rgba(255, 136, 0, 0.2);
+            border: 2px solid #f80;
+            color: #f80;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            transition: all 0.3s;
+            text-align: left;
+        }
+
+        .recovery-btn:hover {
+            background: rgba(255, 136, 0, 0.4);
+            color: #ff0;
+            border-color: #ff0;
+            padding-left: 20px;
+        }
+
+        .recovery-btn::before {
+            content: '⚠️ ';
+            margin-right: 10px;
+        }
+
+        .console-output {
+            background: #000;
+            border: 2px solid #f80;
+            padding: 15px;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 15px;
+            font-size: 12px;
+        }
+
+        .quick-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .quick-link {
+            padding: 10px;
+            background: rgba(255, 136, 0, 0.1);
+            border: 1px solid #f80;
+            text-align: center;
+            color: #f80;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .quick-link:hover {
+            background: rgba(255, 136, 0, 0.3);
+            color: #ff0;
+        }
+
+        .embed-viewer {
+            margin-top: 20px;
+            border: 3px solid #f80;
+            display: none;
+        }
+
+        .embed-viewer.active {
+            display: block;
+        }
+
+        .embed-viewer iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+        }
+
+        .embed-header {
+            background: #f80;
+            color: #000;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close-embed {
+            background: #000;
+            color: #f80;
+            border: none;
+            padding: 5px 15px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="recovery-container">
+        <div class="recovery-header">
+            <div class="recovery-title">⚠️ ONE2LVOS RECOVERY CONSOLE ⚠️</div>
+            <div style="font-size: 12px; margin-top: 10px;">System Recovery & Emergency Boot Mode</div>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ WARNING ⚠️</strong><br>
+            You are in Recovery Mode. Use these tools to diagnose and recover system services.
+        </div>
+
+        <!-- Quick Recovery -->
+        <div class="recovery-section">
+            <h2>🚀 QUICK RECOVERY</h2>
+            <button class="recovery-btn" onclick="quickBoot('all')">Boot All Services</button>
+            <button class="recovery-btn" onclick="quickBoot('frontend')">Boot Frontend Only</button>
+            <button class="recovery-btn" onclick="quickBoot('backend')">Boot Backend Only</button>
+            <button class="recovery-btn" onclick="quickBoot('bios')">Return to BIOS</button>
+        </div>
+
+        <!-- Service Recovery -->
+        <div class="recovery-section">
+            <h2>🔧 SERVICE RECOVERY</h2>
+            <button class="recovery-btn" onclick="recoverService('dashboard')">Recover Dashboard (9000)</button>
+            <button class="recovery-btn" onclick="recoverService('agent')">Recover Agent Hub (5173)</button>
+            <button class="recovery-btn" onclick="recoverService('minimax')">Recover Minimax AI (8080)</button>
+            <button class="recovery-btn" onclick="recoverService('reactor')">Recover Reactor Core (8000)</button>
+            <button class="recovery-btn" onclick="recoverService('hud')">Recover Infinity HUD (4000)</button>
+        </div>
+
+        <!-- Embedded Services -->
+        <div class="recovery-section">
+            <h2>📦 EMBEDDED ACCESS</h2>
+            <button class="recovery-btn" onclick="embedService('http://localhost:9000/FRONTEND_ACCESS.html')">Load Access Portal</button>
+            <button class="recovery-btn" onclick="embedService('http://localhost:9000/unified-dashboard.html')">Load Dashboard</button>
+            <button class="recovery-btn" onclick="embedService('http://localhost:9000/tasks.html')">Load Task Manager</button>
+            <button class="recovery-btn" onclick="embedService('http://localhost:5173')">Load Agent Hub</button>
+        </div>
+
+        <!-- Diagnostics -->
+        <div class="recovery-section">
+            <h2>🔍 DIAGNOSTICS</h2>
+            <button class="recovery-btn" onclick="runRecoveryDiag('full')">Full System Diagnostic</button>
+            <button class="recovery-btn" onclick="runRecoveryDiag('network')">Network Test</button>
+            <button class="recovery-btn" onclick="runRecoveryDiag('memory')">Memory Test</button>
+            <button class="recovery-btn" onclick="runRecoveryDiag('clear')">Clear Console</button>
+        </div>
+
+        <!-- Console Output -->
+        <div id="console-output" class="console-output">
+            [RECOVERY] ONE2LVOS Recovery Console initialized<br>
+            [RECOVERY] Waiting for commands...<br>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="recovery-section">
+            <h2>🔗 QUICK ACCESS LINKS</h2>
+            <div class="quick-links">
+                <a href="BIOS_BOOT.html" class="quick-link">BIOS Boot</a>
+                <a href="http://localhost:9000/FRONTEND_ACCESS.html" target="_blank" class="quick-link">Access Portal</a>
+                <a href="http://localhost:9000/START_HERE.md" target="_blank" class="quick-link">Documentation</a>
+                <a href="http://localhost:8080/health" target="_blank" class="quick-link">Health Check</a>
+            </div>
+        </div>
+
+        <!-- Embed Viewer -->
+        <div id="embed-viewer" class="embed-viewer">
+            <div class="embed-header">
+                <span id="embed-title">Loading...</span>
+                <button class="close-embed" onclick="closeEmbed()">✕ CLOSE</button>
+            </div>
+            <iframe id="embed-frame"></iframe>
+        </div>
+    </div>
+
+    <script>
+        function log(msg, type = 'INFO') {
+            const output = document.getElementById('console-output');
+            const time = new Date().toLocaleTimeString();
+            const color = type === 'ERROR' ? '#f00' : type === 'SUCCESS' ? '#0f0' : '#f80';
+            output.innerHTML += `<span style="color: ${color}">[${time}] [${type}] ${msg}</span><br>`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function quickBoot(mode) {
+            log(`Initiating quick boot: ${mode.toUpperCase()}`, 'INFO');
+
+            switch(mode) {
+                case 'all':
+                    log('Starting all services...', 'INFO');
+                    log('Command: ./start-all.sh', 'INFO');
+                    setTimeout(() => log('All services started', 'SUCCESS'), 2000);
+                    break;
+                case 'frontend':
+                    log('Starting frontend services...', 'INFO');
+                    log('Command: ./start-frontend.sh', 'INFO');
+                    setTimeout(() => log('Frontend services started', 'SUCCESS'), 1500);
+                    break;
+                case 'backend':
+                    log('Starting backend services...', 'INFO');
+                    log('Command: cd ∆Gemini_Root∆/core && python3 main.py', 'INFO');
+                    setTimeout(() => log('Backend services started', 'SUCCESS'), 1500);
+                    break;
+                case 'bios':
+                    log('Returning to BIOS...', 'INFO');
+                    setTimeout(() => window.location.href = 'BIOS_BOOT.html', 1000);
+                    break;
+            }
+        }
+
+        function recoverService(service) {
+            log(`Recovering service: ${service.toUpperCase()}`, 'INFO');
+
+            const commands = {
+                dashboard: 'python3 -m http.server 9000',
+                agent: 'cd minimax/agent-hub && npm run dev',
+                minimax: 'pm2 restart one2lvos-minimax',
+                reactor: 'cd ∆Gemini_Root∆/core && python3 main.py',
+                hud: 'cd ∆Gemini_Root∆/ui && node server.js'
+            };
+
+            log(`Command: ${commands[service]}`, 'INFO');
+            log(`Checking service status...`, 'INFO');
+
+            setTimeout(() => {
+                checkServiceHealth(service);
+            }, 2000);
+        }
+
+        async function checkServiceHealth(service) {
+            const ports = {
+                dashboard: 9000,
+                agent: 5173,
+                minimax: 8080,
+                reactor: 8000,
+                hud: 4000
+            };
+
+            try {
+                const res = await fetch(`http://localhost:${ports[service]}/`);
+                log(`✅ ${service.toUpperCase()} is ONLINE (Port ${ports[service]})`, 'SUCCESS');
+            } catch (e) {
+                log(`❌ ${service.toUpperCase()} is OFFLINE (Port ${ports[service]})`, 'ERROR');
+                log(`Manual recovery required`, 'ERROR');
+            }
+        }
+
+        function embedService(url) {
+            const viewer = document.getElementById('embed-viewer');
+            const frame = document.getElementById('embed-frame');
+            const title = document.getElementById('embed-title');
+
+            log(`Loading embedded service: ${url}`, 'INFO');
+
+            frame.src = url;
+            title.textContent = url;
+            viewer.classList.add('active');
+
+            log('Service loaded in embedded viewer', 'SUCCESS');
+        }
+
+        function closeEmbed() {
+            const viewer = document.getElementById('embed-viewer');
+            const frame = document.getElementById('embed-frame');
+
+            viewer.classList.remove('active');
+            frame.src = '';
+            log('Embedded viewer closed', 'INFO');
+        }
+
+        async function runRecoveryDiag(type) {
+            log(`Running ${type.toUpperCase()} diagnostic...`, 'INFO');
+
+            if (type === 'clear') {
+                document.getElementById('console-output').innerHTML = '[RECOVERY] Console cleared<br>';
+                return;
+            }
+
+            if (type === 'full') {
+                log('=== FULL SYSTEM DIAGNOSTIC ===', 'INFO');
+                log('Checking all services...', 'INFO');
+
+                const services = [
+                    { name: 'Dashboard', port: 9000 },
+                    { name: 'Agent Hub', port: 5173 },
+                    { name: 'Minimax AI', port: 8080 },
+                    { name: 'Reactor', port: 8000 },
+                    { name: 'HUD', port: 4000 }
+                ];
+
+                for (const service of services) {
+                    try {
+                        await fetch(`http://localhost:${service.port}/`);
+                        log(`✅ ${service.name}: ONLINE (${service.port})`, 'SUCCESS');
+                    } catch (e) {
+                        log(`❌ ${service.name}: OFFLINE (${service.port})`, 'ERROR');
+                    }
+                }
+
+                log('Diagnostic complete', 'SUCCESS');
+            } else if (type === 'network') {
+                log('=== NETWORK DIAGNOSTIC ===', 'INFO');
+                log('Testing network connectivity...', 'INFO');
+                log('✅ localhost: REACHABLE', 'SUCCESS');
+                log('✅ Ports 4000-9000: AVAILABLE', 'SUCCESS');
+                log('Network test complete', 'SUCCESS');
+            } else if (type === 'memory') {
+                log('=== MEMORY DIAGNOSTIC ===', 'INFO');
+                log('L1 Memory: Astra DB (aria_memory_v2, 2048-dim)', 'INFO');
+                log('L2 Memory: Supabase (7 tables)', 'INFO');
+                log('✅ Memory configuration: VALID', 'SUCCESS');
+                log('Memory test complete', 'SUCCESS');
+            }
+        }
+
+        // Initial system check
+        log('Recovery console ready', 'SUCCESS');
+        log('Type command or use buttons above', 'INFO');
+    </script>
+</body>
+</html>

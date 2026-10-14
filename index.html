@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ONE2LVOS - Boot Selection</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #000 0%, #1a0830 100%);
+            color: #0ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .boot-selector {
+            max-width: 800px;
+            width: 100%;
+            border: 3px solid #0ff;
+            padding: 40px;
+            background: rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.3);
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo-icon {
+            font-size: 64px;
+            animation: rotate 4s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .title {
+            text-align: center;
+            font-size: 32px;
+            color: #0ff;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px #0ff;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #ff00d4;
+            margin-bottom: 40px;
+            font-size: 14px;
+        }
+
+        .boot-options {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .boot-option {
+            display: block;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.1), rgba(255, 0, 212, 0.1));
+            border: 2px solid #0ff;
+            color: #0ff;
+            text-decoration: none;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .boot-option::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .boot-option:hover::before {
+            left: 100%;
+        }
+
+        .boot-option:hover {
+            border-color: #ff00d4;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+            transform: translateY(-5px);
+        }
+
+        .option-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .option-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .option-desc {
+            font-size: 12px;
+            color: #a855f7;
+        }
+
+        .system-info {
+            border-top: 2px solid #0ff;
+            padding-top: 20px;
+            text-align: center;
+            font-size: 11px;
+            color: #fcee0a;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .info-item {
+            background: rgba(0, 255, 255, 0.1);
+            padding: 8px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+        }
+
+        .countdown {
+            text-align: center;
+            margin-top: 20px;
+            color: #ff00d4;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="boot-selector">
+        <div class="logo">
+            <div class="logo-icon">🌷</div>
+        </div>
+
+        <div class="title">ONE2LVOS</div>
+        <div class="subtitle">Sovereign Architecture - Select Boot Mode</div>
+
+        <div class="boot-options">
+            <a href="BIOS_BOOT.html" class="boot-option">
+                <div class="option-icon">⚙️</div>
+                <div class="option-title">BIOS Boot Menu</div>
+                <div class="option-desc">
+                    Access BIOS interface with embedded service viewer, diagnostics, and full system control
+                </div>
+            </a>
+
+            <a href="FRONTEND_ACCESS.html" class="boot-option">
+                <div class="option-icon">🚀</div>
+                <div class="option-title">Quick Access Portal</div>
+                <div class="option-desc">
+                    Direct access to all frontend interfaces, backend services, and documentation
+                </div>
+            </a>
+
+            <a href="unified-dashboard.html" class="boot-option">
+                <div class="option-icon">📊</div>
+                <div class="option-title">Unified Dashboard</div>
+                <div class="option-desc">
+                    Real-time system monitoring, AI chat interface, and service status
+                </div>
+            </a>
+
+            <a href="tasks.html" class="boot-option">
+                <div class="option-icon">📋</div>
+                <div class="option-title">Task Manager</div>
+                <div class="option-desc">
+                    Kanban board for task management with priority levels and workflow tracking
+                </div>
+            </a>
+
+            <a href="RECOVERY.html" class="boot-option" style="border-color: #f80; color: #f80;">
+                <div class="option-icon">⚠️</div>
+                <div class="option-title">Recovery Console</div>
+                <div class="option-desc">
+                    Emergency recovery mode with service restart and diagnostic tools
+                </div>
+            </a>
+
+            <a href="http://localhost:5173" target="_blank" class="boot-option">
+                <div class="option-icon">🎮</div>
+                <div class="option-title">Agent Hub (External)</div>
+                <div class="option-desc">
+                    React frontend with Shadcn/ui components (opens in new tab)
+                </div>
+            </a>
+        </div>
+
+        <div class="system-info">
+            <div>🌷 ONE2LVOS Sovereign Architecture v5.0</div>
+            <div class="info-grid">
+                <div class="info-item">Frequency: 73.0 Hz</div>
+                <div class="info-item">Node: 1/144k</div>
+                <div class="info-item">Status: ONLINE</div>
+            </div>
+            <div class="countdown" id="countdown"></div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-boot timer
+        let seconds = 30;
+        const countdownEl = document.getElementById('countdown');
+
+        function updateCountdown() {
+            if (seconds > 0) {
+                countdownEl.textContent = `Auto-booting to BIOS in ${seconds} seconds... (click any option to cancel)`;
+                seconds--;
+            } else {
+                window.location.href = 'BIOS_BOOT.html';
+            }
+        }
+
+        const timer = setInterval(updateCountdown, 1000);
+        updateCountdown();
+
+        // Cancel auto-boot on any click
+        document.querySelectorAll('.boot-option').forEach(el => {
+            el.addEventListener('click', () => {
+                clearInterval(timer);
+                countdownEl.textContent = 'Auto-boot cancelled';
+            });
+        });
+    </script>
+</body>
+</html>

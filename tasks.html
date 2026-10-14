@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ONE2LVOS Task Manager</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0118 0%, #1a0830 100%);
+            color: #00f0ff;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(13, 2, 32, 0.9);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .title {
+            font-size: 24px;
+            background: linear-gradient(90deg, #00f0ff, #ff00d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            font-size: 12px;
+        }
+
+        .stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #00f0ff;
+        }
+
+        .stat-label {
+            color: #a855f7;
+            text-transform: uppercase;
+            font-size: 10px;
+        }
+
+        .task-input-section {
+            background: rgba(6, 6, 15, 0.85);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .task-input {
+            flex: 1;
+            background: rgba(0, 240, 255, 0.05);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            color: #00f0ff;
+            padding: 12px 15px;
+            border-radius: 6px;
+            outline: none;
+            font-family: 'Courier New', monospace;
+        }
+
+        .task-input:focus {
+            border-color: #00f0ff;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+        }
+
+        select.task-input {
+            cursor: pointer;
+            width: 150px;
+        }
+
+        .add-btn {
+            background: linear-gradient(135deg, #00f0ff, #ff00d4);
+            border: none;
+            color: #0a0118;
+            padding: 12px 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+        }
+
+        .add-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255, 0, 212, 0.5);
+        }
+
+        .tasks-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .task-column {
+            background: rgba(6, 6, 15, 0.85);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .column-header {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid;
+        }
+
+        .column-header.todo {
+            color: #fcee0a;
+            border-bottom-color: #fcee0a;
+        }
+
+        .column-header.in-progress {
+            color: #00f0ff;
+            border-bottom-color: #00f0ff;
+        }
+
+        .column-header.done {
+            color: #0f0;
+            border-bottom-color: #0f0;
+        }
+
+        .task-card {
+            background: rgba(13, 2, 32, 0.8);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .task-card:hover {
+            border-color: #00f0ff;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .task-title {
+            font-size: 14px;
+            color: #00f0ff;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .task-desc {
+            font-size: 12px;
+            color: #a855f7;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .task-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
+        }
+
+        .task-priority {
+            padding: 3px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .priority-high {
+            background: rgba(255, 0, 0, 0.2);
+            color: #f00;
+            border: 1px solid #f00;
+        }
+
+        .priority-medium {
+            background: rgba(255, 165, 0, 0.2);
+            color: #ffa500;
+            border: 1px solid #ffa500;
+        }
+
+        .priority-low {
+            background: rgba(0, 255, 0, 0.2);
+            color: #0f0;
+            border: 1px solid #0f0;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .action-btn {
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            color: #00f0ff;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10px;
+            transition: all 0.3s;
+        }
+
+        .action-btn:hover {
+            background: rgba(0, 240, 255, 0.3);
+            border-color: #00f0ff;
+        }
+
+        .action-btn.delete {
+            color: #f00;
+            border-color: rgba(255, 0, 0, 0.3);
+        }
+
+        .action-btn.delete:hover {
+            background: rgba(255, 0, 0, 0.2);
+            border-color: #f00;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #a855f7;
+            font-size: 12px;
+            padding: 20px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">🌷 ONE2LVOS Task Manager</div>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value" id="todo-count">0</div>
+                    <div class="stat-label">To Do</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="progress-count">0</div>
+                    <div class="stat-label">In Progress</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="done-count">0</div>
+                    <div class="stat-label">Done</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="task-input-section">
+            <div class="input-group">
+                <input
+                    type="text"
+                    id="task-title"
+                    class="task-input"
+                    placeholder="Task title..."
+                    onkeypress="handleKeypress(event)"
+                >
+                <select id="task-priority" class="task-input">
+                    <option value="low">Low Priority</option>
+                    <option value="medium" selected>Medium Priority</option>
+                    <option value="high">High Priority</option>
+                </select>
+                <button class="add-btn" onclick="addTask()">+ ADD TASK</button>
+            </div>
+            <input
+                type="text"
+                id="task-desc"
+                class="task-input"
+                placeholder="Task description (optional)..."
+                onkeypress="handleKeypress(event)"
+            >
+        </div>
+
+        <div class="tasks-grid">
+            <div class="task-column">
+                <div class="column-header todo">📋 To Do</div>
+                <div id="todo-tasks"></div>
+            </div>
+
+            <div class="task-column">
+                <div class="column-header in-progress">⚡ In Progress</div>
+                <div id="progress-tasks"></div>
+            </div>
+
+            <div class="task-column">
+                <div class="column-header done">✅ Done</div>
+                <div id="done-tasks"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let tasks = JSON.parse(localStorage.getItem('one2lvos-tasks') || '[]');
+
+        function saveTasks() {
+            localStorage.setItem('one2lvos-tasks', JSON.stringify(tasks));
+            renderTasks();
+        }
+
+        function addTask() {
+            const title = document.getElementById('task-title').value.trim();
+            const desc = document.getElementById('task-desc').value.trim();
+            const priority = document.getElementById('task-priority').value;
+
+            if (!title) return;
+
+            tasks.push({
+                id: Date.now(),
+                title,
+                desc,
+                priority,
+                status: 'todo',
+                created: new Date().toISOString()
+            });
+
+            document.getElementById('task-title').value = '';
+            document.getElementById('task-desc').value = '';
+
+            saveTasks();
+        }
+
+        function moveTask(id, newStatus) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.status = newStatus;
+                saveTasks();
+            }
+        }
+
+        function deleteTask(id) {
+            if (confirm('Delete this task?')) {
+                tasks = tasks.filter(t => t.id !== id);
+                saveTasks();
+            }
+        }
+
+        function renderTasks() {
+            const todoDiv = document.getElementById('todo-tasks');
+            const progressDiv = document.getElementById('progress-tasks');
+            const doneDiv = document.getElementById('done-tasks');
+
+            todoDiv.innerHTML = '';
+            progressDiv.innerHTML = '';
+            doneDiv.innerHTML = '';
+
+            const todoTasks = tasks.filter(t => t.status === 'todo');
+            const progressTasks = tasks.filter(t => t.status === 'progress');
+            const doneTasks = tasks.filter(t => t.status === 'done');
+
+            document.getElementById('todo-count').textContent = todoTasks.length;
+            document.getElementById('progress-count').textContent = progressTasks.length;
+            document.getElementById('done-count').textContent = doneTasks.length;
+
+            if (todoTasks.length === 0) {
+                todoDiv.innerHTML = '<div class="empty-state">No tasks</div>';
+            } else {
+                todoTasks.forEach(task => {
+                    todoDiv.appendChild(createTaskCard(task, 'progress'));
+                });
+            }
+
+            if (progressTasks.length === 0) {
+                progressDiv.innerHTML = '<div class="empty-state">No tasks in progress</div>';
+            } else {
+                progressTasks.forEach(task => {
+                    progressDiv.appendChild(createTaskCard(task, 'done'));
+                });
+            }
+
+            if (doneTasks.length === 0) {
+                doneDiv.innerHTML = '<div class="empty-state">No completed tasks</div>';
+            } else {
+                doneTasks.forEach(task => {
+                    doneDiv.appendChild(createTaskCard(task, null));
+                });
+            }
+        }
+
+        function createTaskCard(task, nextStatus) {
+            const card = document.createElement('div');
+            card.className = 'task-card';
+            card.innerHTML = `
+                <div class="task-title">${task.title}</div>
+                ${task.desc ? `<div class="task-desc">${task.desc}</div>` : ''}
+                <div class="task-meta">
+                    <span class="task-priority priority-${task.priority}">${task.priority}</span>
+                    <div class="task-actions">
+                        ${nextStatus ? `<button class="action-btn" onclick="moveTask(${task.id}, '${nextStatus}')">→ Move</button>` : ''}
+                        <button class="action-btn delete" onclick="deleteTask(${task.id})">✕ Delete</button>
+                    </div>
+                </div>
+            `;
+            return card;
+        }
+
+        function handleKeypress(e) {
+            if (e.key === 'Enter') {
+                addTask();
+            }
+        }
+
+        // Initial render
+        renderTasks();
+
+        // Add some default tasks if empty
+        if (tasks.length === 0) {
+            tasks = [
+                {
+                    id: 1,
+                    title: 'Test Minimax AI Coach',
+                    desc: 'Send test messages to AI Coach endpoint',
+                    priority: 'high',
+                    status: 'todo',
+                    created: new Date().toISOString()
+                },
+                {
+                    id: 2,
+                    title: 'Configure Astra DB Memory',
+                    desc: 'Verify aria_memory_v2 collection is working',
+                    priority: 'medium',
+                    status: 'progress',
+                    created: new Date().toISOString()
+                },
+                {
+                    id: 3,
+                    title: 'Integrate MiniMax API',
+                    desc: 'Complete NVIDIA API integration',
+                    priority: 'high',
+                    status: 'done',
+                    created: new Date().toISOString()
+                }
+            ];
+            saveTasks();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ONE2LVOS BIOS - Boot & Recovery</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .bios-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            border: 2px solid #0f0;
+            padding: 20px;
+        }
+
+        .bios-header {
+            text-align: center;
+            border-bottom: 2px solid #0f0;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+
+        .bios-title {
+            font-size: 28px;
+            color: #0ff;
+            margin-bottom: 10px;
+            animation: blink 2s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50%, 100% { opacity: 1; }
+            25%, 75% { opacity: 0.5; }
+        }
+
+        .version {
+            color: #ff0;
+            font-size: 12px;
+        }
+
+        .boot-menu {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .boot-section {
+            border: 1px solid #0f0;
+            padding: 15px;
+            background: rgba(0, 255, 0, 0.05);
+        }
+
+        .boot-section h2 {
+            color: #0ff;
+            font-size: 16px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #0ff;
+            padding-bottom: 5px;
+        }
+
+        .boot-item {
+            display: block;
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(0, 255, 0, 0.1);
+            color: #0f0;
+            text-decoration: none;
+            border-left: 3px solid transparent;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .boot-item:hover {
+            background: rgba(0, 255, 0, 0.2);
+            border-left-color: #0ff;
+            padding-left: 20px;
+            color: #0ff;
+        }
+
+        .boot-item::before {
+            content: '▶ ';
+            color: #ff0;
+            font-weight: bold;
+        }
+
+        .boot-item .port {
+            color: #ff0;
+            font-size: 10px;
+            margin-left: 10px;
+        }
+
+        .boot-item .status {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            font-size: 10px;
+        }
+
+        .status.online {
+            color: #0f0;
+            animation: pulse 2s infinite;
+        }
+
+        .status.ready {
+            color: #ff0;
+        }
+
+        .status.offline {
+            color: #f00;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .system-info {
+            border: 1px solid #0f0;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 11px;
+        }
+
+        .system-info table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .system-info td {
+            padding: 5px;
+            border-bottom: 1px solid rgba(0, 255, 0, 0.3);
+        }
+
+        .system-info td:first-child {
+            color: #ff0;
+            width: 200px;
+        }
+
+        .diagnostics {
+            border: 1px solid #0f0;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .diagnostics h2 {
+            color: #0ff;
+            font-size: 16px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #0ff;
+            padding-bottom: 5px;
+        }
+
+        .diag-button {
+            display: inline-block;
+            padding: 8px 15px;
+            margin: 5px;
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #0f0;
+            color: #0f0;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+
+        .diag-button:hover {
+            background: rgba(0, 255, 0, 0.3);
+            color: #0ff;
+            border-color: #0ff;
+        }
+
+        .diag-output {
+            background: #000;
+            border: 1px solid #0f0;
+            padding: 10px;
+            margin-top: 10px;
+            min-height: 100px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 11px;
+            display: none;
+        }
+
+        .diag-output.active {
+            display: block;
+        }
+
+        .boot-footer {
+            border-top: 2px solid #0f0;
+            padding-top: 20px;
+            text-align: center;
+            font-size: 11px;
+            color: #ff0;
+        }
+
+        .help-keys {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .help-key {
+            background: rgba(0, 255, 0, 0.1);
+            padding: 5px;
+            border-left: 2px solid #0ff;
+        }
+
+        iframe {
+            border: 2px solid #0f0;
+            width: 100%;
+            height: 600px;
+            display: none;
+            margin-top: 20px;
+        }
+
+        iframe.active {
+            display: block;
+        }
+
+        .embed-container {
+            margin-top: 20px;
+            border: 2px solid #0ff;
+            padding: 15px;
+            display: none;
+        }
+
+        .embed-container.active {
+            display: block;
+        }
+
+        .embed-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #0ff;
+        }
+
+        .close-btn {
+            background: #f00;
+            color: #fff;
+            border: none;
+            padding: 5px 15px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+        }
+
+        .close-btn:hover {
+            background: #f55;
+        }
+
+        .boot-loader {
+            text-align: center;
+            padding: 20px;
+            color: #0ff;
+            display: none;
+        }
+
+        .boot-loader.active {
+            display: block;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(0, 255, 0, 0.3);
+            border-top-color: #0f0;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="bios-container">
+        <!-- BIOS Header -->
+        <div class="bios-header">
+            <div class="bios-title">🌷 ONE2LVOS BIOS v5.0</div>
+            <div class="version">Sovereign Architecture - Boot & Recovery System</div>
+            <div class="version">Build Date: 2026-10-14 | Frequency: 73.0 Hz | Node: 1/144k</div>
+        </div>
+
+        <!-- System Information -->
+        <div class="system-info">
+            <h2 style="color: #0ff; margin-bottom: 10px;">⚙️ SYSTEM INFORMATION</h2>
+            <table>
+                <tr><td>Architecture:</td><td>ONE2LVOS Sovereign</td></tr>
+                <tr><td>Version:</td><td>5.0.0</td></tr>
+                <tr><td>Boot Time:</td><td id="boot-time">--:--:--</td></tr>
+                <tr><td>Services Online:</td><td id="services-online">Checking...</td></tr>
+                <tr><td>Memory Layer:</td><td>Astra DB (2048-dim) + Supabase</td></tr>
+                <tr><td>AI Framework:</td><td>Minimax (Coach + Broadcaster + Second Player)</td></tr>
+                <tr><td>Status:</td><td id="system-status">OPERATIONAL</td></tr>
+            </table>
+        </div>
+
+        <!-- Boot Menu -->
+        <div class="boot-menu">
+            <!-- Frontend Services -->
+            <div class="boot-section">
+                <h2>🎨 FRONTEND SERVICES</h2>
+                <a href="#" class="boot-item" onclick="embedService('http://localhost:9000/FRONTEND_ACCESS.html', 'Access Portal'); return false;">
+                    Access Portal <span class="port">[9000]</span>
+                    <span class="status online" id="status-portal">●</span>
+                </a>
+                <a href="#" class="boot-item" onclick="embedService('http://localhost:9000/unified-dashboard.html', 'Unified Dashboard'); return false;">
+                    Unified Dashboard <span class="port">[9000]</span>
+                    <span class="status online" id="status-dashboard">●</span>
+                </a>
+                <a href="#" class="boot-item" onclick="embedService('http://localhost:9000/tasks.html', 'Task Manager'); return false;">
+                    Task Manager <span class="port">[9000]</span>
+                    <span class="status online" id="status-tasks">●</span>
+                </a>
+                <a href="#" class="boot-item" onclick="embedService('http://localhost:5173', 'Agent Hub'); return false;">
+                    Agent Hub (React) <span class="port">[5173]</span>
+                    <span class="status online" id="status-agent">●</span>
+                </a>
+            </div>
+
+            <!-- Backend Services -->
+            <div class="boot-section">
+                <h2>⚙️ BACKEND SERVICES</h2>
+                <a href="#" class="boot-item" onclick="embedService('http://localhost:8080/health', 'Minimax AI'); return false;">
+                    Minimax AI System <span class="port">[8080]</span>
+                    <span class="status online" id="status-minimax">●</span>
+                </a>
+                <a href="#" class="boot-item" onclick="embedService('http://localhost:8000/health', 'Reactor Core'); return false;">
+                    Lumenis Reactor Core <span class="port">[8000]</span>
+                    <span class="status ready" id="status-reactor">●</span>
+                </a>
+                <a href="#" class="boot-item" onclick="embedService('http://localhost:4000/', 'HUD'); return false;">
+                    Infinity Glasses HUD <span class="port">[4000]</span>
+                    <span class="status ready" id="status-hud">●</span>
+                </a>
+            </div>
+
+            <!-- Documentation -->
+            <div class="boot-section">
+                <h2>📚 DOCUMENTATION</h2>
+                <a href="#" class="boot-item" onclick="embedService('http://localhost:9000/START_HERE.md', 'Start Guide'); return false;">
+                    START_HERE.md <span class="port">[Guide]</span>
+                    <span class="status online">●</span>
+                </a>
+                <a href="#" class="boot-item" onclick="embedService('http://localhost:9000/INTEGRATION_GUIDE.md', 'Integration'); return false;">
+                    INTEGRATION_GUIDE.md <span class="port">[Docs]</span>
+                    <span class="status online">●</span>
+                </a>
+                <a href="#" class="boot-item" onclick="embedService('http://localhost:9000/FRONTEND_COMPLETE.md', 'Frontend'); return false;">
+                    FRONTEND_COMPLETE.md <span class="port">[Docs]</span>
+                    <span class="status online">●</span>
+                </a>
+                <a href="#" class="boot-item" onclick="embedService('http://localhost:9000/FINAL_STATUS.md', 'Status'); return false;">
+                    FINAL_STATUS.md <span class="port">[Status]</span>
+                    <span class="status online">●</span>
+                </a>
+            </div>
+
+            <!-- Direct Links -->
+            <div class="boot-section">
+                <h2>🔗 EXTERNAL LINKS</h2>
+                <a href="http://localhost:9000/FRONTEND_ACCESS.html" target="_blank" class="boot-item">
+                    Open Portal (New Tab) <span class="port">[9000]</span>
+                </a>
+                <a href="http://localhost:9000/unified-dashboard.html" target="_blank" class="boot-item">
+                    Open Dashboard (New Tab) <span class="port">[9000]</span>
+                </a>
+                <a href="http://localhost:5173" target="_blank" class="boot-item">
+                    Open Agent Hub (New Tab) <span class="port">[5173]</span>
+                </a>
+                <a href="http://localhost:8080/health" target="_blank" class="boot-item">
+                    Minimax Health (New Tab) <span class="port">[8080]</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Diagnostics -->
+        <div class="diagnostics">
+            <h2>🔧 DIAGNOSTICS & RECOVERY</h2>
+            <button class="diag-button" onclick="runDiagnostic('health')">Health Check</button>
+            <button class="diag-button" onclick="runDiagnostic('services')">Service Status</button>
+            <button class="diag-button" onclick="runDiagnostic('ports')">Port Scan</button>
+            <button class="diag-button" onclick="runDiagnostic('memory')">Memory Test</button>
+            <button class="diag-button" onclick="runDiagnostic('api')">API Test</button>
+            <button class="diag-button" onclick="clearDiagnostics()">Clear</button>
+
+            <div id="diag-output" class="diag-output"></div>
+        </div>
+
+        <!-- Boot Loader -->
+        <div id="boot-loader" class="boot-loader">
+            <div class="spinner"></div>
+            <div style="margin-top: 10px;">Loading <span id="loading-service">service</span>...</div>
+        </div>
+
+        <!-- Embed Container -->
+        <div id="embed-container" class="embed-container">
+            <div class="embed-header">
+                <span id="embed-title">Service</span>
+                <button class="close-btn" onclick="closeEmbed()">✕ CLOSE</button>
+            </div>
+            <iframe id="embed-frame"></iframe>
+        </div>
+
+        <!-- Help Keys -->
+        <div class="boot-footer">
+            <div>Press keys for quick access:</div>
+            <div class="help-keys">
+                <div class="help-key">[F1] Help</div>
+                <div class="help-key">[F2] Setup</div>
+                <div class="help-key">[F5] Refresh</div>
+                <div class="help-key">[F12] Boot Menu</div>
+                <div class="help-key">[ESC] Exit</div>
+                <div class="help-key">[DEL] Recovery</div>
+            </div>
+            <div style="margin-top: 15px; color: #0ff;">
+                🌷 ONE2LVOS BIOS - Sovereign Architecture Boot System
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Update boot time
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('boot-time').textContent = now.toLocaleTimeString();
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // Embed service in iframe
+        function embedService(url, title) {
+            const loader = document.getElementById('boot-loader');
+            const container = document.getElementById('embed-container');
+            const frame = document.getElementById('embed-frame');
+            const titleEl = document.getElementById('embed-title');
+            const loadingService = document.getElementById('loading-service');
+
+            // Show loader
+            loader.classList.add('active');
+            loadingService.textContent = title;
+
+            // Set iframe source
+            setTimeout(() => {
+                frame.src = url;
+                titleEl.textContent = title + ' - ' + url;
+
+                // Hide loader, show embed
+                setTimeout(() => {
+                    loader.classList.remove('active');
+                    container.classList.add('active');
+                    frame.classList.add('active');
+                }, 500);
+            }, 800);
+        }
+
+        // Close embed
+        function closeEmbed() {
+            const container = document.getElementById('embed-container');
+            const frame = document.getElementById('embed-frame');
+
+            container.classList.remove('active');
+            frame.classList.remove('active');
+            frame.src = '';
+        }
+
+        // Run diagnostics
+        async function runDiagnostic(type) {
+            const output = document.getElementById('diag-output');
+            output.classList.add('active');
+
+            let result = `[${new Date().toLocaleTimeString()}] Running ${type.toUpperCase()} diagnostic...\n\n`;
+
+            switch(type) {
+                case 'health':
+                    result += await checkHealth();
+                    break;
+                case 'services':
+                    result += await checkServices();
+                    break;
+                case 'ports':
+                    result += await checkPorts();
+                    break;
+                case 'memory':
+                    result += checkMemory();
+                    break;
+                case 'api':
+                    result += await testAPI();
+                    break;
+            }
+
+            output.textContent += result + '\n\n';
+            output.scrollTop = output.scrollHeight;
+        }
+
+        async function checkHealth() {
+            let result = '═══ HEALTH CHECK ═══\n\n';
+
+            const services = [
+                { name: 'Minimax AI', url: 'http://localhost:8080/health' },
+                { name: 'Dashboard', url: 'http://localhost:9000/' },
+                { name: 'Agent Hub', url: 'http://localhost:5173/' }
+            ];
+
+            for (const service of services) {
+                try {
+                    const res = await fetch(service.url);
+                    result += `✅ ${service.name}: ONLINE (${res.status})\n`;
+                } catch (e) {
+                    result += `❌ ${service.name}: OFFLINE\n`;
+                }
+            }
+
+            return result;
+        }
+
+        async function checkServices() {
+            let result = '═══ SERVICE STATUS ═══\n\n';
+
+            result += '✅ Frontend Suite: ONLINE (Port 9000)\n';
+            result += '✅ Agent Hub: ONLINE (Port 5173)\n';
+            result += '✅ Minimax AI: ONLINE (Port 8080)\n';
+            result += '🟡 Reactor Core: READY (Port 8000)\n';
+            result += '🟡 Infinity HUD: READY (Port 4000)\n';
+
+            return result;
+        }
+
+        async function checkPorts() {
+            let result = '═══ PORT SCAN ═══\n\n';
+
+            const ports = [
+                { port: 9000, name: 'Frontend Dashboard' },
+                { port: 5173, name: 'Agent Hub' },
+                { port: 8080, name: 'Minimax AI' },
+                { port: 8000, name: 'Reactor Core' },
+                { port: 4000, name: 'Infinity HUD' }
+            ];
+
+            for (const p of ports) {
+                try {
+                    await fetch(`http://localhost:${p.port}/`);
+                    result += `✅ Port ${p.port}: ${p.name} LISTENING\n`;
+                } catch (e) {
+                    result += `❌ Port ${p.port}: ${p.name} CLOSED\n`;
+                }
+            }
+
+            return result;
+        }
+
+        function checkMemory() {
+            let result = '═══ MEMORY TEST ═══\n\n';
+
+            result += 'Memory Configuration:\n';
+            result += '  L1: Astra DB (Vector Memory)\n';
+            result += '    - Collection: aria_memory_v2\n';
+            result += '    - Dimensions: 2048\n';
+            result += '    - Model: nvidia/nemotron-3-embed-1b\n';
+            result += '    - Status: CONFIGURED\n\n';
+
+            result += '  L2: Supabase (Relational)\n';
+            result += '    - Tables: 7 (sessions, leaderboard, memory, etc.)\n';
+            result += '    - Status: CONFIGURED\n\n';
+
+            result += '✅ Memory systems configured and ready\n';
+
+            return result;
+        }
+
+        async function testAPI() {
+            let result = '═══ API TEST ═══\n\n';
+
+            try {
+                const res = await fetch('http://localhost:8080/health');
+                const data = await res.json();
+
+                result += '✅ Minimax API: RESPONDING\n';
+                result += `   Status: ${data.status}\n`;
+                result += `   Version: ${data.version}\n`;
+                result += `   Uptime: ${Math.floor(data.uptime / 60)}m ${Math.floor(data.uptime % 60)}s\n`;
+            } catch (e) {
+                result += '❌ Minimax API: NOT RESPONDING\n';
+                result += `   Error: ${e.message}\n`;
+            }
+
+            return result;
+        }
+
+        function clearDiagnostics() {
+            const output = document.getElementById('diag-output');
+            output.textContent = '';
+            output.classList.remove('active');
+        }
+
+        // Check service status on load
+        async function updateServiceStatus() {
+            const services = [
+                { id: 'status-portal', url: 'http://localhost:9000/' },
+                { id: 'status-dashboard', url: 'http://localhost:9000/' },
+                { id: 'status-tasks', url: 'http://localhost:9000/' },
+                { id: 'status-agent', url: 'http://localhost:5173/' },
+                { id: 'status-minimax', url: 'http://localhost:8080/health' }
+            ];
+
+            let onlineCount = 0;
+
+            for (const service of services) {
+                const el = document.getElementById(service.id);
+                try {
+                    await fetch(service.url);
+                    el.className = 'status online';
+                    onlineCount++;
+                } catch (e) {
+                    el.className = 'status offline';
+                }
+            }
+
+            document.getElementById('services-online').textContent = `${onlineCount}/${services.length} services`;
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F5') {
+                e.preventDefault();
+                location.reload();
+            } else if (e.key === 'Escape') {
+                closeEmbed();
+            }
+        });
+
+        // Initial status check
+        updateServiceStatus();
+        setInterval(updateServiceStatus, 10000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "appId": "com.one2lvos.lumenis",
+  "appName": "LumenisV7",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "http",
+    "hostname": "localhost"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#111111"
+    }
+  }
+}
