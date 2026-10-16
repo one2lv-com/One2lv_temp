@@ -205,6 +205,7 @@
       <button onclick="show('lumenis-os')"><span class="dot" id="dot-lumenis-os"></span>LumenisOS</button>
       <button onclick="show('aetherix')"><span class="dot" id="dot-aetherix"></span>Aetherix</button>
       <button onclick="show('gateway')"><span class="dot" id="dot-gateway"></span>Gateway API</button>
+      <button onclick="show('network')"><span class="dot" id="dot-network"></span>Network Service</button>
     </nav>
 
     <!-- ── Content ── -->
@@ -543,6 +544,50 @@
         </div>
       </div>
 
+      <!-- NETWORK SERVICE -->
+      <div id="panel-network" class="panel">
+        <div class="card">
+          <h2>Network Service — Mesh Routing & Static Connections</h2>
+          <p class="text-muted" style="font-size:11px;margin-bottom:12px">WebDAV & FTP integration with mesh routing · <span class="text-accent">http://localhost:3003</span></p>
+
+          <div class="grid2" style="margin-bottom:16px">
+            <div class="svc-card">
+              <div class="svc-name">Total Connections</div>
+              <div class="svc-port" id="net-total">—</div>
+              <div class="svc-status" id="net-total-status">Loading...</div>
+            </div>
+            <div class="svc-card">
+              <div class="svc-name">Active Connections</div>
+              <div class="svc-port" id="net-active">—</div>
+              <div class="svc-status" id="net-active-status">Loading...</div>
+            </div>
+            <div class="svc-card">
+              <div class="svc-name">Protocols</div>
+              <div class="svc-port" id="net-protocols">—</div>
+              <div class="svc-status" id="net-protocols-status">WebDAV, FTP</div>
+            </div>
+            <div class="svc-card">
+              <div class="svc-name">Mesh Nodes</div>
+              <div class="svc-port" id="net-nodes">—</div>
+              <div class="svc-status" id="net-nodes-status">Loading...</div>
+            </div>
+          </div>
+
+          <div class="flex" style="margin-bottom:12px">
+            <button class="btn btn-primary" onclick="refreshNetworkStats()">↻ Refresh Stats</button>
+            <button class="btn btn-green" onclick="window.open('http://localhost:3003/network-manager.html','_blank')">🌐 Open Network Manager</button>
+          </div>
+
+          <hr class="divider">
+          <h3>Recent Connections</h3>
+          <div id="net-connections-list" style="max-height:300px;overflow-y:auto;margin-bottom:12px"></div>
+
+          <hr class="divider">
+          <h3>Service Log</h3>
+          <div class="output" id="netLog"></div>
+        </div>
+      </div>
+
     </div><!-- /content -->
   </div><!-- /main -->
 </div><!-- /app -->
@@ -551,6 +596,7 @@
 const GW = 'http://localhost:8888';
 const ARCADE = 'http://localhost:8003';
 const LOBBY  = 'http://localhost:8006';
+const NETWORK = 'http://localhost:3003';
 
 // ── Panel navigation ────────────────────────────────────────────────────────
 const panels = {};
@@ -568,6 +614,7 @@ function show(id) {
   if (id === 'arcade-lib') loadLibrary();
   if (id === 'leaderboard') loadLeaderboard();
   if (id === 'aetherix') loadAetherix();
+  if (id === 'network') refreshNetworkStats();
 }
 
 // ── HTTP helpers ─────────────────────────────────────────────────────────────
@@ -1010,6 +1057,80 @@ function gwQuick(method, endpoint) {
   document.getElementById('gwMethod').value = method;
   document.getElementById('gwEndpoint').value = endpoint;
   gwCall();
+}
+
+// ── Network Service ───────────────────────────────────────────────────────────
+async function refreshNetworkStats() {
+  try {
+    setOutput('netLog', 'Fetching network statistics...', 'info');
+    const stats = await api(`${NETWORK}/api/network/stats`);
+
+    document.getElementById('net-total').textContent = stats.connections || 0;
+    document.getElementById('net-active').textContent = stats.activeConnections || 0;
+    document.getElementById('net-protocols').textContent = stats.protocols?.length || 0;
+    document.getElementById('net-nodes').textContent = stats.nodes || 0;
+
+    document.getElementById('net-total-status').textContent = 'Configured';
+    document.getElementById('net-active-status').textContent = stats.activeConnections > 0 ? 'Connected' : 'Idle';
+    document.getElementById('net-nodes-status').textContent = 'Running';
+
+    setOutput('netLog', `Stats updated: ${stats.activeConnections}/${stats.connections} connections active`, 'ok');
+
+    // Load connections list
+    await loadNetworkConnections();
+
+    // Update dot indicator
+    const dot = document.getElementById('dot-network');
+    if (dot) {
+      dot.classList.remove('down');
+      dot.classList.add('up');
+    }
+  } catch (error) {
+    setOutput('netLog', `Error: ${error.message}`, 'err');
+    document.getElementById('net-total-status').textContent = 'Offline';
+    document.getElementById('net-active-status').textContent = 'Offline';
+    document.getElementById('net-nodes-status').textContent = 'Offline';
+
+    const dot = document.getElementById('dot-network');
+    if (dot) {
+      dot.classList.remove('up');
+      dot.classList.add('down');
+    }
+  }
+}
+
+async function loadNetworkConnections() {
+  try {
+    const connections = await api(`${NETWORK}/api/network/connections`);
+    const list = document.getElementById('net-connections-list');
+
+    if (!connections || connections.length === 0) {
+      list.innerHTML = '<div class="text-muted" style="padding:8px;font-size:11px">No connections configured</div>';
+      return;
+    }
+
+    list.innerHTML = connections.slice(0, 10).map(conn => {
+      const statusClass = conn.status === 'connected' ? 'badge-green' :
+                         conn.status === 'connecting' ? 'badge-yellow' :
+                         conn.status === 'error' ? 'badge-red' : 'badge-blue';
+
+      return `
+        <div style="border-bottom:1px solid var(--border);padding:8px 0;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-weight:600;font-size:11px">${conn.id}</div>
+            <div class="text-muted" style="font-size:10px">${conn.protocol.toUpperCase()} — ${conn.host}:${conn.port}</div>
+          </div>
+          <span class="badge ${statusClass}">${conn.status}</span>
+        </div>
+      `;
+    }).join('');
+
+    if (connections.length > 10) {
+      list.innerHTML += `<div class="text-muted" style="padding:8px;font-size:10px;text-align:center">+ ${connections.length - 10} more connections</div>`;
+    }
+  } catch (error) {
+    console.error('Failed to load connections:', error);
+  }
 }
 
 // ── Terminal Commands ─────────────────────────────────────────────────────────

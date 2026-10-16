@@ -1,0 +1,27 @@
+{
+  "name": "one2lvos-network-service",
+  "version": "1.0.0",
+  "description": "One2lvOS Static Connections & Mesh Routing with WebDAV/FTP",
+  "main": "server/network-api.js",
+  "scripts": {
+    "start": "node server/network-api.js",
+    "dev": "nodemon server/network-api.js"
+  },
+  "keywords": [
+    "mesh",
+    "routing",
+    "webdav",
+    "ftp",
+    "network",
+    "one2lvos"
+  ],
+  "author": "One2lv",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
