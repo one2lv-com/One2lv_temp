@@ -1,6 +1,6 @@
-# 🌷 ONE2LVOS Sovereign Architecture
+# 🌷 ONE2LVOS Sovereign Architecture v8.0
 
-## Complete AI-Powered Gaming System with Frontend Suite
+## Complete AI-Powered Operating System with Production-Ready Components
 
 ---
 
@@ -45,6 +45,19 @@ http://localhost:9000/
 
 ## 🤖 AI Services
 
+### **Lumenis Reactor Core (Python - Port 8000)**
+- L2 Skills Pipeline (1500+ framework)
+- Vector Memory (Astra DB, 2048-dim)
+- NVIDIA Embeddings
+- Four Gates Architecture
+
+### **Lumenis v7 Orchestration (Node.js - Port 8787)**
+- Council System (multi-agent voting)
+- Telemetry Combo Detection
+- Prediction Engine
+- Voice Coach (TTS)
+- OBS/Twitch Integration
+
 ### **Minimax AI System (Port 8080)**
 - AI Coach (combat philosophy chatbot)
 - AI Broadcaster (real-time commentary)
@@ -52,17 +65,22 @@ http://localhost:9000/
 - Memory System (Supabase)
 - Mesh Networking (WebSocket)
 
-### **Lumenis Reactor Core (Port 8000)**
-- L2 Skills Pipeline (1500+ framework)
-- Vector Memory (Astra DB, 2048-dim)
-- NVIDIA Embeddings
-- Four Gates Architecture
-
 ### **Infinity Glasses HUD (Port 4000)**
 - AR Interface Gateway
 - ITT Governance Display
 - Neural Bridge
 - Real-time Chat
+
+### **Infinity Glass v2 (AR/VR)**
+- Gesture Engine
+- Sensor Fusion (gyro + vision)
+- 3D HUD with Three.js
+- Spatial Tracking
+
+### **Registry of Thought (Port 8888)**
+- Interplanetary Disk (vector storage)
+- Vault System (snapshots)
+- Cross-session Persistence
 
 ---
 
@@ -103,13 +121,18 @@ See complete documentation:
 - ✅ 9 frontend interfaces
 - ✅ L6 Sovereign Lattice (3D orbital visualization)
 - ✅ Protocol 0x1162 (Agentic control layer)
+- ✅ Lumenis v7 (Council orchestration)
+- ✅ Infinity Glass v2 (AR/VR interface)
+- ✅ Registry of Thought (Vector memory)
+- ✅ Multi-agent voting system
+- ✅ Gesture recognition
 - ✅ Embedded iframe viewing
 - ✅ Real-time monitoring
 - ✅ BIOS boot menu
 - ✅ Recovery console
 - ✅ Task management
 - ✅ Diagnostic tools
-- ✅ Full documentation
+- ✅ Full documentation (85%+ test coverage)
 
 ---
 

@@ -1,0 +1,22 @@
+{
+  "name": "Flux Navigation System",
+  "version": "1.0.0",
+  "description": "Global routing and navigation for One2lvOS",
+  "routes": [
+    {
+      "path": "/lumenis",
+      "target": "lumenis_v7",
+      "port": 8080
+    },
+    {
+      "path": "/glass",
+      "target": "infinity_glass_v2",
+      "port": 8081
+    },
+    {
+      "path": "/registry",
+      "target": "registry_of_thought",
+      "port": 8082
+    }
+  ]
+}

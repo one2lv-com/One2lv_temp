@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌷 Lumenis v7 HUD</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: linear-gradient(135deg, #0f1117 0%, #1a0b2e 100%);
+      color: #00ffcc;
+      font-family: 'Courier New', monospace;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
+    h1 {
+      text-align: center;
+      font-size: 2.5rem;
+      margin-bottom: 30px;
+      text-shadow: 0 0 20px #00ffcc;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: rgba(26, 11, 46, 0.8);
+      padding: 20px;
+      border-radius: 15px;
+      border: 2px solid #8a5cff;
+      box-shadow: 0 0 30px rgba(138, 92, 255, 0.3);
+      transition: all 0.3s;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 0 40px rgba(138, 92, 255, 0.5);
+    }
+    .card h3 {
+      color: #ff6ec7;
+      margin-bottom: 15px;
+      font-size: 1.3rem;
+    }
+    button {
+      background: linear-gradient(135deg, #8a5cff 0%, #ff6ec7 100%);
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      width: 100%;
+      margin: 5px 0;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 20px rgba(138, 92, 255, 0.6);
+    }
+    pre {
+      background: #000;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #333;
+    }
+    .status {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+    .status.online { background: #00ff00; box-shadow: 0 0 10px #00ff00; }
+    .status.offline { background: #ff0000; box-shadow: 0 0 10px #ff0000; }
+    .combo-display {
+      font-size: 3rem;
+      text-align: center;
+      color: #ff6ec7;
+      text-shadow: 0 0 20px #ff6ec7;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🌷 Lumenis v7 Command Center</h1>
+
+    <div class="grid">
+      <div class="card">
+        <h3>System Status</h3>
+        <div><span class="status" id="status-dot"></span><span id="status-text">Checking...</span></div>
+        <div style="margin-top: 10px;"><strong>OBS:</strong> <span id="obs-status">—</span></div>
+      </div>
+
+      <div class="card">
+        <h3>Telemetry Controls</h3>
+        <button onclick="simulateHit()">Simulate Hit</button>
+        <button onclick="resetCombo()">Reset Combo</button>
+        <div class="combo-display" id="combo-count">0</div>
+      </div>
+
+      <div class="card">
+        <h3>Council Strategy</h3>
+        <div id="strategy" style="text-align: center; font-size: 1.5rem; color: #ff6ec7; margin: 20px 0;">—</div>
+        <button onclick="getStrategy()">Get Current Strategy</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 20px;">
+      <h3>Council Communication Log</h3>
+      <pre id="log">Initializing...</pre>
+    </div>
+  </div>
+
+  <script>
+    async function updateStatus() {
+      try {
+        const r = await fetch('/api/status');
+        const d = await r.json();
+        document.getElementById('status-dot').className = 'status online';
+        document.getElementById('status-text').textContent = 'Online - ' + d.system;
+        document.getElementById('obs-status').textContent = d.obs ? 'Connected' : 'Disconnected';
+        document.getElementById('combo-count').textContent = d.combo.hitCount;
+      } catch(e) {
+        document.getElementById('status-dot').className = 'status offline';
+        document.getElementById('status-text').textContent = 'Offline';
+      }
+    }
+
+    async function updateLog() {
+      try {
+        const r = await fetch('/api/council');
+        const d = await r.json();
+        document.getElementById('log').textContent = JSON.stringify(d.slice(-10), null, 2);
+      } catch(e) {
+        document.getElementById('log').textContent = 'Error loading logs';
+      }
+    }
+
+    async function simulateHit() {
+      await fetch('/api/telemetry', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({type: 'hit'})
+      });
+      updateStatus();
+      updateLog();
+    }
+
+    async function resetCombo() {
+      document.getElementById('combo-count').textContent = '0';
+    }
+
+    async function getStrategy() {
+      try {
+        const r = await fetch('/api/council/vote');
+        const d = await r.json();
+        document.getElementById('strategy').textContent = d.strategy;
+      } catch(e) {
+        document.getElementById('strategy').textContent = 'Error';
+      }
+    }
+
+    setInterval(() => {
+      updateStatus();
+      updateLog();
+    }, 2000);
+
+    updateStatus();
+    updateLog();
+  </script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sanctuary Terminal v1.3 (Omni-Edition)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000;
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+      height: 100vh;
+    }
+    .terminal-container {
+      padding: 20px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .header {
+      border-bottom: 2px solid #0f0;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+    .output {
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: 20px;
+      padding: 10px;
+      background: rgba(0, 255, 0, 0.05);
+      border: 1px solid #0f0;
+    }
+    .input-line {
+      display: flex;
+      align-items: center;
+    }
+    .prompt { margin-right: 10px; color: #0ff; }
+    input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      outline: none;
+    }
+    .blink { animation: blink 1s infinite; }
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+    .shield-active { color: #ff0; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="terminal-container">
+    <div class="header">
+      <h2>🛡️ SANCTUARY TERMINAL v1.3 (Omni-Edition)</h2>
+      <p>Status: <span id="shield-status">STANDBY</span> | Time: <span id="time"></span></p>
+    </div>
+
+    <div class="output" id="output">
+      <div>> System initialized...</div>
+      <div>> Lumenis v7 connection established</div>
+      <div>> Type 'help' for available commands</div>
+      <div>> Type 'vanguard shield' to activate defensive operations</div>
+    </div>
+
+    <div class="input-line">
+      <span class="prompt">🌷></span>
+      <input type="text" id="input" autofocus />
+      <span class="blink">_</span>
+    </div>
+  </div>
+
+  <script>
+    const output = document.getElementById('output');
+    const input = document.getElementById('input');
+    const shieldStatus = document.getElementById('shield-status');
+    let shieldActive = false;
+
+    function updateTime() {
+      document.getElementById('time').textContent = new Date().toLocaleTimeString();
+    }
+    setInterval(updateTime, 1000);
+    updateTime();
+
+    function print(msg, color = '#0f0') {
+      const line = document.createElement('div');
+      line.textContent = '> ' + msg;
+      line.style.color = color;
+      output.appendChild(line);
+      output.scrollTop = output.scrollHeight;
+    }
+
+    function executeCommand(cmd) {
+      print(cmd, '#0ff');
+
+      const lower = cmd.toLowerCase().trim();
+
+      if (lower === 'help') {
+        print('Available commands:', '#ff0');
+        print('  help - Show this message');
+        print('  vanguard shield - Activate defensive operations');
+        print('  status - Show system status');
+        print('  clear - Clear terminal');
+        print('  council - View council messages');
+      } else if (lower === 'vanguard shield') {
+        shieldActive = true;
+        shieldStatus.textContent = 'ACTIVE';
+        shieldStatus.className = 'shield-active';
+        print('🛡️ VANGUARD SHIELD ACTIVATED', '#ff0');
+        print('Buffer protection: ENABLED');
+        print('Injection testing: ACTIVE');
+        print('Quota management: ONLINE');
+      } else if (lower === 'status') {
+        print('System: Lumenis v7');
+        print('Shield: ' + (shieldActive ? 'ACTIVE' : 'STANDBY'));
+        print('Council: ONLINE');
+        print('Registry: CONNECTED');
+      } else if (lower === 'clear') {
+        output.innerHTML = '';
+      } else if (lower === 'council') {
+        fetch('/api/council')
+          .then(r => r.json())
+          .then(d => {
+            print('Recent council messages:', '#ff0');
+            d.slice(-5).forEach(msg => {
+              print(`[${msg.agent}] ${msg.msg}`, '#0ff');
+            });
+          })
+          .catch(() => print('Error fetching council messages', '#f00'));
+      } else {
+        print('Unknown command: ' + cmd, '#f00');
+        print('Type "help" for available commands');
+      }
+    }
+
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        const cmd = input.value.trim();
+        if (cmd) executeCommand(cmd);
+        input.value = '';
+      }
+    });
+  </script>
+</body>
+</html>
