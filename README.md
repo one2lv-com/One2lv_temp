@@ -29,7 +29,7 @@ http://localhost:9000/
 
 ## 🎨 Interfaces
 
-### **8 HTML Interfaces Available**
+### **9 HTML Interfaces Available**
 
 1. **Boot Selector** - http://localhost:9000/
 2. **BIOS Boot Menu** - http://localhost:9000/BIOS_BOOT.html
@@ -38,7 +38,8 @@ http://localhost:9000/
 5. **Unified Dashboard** - http://localhost:9000/unified-dashboard.html
 6. **Task Manager** - http://localhost:9000/tasks.html
 7. **L6 Interface** - http://localhost:9000/L6-Interface/launcher.html
-8. **Agent Hub** - http://localhost:5173
+8. **Protocol 0x1162** - http://localhost:9000/Protocol-0x1162/launcher.html
+9. **Agent Hub** - http://localhost:5173
 
 ---
 
@@ -99,8 +100,9 @@ See complete documentation:
 ## 🎯 Features
 
 - ✅ Complete AI system integration
-- ✅ 8 frontend interfaces
+- ✅ 9 frontend interfaces
 - ✅ L6 Sovereign Lattice (3D orbital visualization)
+- ✅ Protocol 0x1162 (Agentic control layer)
 - ✅ Embedded iframe viewing
 - ✅ Real-time monitoring
 - ✅ BIOS boot menu

@@ -1,0 +1,11 @@
+# Protocol 0x1162 - Production Runtime v3
+# Core runtime has no external dependencies
+
+# Optional integrations
+# openai>=1.0.0  # For LLM integration
+# anthropic>=0.3.0  # For Claude integration
+
+# Development dependencies
+# pytest>=7.0.0
+# black>=22.0.0
+# mypy>=0.900
