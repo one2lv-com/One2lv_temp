@@ -58,10 +58,11 @@ psycopg2-binary>=2.9.9
 sqlalchemy>=2.0.23
 
 # ============================================
-# Async Support
+# Async Support (Lumenis Reactor Core)
 # ============================================
 aiohttp>=3.9.0
 asyncio>=3.4.3
+aiofiles>=23.2.0
 
 # ============================================
 # Testing & Development
