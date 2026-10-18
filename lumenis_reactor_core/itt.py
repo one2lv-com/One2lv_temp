@@ -243,8 +243,10 @@ class ITTCouncil:
             model="nvidia/nemotron-3.5-lightning-30b-a3b",
             api_key_env="NVIDIA_API_KEY",
         )
+        # DeepSeek Flash times out on NVIDIA's API — use Lightning for Forge too
+        # Oracle and Forge are differentiated by their system prompts, not the model
         self.forge_reactor = ReasoningReactor(
-            model="deepseek-ai/deepseek-v4.1-flash",
+            model="nvidia/nemotron-3.5-lightning-30b-a3b",
             api_key_env="NVIDIA_API_KEY",
         )
         self.compass = compass
