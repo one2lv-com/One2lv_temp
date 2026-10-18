@@ -85,6 +85,8 @@ async def status():
     return {
         "reactor": reactor.get_status(),
         "nvidia": nvidia.get_status(),
+        "oracle_reactor": council.oracle_reactor.get_status(),
+        "forge_reactor": council.forge_reactor.get_status(),
         "nodes": node_pool.get_status(),
         "compass": compass.get_stats(),
         "maton": bridge.get_status(),

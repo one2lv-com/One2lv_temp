@@ -24,7 +24,7 @@ from typing import Optional
 from .arcade import ArcadeBridge
 from .compass import FluxCompass
 from .maton import MatonBridge
-from .reactor import LumenisReactor, NvidiaReactor
+from .reactor import LumenisReactor, NvidiaReactor, ReasoningReactor
 
 # ── Seat Definitions ──────────────────────────────────────────────────────────
 
@@ -229,12 +229,24 @@ class ITTCouncil:
     - Secondary Reactor (Gemma-4-31B-IT): Forge & Oracle (code + reasoning)
     """
 
-    # Seats that run on the secondary NVIDIA Gemma reactor (code + reasoning)
+    # Routing: oracle → ReasoningReactor (Nemotron Lightning), forge → ReasoningReactor (DeepSeek)
+    ORACLE_SEAT = "oracle"
+    FORGE_SEAT = "forge"
+    # Legacy secondary set (unused — kept for compatibility)
     SECONDARY_SEATS = {"forge", "oracle"}
 
     def __init__(self, reactor: LumenisReactor, compass: FluxCompass):
-        self.reactor = reactor  # Primary NVIDIA reactor
-        self.nvidia = NvidiaReactor()  # Secondary NVIDIA reactor
+        self.reactor = reactor                # Primary: llama-3.2-90b
+        self.nvidia = NvidiaReactor()         # Fallback secondary: llama-3.2-11b
+        # Reasoning reactors (Frontier #1 — Advanced AI)
+        self.oracle_reactor = ReasoningReactor(
+            model="nvidia/nemotron-3.5-lightning-30b-a3b",
+            api_key_env="NVIDIA_API_KEY",
+        )
+        self.forge_reactor = ReasoningReactor(
+            model="deepseek-ai/deepseek-v4.1-flash",
+            api_key_env="NVIDIA_API_KEY",
+        )
         self.compass = compass
         self.bridge = MatonBridge()
         self.arcade = ArcadeBridge()
@@ -255,12 +267,23 @@ class ITTCouncil:
                 "content": f"{user_message}\n\n{extra_context}".strip(),
             }
         ]
-        # Route Forge and Oracle to secondary Gemma; everything else uses primary Nemotron
-        backend = self.nvidia if seat_key in self.SECONDARY_SEATS else self.reactor
+        # Route to the appropriate reactor per seat
+        # Oracle  → Nemotron Lightning (chain-of-thought deep reasoning)
+        # Forge   → DeepSeek Flash (code & technical analysis with CoT)
+        # Others  → LumenisReactor primary (llama-3.2-90b, stable/fast)
+        if seat_key == self.ORACLE_SEAT:
+            backend = self.oracle_reactor
+            max_tok = 2048  # reasoning models need extra tokens for CoT
+        elif seat_key == self.FORGE_SEAT:
+            backend = self.forge_reactor
+            max_tok = 2048
+        else:
+            backend = self.reactor
+            max_tok = 1024
         return await backend.call(
             messages=messages,
             system=seat["system"],
-            max_tokens=1024,
+            max_tokens=max_tok,
         )
 
     async def process(

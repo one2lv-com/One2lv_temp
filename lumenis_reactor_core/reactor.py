@@ -252,3 +252,106 @@ class NvidiaReactor:
             "errors": self._error_count,
             "online": bool(self.api_key),
         }
+
+
+class ReasoningReactor:
+    """
+    Reactor for models that use chain-of-thought reasoning_content before answering.
+    Handles: nvidia/nemotron-3.5-lightning-30b-a3b, deepseek-ai/deepseek-v4.1-flash.
+    Skips reasoning tokens from output — only yields the final answer content.
+    """
+
+    def __init__(self, model: str, api_key_env: str = "NVIDIA_API_KEY"):
+        self.model = model
+        self.api_key = os.environ.get(api_key_env, os.environ.get("NVIDIA_API_KEY", ""))
+        self._call_count = 0
+        self._error_count = 0
+        self._reasoning_tokens = 0  # track internal CoT depth
+
+    async def stream_response(
+        self,
+        messages: list[dict],
+        system: str = "",
+        max_tokens: int = 2048,
+    ) -> AsyncIterator[str]:
+        """Stream only final answer tokens, skipping reasoning_content."""
+        full_messages = []
+        if system:
+            full_messages.append({"role": "system", "content": system})
+        full_messages.extend(messages)
+
+        payload = {
+            "model": self.model,
+            "messages": full_messages,
+            "max_tokens": max_tokens,
+            "temperature": 0.6,   # slightly higher for reasoning models
+            "top_p": 0.95,
+            "stream": True,
+        }
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",
+        }
+
+        reasoning_buf = []
+        async with httpx.AsyncClient(timeout=180) as client:
+            async with client.stream(
+                "POST", NVIDIA_API_URL, headers=headers, json=payload
+            ) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if not line.startswith("data: "):
+                        continue
+                    data = line[6:].strip()
+                    if data == "[DONE]":
+                        break
+                    try:
+                        chunk = json.loads(data)
+                        delta = chunk["choices"][0]["delta"]
+
+                        # Reasoning content — accumulate silently for depth tracking
+                        reasoning = delta.get("reasoning_content")
+                        if reasoning:
+                            reasoning_buf.append(reasoning)
+                            self._reasoning_tokens += len(reasoning)
+                            continue
+
+                        # Final answer content — yield to caller
+                        text = delta.get("content") or ""
+                        if text:
+                            self._call_count += 1
+                            yield text
+                    except Exception:
+                        continue
+
+    async def call(
+        self,
+        messages: list[dict],
+        system: str = "",
+        max_tokens: int = 2048,
+    ) -> str:
+        """Non-streaming call — returns final answer after reasoning completes."""
+        parts = []
+        try:
+            async for chunk in self.stream_response(messages, system, max_tokens):
+                parts.append(chunk)
+        except Exception as e:
+            self._error_count += 1
+            return f"[ReasoningReactor error: {e}]"
+        result = "".join(parts).strip()
+        # If model only returned reasoning with no answer, return a fallback
+        if not result:
+            result = "[Reasoning complete — no final answer emitted. Increase max_tokens.]"
+        return result
+
+    def get_status(self) -> dict:
+        return {
+            "model": self.model,
+            "tokens_streamed": self._call_count,
+            "reasoning_tokens": self._reasoning_tokens,
+            "errors": self._error_count,
+            "online": bool(self.api_key),
+            "type": "reasoning",
+        }
