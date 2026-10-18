@@ -45,20 +45,20 @@ fi
 echo ""
 echo -e "${CYAN}🔍 Checking environment variables...${NC}"
 
-if [ -z "$ANTHROPIC_API_KEY" ] || [ "$ANTHROPIC_API_KEY" = "your_anthropic_api_key_here" ]; then
-    echo -e "${RED}❌ ANTHROPIC_API_KEY not set or invalid${NC}"
-    echo "Please set your Anthropic API key in .env"
-    echo "Get your key from: https://console.anthropic.com/"
+if [ -z "$NVIDIA_API_KEY" ] || [ "$NVIDIA_API_KEY" = "your_nvidia_api_key_here" ]; then
+    echo -e "${RED}❌ NVIDIA_API_KEY not set or invalid${NC}"
+    echo "Please set your NVIDIA API key in .env"
+    echo "Get your key from: https://build.nvidia.com/explore/discover"
     exit 1
 else
-    echo -e "${GREEN}✓ ANTHROPIC_API_KEY configured${NC}"
+    echo -e "${GREEN}✓ NVIDIA_API_KEY configured${NC}"
 fi
 
-if [ -z "$NVIDIA_API_KEY" ]; then
-    echo -e "${YELLOW}⚠️  NVIDIA_API_KEY not set${NC}"
-    echo "Some features (Forge, Oracle seats) may not work"
+if [ -z "$ANTHROPIC_API_KEY" ]; then
+    echo -e "${YELLOW}⚠️  ANTHROPIC_API_KEY not set${NC}"
+    echo "Some features may not work without Anthropic key"
 else
-    echo -e "${GREEN}✓ NVIDIA_API_KEY configured${NC}"
+    echo -e "${GREEN}✓ ANTHROPIC_API_KEY configured${NC}"
 fi
 
 if [ -z "$ASTRA_DB_API_ENDPOINT" ]; then

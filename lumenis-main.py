@@ -18,7 +18,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from core import LumenisReactor, NvidiaReactor, FluxCompass, ITTCouncil, MatonBridge, VanguardNodePool
+from lumenis_reactor_core import LumenisReactor, NvidiaReactor, FluxCompass, ITTCouncil, MatonBridge, VanguardNodePool
 
 # ── Global instances ──────────────────────────────────────────────────────────
 reactor = LumenisReactor()
@@ -81,7 +81,7 @@ async def root():
 # ── REST: Status ──────────────────────────────────────────────────────────────
 @app.get("/api/status")
 async def status():
-    from core.itt import SEATS
+    from lumenis_reactor_core.itt import SEATS
     return {
         "reactor": reactor.get_status(),
         "nvidia": nvidia.get_status(),
