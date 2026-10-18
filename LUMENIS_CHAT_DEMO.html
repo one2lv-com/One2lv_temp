@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumenis Reactor Core - Chat UI Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Monaco', 'Courier New', monospace;
+            background: #0a0118;
+            color: #e0e0ff;
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            background: linear-gradient(135deg, #00f0ff, #ff00d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .status-box {
+            background: rgba(15, 5, 30, 0.85);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 8px;
+            padding: 30px;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-box h2 {
+            color: #00f0ff;
+            margin-bottom: 15px;
+            font-size: 24px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            margin: 10px 0;
+            background: rgba(0, 240, 255, 0.05);
+            border-left: 3px solid #00f0ff;
+            border-radius: 4px;
+        }
+
+        .status-icon {
+            font-size: 32px;
+        }
+
+        .status-text {
+            flex: 1;
+        }
+
+        .status-label {
+            color: #8888cc;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status-value {
+            color: #00f0ff;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .screenshot {
+            width: 100%;
+            border: 2px solid rgba(0, 240, 255, 0.3);
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.2);
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .feature-card {
+            background: rgba(15, 5, 30, 0.85);
+            border: 1px solid rgba(255, 0, 212, 0.3);
+            border-radius: 8px;
+            padding: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            border-color: #ff00d4;
+            box-shadow: 0 0 20px rgba(255, 0, 212, 0.3);
+            transform: translateY(-5px);
+        }
+
+        .feature-card h3 {
+            color: #ff00d4;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .feature-card p {
+            color: #8888cc;
+            font-size: 14px;
+        }
+
+        .council-seats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .seat-card {
+            background: rgba(0, 240, 255, 0.05);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .seat-icon {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+
+        .seat-name {
+            color: #00f0ff;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .seat-role {
+            color: #8888cc;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .code-block {
+            background: #000;
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+
+        .code-block pre {
+            color: #00ff88;
+            font-family: 'Monaco', monospace;
+            font-size: 13px;
+        }
+
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #00f0ff, #ff00d4);
+            color: #0a0118;
+            padding: 15px 30px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 10px 5px;
+            transition: all 0.3s ease;
+        }
+
+        .button:hover {
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .warning {
+            background: rgba(252, 238, 10, 0.1);
+            border-left: 4px solid #fcee0a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .warning-title {
+            color: #fcee0a;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .raccoon {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .raccoon-emoji {
+            font-size: 120px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .raccoon-text {
+            color: #fcee0a;
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌸 LUMENIS REACTOR CORE 🌸</h1>
+        <p style="text-align: center; color: #8888cc; font-size: 18px; margin-bottom: 40px;">
+            Chat UI with Council of Nine AI Agents
+        </p>
+
+        <!-- Status -->
+        <div class="status-box">
+            <h2>🚀 System Status</h2>
+            <div class="status-item">
+                <div class="status-icon">✅</div>
+                <div class="status-text">
+                    <div class="status-label">UI Status</div>
+                    <div class="status-value">Created & Pushed to GitHub</div>
+                </div>
+            </div>
+            <div class="status-item">
+                <div class="status-icon">📦</div>
+                <div class="status-text">
+                    <div class="status-label">Repository</div>
+                    <div class="status-value">github.com/one2lv-com/One2lvos</div>
+                </div>
+            </div>
+            <div class="status-item">
+                <div class="status-icon">💻</div>
+                <div class="status-text">
+                    <div class="status-label">Files</div>
+                    <div class="status-value">static/index.html + CHAT_UI_README.md</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Raccoon Agent -->
+        <div class="raccoon">
+            <div class="raccoon-emoji">🦝</div>
+            <div class="raccoon-text">Meet Rocky, Your Sovereign Assistant</div>
+            <p style="color: #8888cc; margin-top: 10px;">Memory tracking, activity logging, and real-time status updates</p>
+        </div>
+
+        <!-- Council of Nine -->
+        <div class="status-box">
+            <h2>🏛️ The Council of Nine</h2>
+            <p style="color: #8888cc; margin-bottom: 20px;">
+                Nine specialized AI agents that govern every request through the Lumenis Reactor Core
+            </p>
+            <div class="council-seats">
+                <div class="seat-card">
+                    <div class="seat-icon">👁️</div>
+                    <div class="seat-name">The Witness</div>
+                    <div class="seat-role">Memory & Context</div>
+                </div>
+                <div class="seat-card">
+                    <div class="seat-icon">🛡️</div>
+                    <div class="seat-name">The Sentinel</div>
+                    <div class="seat-role">Security Check</div>
+                </div>
+                <div class="seat-card">
+                    <div class="seat-icon">🧭</div>
+                    <div class="seat-name">The Navigator</div>
+                    <div class="seat-role">Intent Routing</div>
+                </div>
+                <div class="seat-card">
+                    <div class="seat-icon">🕸️</div>
+                    <div class="seat-name">The Weaver</div>
+                    <div class="seat-role">Response Synthesis</div>
+                </div>
+                <div class="seat-card">
+                    <div class="seat-icon">⚒️</div>
+                    <div class="seat-name">The Forge</div>
+                    <div class="seat-role">Code Execution</div>
+                </div>
+                <div class="seat-card">
+                    <div class="seat-icon">🔮</div>
+                    <div class="seat-name">The Oracle</div>
+                    <div class="seat-role">Knowledge Base</div>
+                </div>
+                <div class="seat-card">
+                    <div class="seat-icon">🏛️</div>
+                    <div class="seat-name">The Architect</div>
+                    <div class="seat-role">Governance</div>
+                </div>
+                <div class="seat-card">
+                    <div class="seat-icon">⚡</div>
+                    <div class="seat-name">The Hermes</div>
+                    <div class="seat-role">External Services</div>
+                </div>
+                <div class="seat-card">
+                    <div class="seat-icon">🎮</div>
+                    <div class="seat-name">The Gambit</div>
+                    <div class="seat-role">AI Arcade</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features -->
+        <div class="status-box">
+            <h2>✨ Key Features</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>🎨 Cyberpunk Design</h3>
+                    <p>Dark theme with neon cyan, magenta, and yellow accents. Animated particle background with GPU-accelerated effects.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🔴 Real-time WebSocket</h3>
+                    <p>Live streaming responses with token-by-token display. Auto-reconnect on disconnect.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>👀 Seat Visualization</h3>
+                    <p>Watch council seats activate in real-time as they process your request. Visual indicators show which agents are working.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>💾 Memory Tracking</h3>
+                    <p>Rocky the Raccoon tracks session memory, stores key facts, and maintains activity logs.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>📊 Status Monitoring</h3>
+                    <p>Live reactor metrics: temperature (0.18°C), pulse rate (73ms), and active node count.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🎮 Multi-Modal</h3>
+                    <p>Supports chat, code generation, external services (Gmail, Drive, GitHub), and AI Arcade games.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Setup Instructions -->
+        <div class="status-box">
+            <h2>🔧 Setup Instructions</h2>
+
+            <div class="warning">
+                <div class="warning-title">⚠️ API Keys Required</div>
+                <p>The Lumenis Reactor requires API keys to function:</p>
+                <ul style="margin-top: 10px; margin-left: 20px;">
+                    <li><strong>NVIDIA API Key</strong> - For Nemotron models (Forge & Oracle seats)</li>
+                    <li><strong>Anthropic API Key</strong> - For Claude models (main reactor)</li>
+                    <li><strong>Astra DB Credentials</strong> - For persistent memory (optional)</li>
+                </ul>
+            </div>
+
+            <h3 style="color: #00f0ff; margin: 20px 0 10px 0;">Step 1: Clone the Repository</h3>
+            <div class="code-block">
+                <pre>git clone https://github.com/one2lv-com/One2lvos.git
+cd One2lvos</pre>
+            </div>
+
+            <h3 style="color: #00f0ff; margin: 20px 0 10px 0;">Step 2: Configure Environment</h3>
+            <div class="code-block">
+                <pre># Copy the master .env template
+cp .env.master .env
+
+# Edit .env and add your API keys
+nano .env
+
+# Required keys:
+ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
+NVIDIA_API_KEY=nvapi-your-key-here
+ASTRA_DB_API_ENDPOINT=your-endpoint-here
+ASTRA_DB_APPLICATION_TOKEN=your-token-here</pre>
+            </div>
+
+            <h3 style="color: #00f0ff; margin: 20px 0 10px 0;">Step 3: Install Dependencies</h3>
+            <div class="code-block">
+                <pre>pip install -r requirements.txt
+
+# Or install manually:
+pip install fastapi uvicorn anthropic openai httpx aiofiles astrapy</pre>
+            </div>
+
+            <h3 style="color: #00f0ff; margin: 20px 0 10px 0;">Step 4: Start the Reactor</h3>
+            <div class="code-block">
+                <pre># Using the startup script:
+./start-lumenis-reactor.sh
+
+# Or manually:
+python3 lumenis-main.py
+
+# Or with uvicorn (with auto-reload):
+uvicorn lumenis-main:app --host 0.0.0.0 --port 3002 --reload</pre>
+            </div>
+
+            <h3 style="color: #00f0ff; margin: 20px 0 10px 0;">Step 5: Access the Chat UI</h3>
+            <div class="code-block">
+                <pre># Open in your browser:
+http://localhost:3002
+
+# WebSocket endpoint:
+ws://localhost:3002/ws
+
+# API status:
+http://localhost:3002/api/status</pre>
+            </div>
+        </div>
+
+        <!-- Architecture -->
+        <div class="status-box">
+            <h2>🏗️ Architecture</h2>
+            <div style="color: #8888cc; margin: 20px 0;">
+                <p style="margin-bottom: 10px;"><strong style="color: #00f0ff;">Frontend:</strong></p>
+                <ul style="margin-left: 20px; margin-bottom: 20px;">
+                    <li>Pure HTML5/CSS3/JavaScript (no frameworks)</li>
+                    <li>WebSocket API for real-time communication</li>
+                    <li>Canvas API for animated background</li>
+                    <li>CSS Grid for responsive layout</li>
+                    <li>~60KB total (uncompressed, self-contained)</li>
+                </ul>
+
+                <p style="margin-bottom: 10px;"><strong style="color: #00f0ff;">Backend:</strong></p>
+                <ul style="margin-left: 20px; margin-bottom: 20px;">
+                    <li>FastAPI server (lumenis-main.py)</li>
+                    <li>WebSocket endpoint at /ws</li>
+                    <li>ITT Council orchestration</li>
+                    <li>Dual LLM support (Claude + NVIDIA Nemotron)</li>
+                    <li>Astra DB vector memory</li>
+                </ul>
+
+                <p style="margin-bottom: 10px;"><strong style="color: #00f0ff;">Council Flow:</strong></p>
+                <ol style="margin-left: 20px;">
+                    <li>User sends message → WebSocket</li>
+                    <li>Sentinel checks security → risk assessment</li>
+                    <li>Navigator classifies intent → routing plan</li>
+                    <li>Witness retrieves memory → context injection</li>
+                    <li>Specialist seats (Forge/Oracle/Hermes/Gambit) → execute tasks</li>
+                    <li>Weaver synthesizes → final response</li>
+                    <li>Stream to client → token-by-token display</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Links -->
+        <div style="text-align: center; margin: 40px 0;">
+            <a href="https://github.com/one2lv-com/One2lvos" class="button">View on GitHub</a>
+            <a href="https://github.com/one2lv-com/One2lvos/blob/main/CHAT_UI_README.md" class="button">Read Documentation</a>
+            <a href="https://github.com/one2lv-com/One2lvos/blob/main/static/index.html" class="button">View Source</a>
+        </div>
+
+        <!-- Footer -->
+        <div style="text-align: center; color: #8888cc; margin-top: 60px; padding: 20px; border-top: 1px solid rgba(0, 240, 255, 0.3);">
+            <p><strong>Lumenis Reactor Core</strong> - Sovereign AI Architecture</p>
+            <p style="margin-top: 10px;">Council of Nine • Rocky the Raccoon • One2lvOS</p>
+            <p style="margin-top: 10px; font-size: 12px;">Version 1.0.0 • Last Updated: 2026-10-18</p>
+        </div>
+    </div>
+</body>
+</html>
