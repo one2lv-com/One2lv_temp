@@ -1,0 +1,31 @@
+import express from "express";
+import { requireAuth } from "../lib/auth.js";
+import { getBootState, createSnapshot, restoreSnapshot, getRecoveryChecklist } from "../lib/boot-state.js";
+
+const router = express.Router();
+
+router.get("/state", (_req, res) => {
+  res.json({ ok: true, state: getBootState(), checklist: getRecoveryChecklist() });
+});
+
+router.post("/snapshot", requireAuth, (req, res) => {
+  try {
+    const { path, label } = req.body || {};
+    const snapshot = createSnapshot(String(path || "notes.txt"), String(label || "manual"));
+    res.json({ ok: true, snapshot });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+router.post("/restore", requireAuth, (req, res) => {
+  try {
+    const { snapshotId, targetPath } = req.body || {};
+    const result = restoreSnapshot(String(snapshotId || ""), String(targetPath || "notes.txt"));
+    res.json({ ok: true, result });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+export default router;

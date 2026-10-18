@@ -1,0 +1,7 @@
+Package: one2lvos-ix
+Version: 5.0
+Section: utils
+Priority: optional
+Architecture: all
+Maintainer: One2lv <root@one2lv>
+Description: one2lvos_ix atomic recovery-first runtime

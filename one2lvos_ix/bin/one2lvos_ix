@@ -1,0 +1,140 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_NAME="one2lvos_ix"
+VERSION="v5.0"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+MODULES_CONF="${ROOT_DIR}/modules.conf"
+QUIET=0
+NO_COLOR=0
+INTERACTIVE=0
+SIM_MODE=1
+LOG_DIR="${HOME}/Registry_of_Thought"
+LOG_FILE="${LOG_DIR}/one2lvos_ix.boot.log"
+
+usage() {
+  cat <<EOF
+${APP_NAME} ${VERSION}
+
+Usage:
+  one2lvos_ix [command] [options]
+
+Commands:
+  boot              Run boot sequence (default)
+  list-modules      Show discovered modules
+  run <module>      Run one module by name
+  doctor            Check dependencies / environment
+
+Options:
+  --modules <path>  Path to modules.conf (default: ${MODULES_CONF})
+  --log-dir <path>  Log directory (default: ${LOG_DIR})
+  --quiet           No stdout; still logs
+  --no-color        Disable ANSI color
+  --interactive     Interactive selection menu (if gum exists, uses it)
+  --real            Disable simulation delays (SIM_MODE=0)
+  -h, --help        Show help
+EOF
+}
+
+cmd="${1:-boot}"
+shift || true
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --modules) MODULES_CONF="${2:?missing path}"; shift 2 ;;
+    --log-dir) LOG_DIR="${2:?missing path}"; shift 2 ;;
+    --quiet) QUIET=1; shift ;;
+    --no-color) NO_COLOR=1; shift ;;
+    --interactive) INTERACTIVE=1; shift ;;
+    --real) SIM_MODE=0; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown option: $1" >&2; usage; exit 2 ;;
+  esac
+done
+
+source "${ROOT_DIR}/lib/log.sh"
+source "${ROOT_DIR}/lib/ui.sh"
+source "${ROOT_DIR}/lib/modules.sh"
+source "${ROOT_DIR}/lib/sim.sh"
+
+init_logging "${LOG_DIR}" "${LOG_FILE}" "${QUIET}"
+init_ui "${NO_COLOR}"
+
+on_err() {
+  say "${RED}[FAIL]${RST} Boot halted at line ${1}. Exit code: ${2}"
+  say "${DIM}[INFO]${RST} Check log: ${LOG_FILE}"
+}
+trap 'on_err $LINENO $?' ERR
+
+logo() {
+  cat <<'EOF'
+   ____             ___       ___   _____   _____
+  / __ \____  ___  |__ \     / (_) / ___/  /  _/
+ / / / / __ \/ _ \ __/ /    / / /  \__ \   / /
+/ /_/ / / / /  __// __/ _  / / /  ___/ / _/ /
+\____/_/ /_/\___//____(_) /_/_/  /____/ /___/
+EOF
+}
+
+boot_sequence() {
+  clear 2>/dev/null || true
+  ui_color "${MAG}"; logo; ui_color "${RST}"
+
+  say "${BOLD}===============================================${RST}"
+  say "${BOLD}[BOOT]${RST} ${APP_NAME} ${VERSION}"
+  say "${BOLD}===============================================${RST}"
+
+  ui_progress "Boot profile warm-up" 0.8
+  say "${GRN}[OK]${RST} Boot profile ready"
+
+  load_modules_conf "${MODULES_CONF}"
+  discover_modules "${ROOT_DIR}/modules"
+
+  if [[ "${INTERACTIVE}" -eq 1 ]]; then
+    interactive_module_run
+  else
+    run_configured_modules "${SIM_MODE}"
+  fi
+
+  say "${DIM}-----------------------------------------------${RST}"
+  say "${GRN}[READY]${RST} System operational"
+  say "${DIM}-----------------------------------------------${RST}"
+  say "${DIM}[DONE]${RST} Boot log written to: ${LOG_FILE}"
+}
+
+doctor() {
+  say "${BOLD}Doctor:${RST}"
+  say " - bash: $(bash --version | head -n1)"
+  if command -v gum >/dev/null 2>&1; then
+    say " - gum: found ($(gum --version 2>/dev/null || true))"
+  else
+    say " - gum: not found (optional)"
+  fi
+  say " - modules.conf: ${MODULES_CONF}"
+  [[ -f "${MODULES_CONF}" ]] && say "   ${GRN}[OK]${RST} exists" || say "   ${YLW}[WARN]${RST} missing"
+  say " - modules dir: ${ROOT_DIR}/modules"
+  [[ -d "${ROOT_DIR}/modules" ]] && say "   ${GRN}[OK]${RST} exists" || say "   ${YLW}[WARN]${RST} missing"
+}
+
+case "${cmd}" in
+  boot) boot_sequence ;;
+  list-modules)
+    load_modules_conf "${MODULES_CONF}"
+    discover_modules "${ROOT_DIR}/modules"
+    list_modules
+    ;;
+  run)
+    module="${1:-}"
+    [[ -z "${module}" ]] && { echo "Missing module name"; exit 2; }
+    load_modules_conf "${MODULES_CONF}"
+    discover_modules "${ROOT_DIR}/modules"
+    run_one_module "${module}" "${SIM_MODE}"
+    ;;
+  doctor) doctor ;;
+  *)
+    echo "Unknown command: ${cmd}" >&2
+    usage
+    exit 2
+    ;;
+esac

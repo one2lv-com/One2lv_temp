@@ -97,6 +97,9 @@ class MatonBridge:
         params: Optional[dict] = None,
     ) -> dict:
         """Execute a single API call through the Maton gateway."""
+        if not self.api_key or self.api_key.startswith("INJECTED"):
+            return {"error": "MATON_API_KEY not configured"}
+
         url = f"{MATON_API_BASE}/{app}{path}"
         if params:
             qs = "&".join(f"{k}={urllib.parse.quote(str(v))}" for k, v in params.items())

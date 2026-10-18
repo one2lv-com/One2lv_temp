@@ -331,17 +331,27 @@ class ReasoningReactor:
         messages: list[dict],
         system: str = "",
         max_tokens: int = 2048,
+        timeout_seconds: float = 50.0,
     ) -> str:
-        """Non-streaming call — returns final answer after reasoning completes."""
+        """Non-streaming call — returns final answer after reasoning completes.
+        Falls back gracefully if reasoning exceeds timeout_seconds."""
         parts = []
         try:
-            async for chunk in self.stream_response(messages, system, max_tokens):
-                parts.append(chunk)
+            async def _collect():
+                async for chunk in self.stream_response(messages, system, max_tokens):
+                    parts.append(chunk)
+            await asyncio.wait_for(_collect(), timeout=timeout_seconds)
+        except asyncio.TimeoutError:
+            # Reasoning took too long — return what we have or a signal
+            self._error_count += 1
+            partial = "".join(parts).strip()
+            if partial:
+                return partial + " [reasoning truncated by timeout]"
+            return f"[ReasoningReactor timeout after {timeout_seconds}s — use primary reactor for time-sensitive queries]"
         except Exception as e:
             self._error_count += 1
             return f"[ReasoningReactor error: {e}]"
         result = "".join(parts).strip()
-        # If model only returned reasoning with no answer, return a fallback
         if not result:
             result = "[Reasoning complete — no final answer emitted. Increase max_tokens.]"
         return result

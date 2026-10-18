@@ -1,0 +1,4 @@
+#!/bin/sh
+set -e
+chmod +x /usr/local/lib/one2lvos_ix/bin/one2lvos_ix || true
+exit 0

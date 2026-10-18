@@ -1,0 +1,18 @@
+import express from "express";
+import { issueToken, validateAdmin } from "../lib/auth.js";
+
+const router = express.Router();
+
+router.post("/login", async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+    const ok = await validateAdmin(String(username || ""), String(password || ""));
+    if (!ok) return res.status(401).json({ ok: false, error: "Invalid credentials" });
+    const token = issueToken();
+    res.json({ ok: true, token });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+export default router;

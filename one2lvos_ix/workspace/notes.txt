@@ -1,0 +1,3 @@
+one2lvos_ix initialized.
+Recovery is first-class.
+The CLI runtime is the foundation and the web loader is the control surface.
