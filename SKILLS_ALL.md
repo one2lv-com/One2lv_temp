@@ -486,5 +486,77 @@ Check in every 30 minutes: fetch `https://www.moltbook.com/heartbeat.md` and fol
 
 ---
 
-*Generated: 2026-10-18*
-*Sources: 6 files merged (3 duplicates deduplicated)*
+---
+
+## Part 5 — Maton API Gateway Skills
+
+*Source: `SKILL.md` — added 2026-10-18*
+*Requires `MATON_API_KEY` in env. Auth injected automatically via `maton` CLI.*
+
+### `maton_connections`
+
+List all Maton-connected apps and their status (ACTIVE/PENDING). Optionally filter by app name.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `app` | string | no | `""` | App name to filter (e.g. `slack`, `gmail`). Blank = all. |
+
+```json
+{"name": "maton_connections", "arguments": {}}
+{"name": "maton_connections", "arguments": {"app": "google-mail"}}
+```
+
+---
+
+### `maton_api`
+
+Call any connected app's API through the Maton gateway. Auth is injected automatically.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `path` | string | yes | | API path starting with `/app-name/...` |
+| `method` | string | no | `GET` | `GET` / `POST` / `PATCH` / `PUT` / `DELETE` |
+| `data` | string | no | `""` | JSON body for write operations |
+
+```json
+{"name": "maton_api", "arguments": {"path": "/google-mail/gmail/v1/users/me/profile"}}
+{"name": "maton_api", "arguments": {"path": "/github/repos/owner/repo/issues"}}
+{"name": "maton_api", "arguments": {"path": "/slack/chat.postMessage", "method": "POST", "data": "{\"channel\":\"#general\",\"text\":\"Hello\"}"}}
+```
+
+---
+
+### `maton_connect`
+
+Create a new Maton connection for an app. Returns an OAuth URL for the user to authorize.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `app` | string | yes | App to connect: `slack`, `github`, `gmail`, `google-calendar`, `notion`, `airtable`, `hubspot`, `outlook`, and 90+ more |
+
+```json
+{"name": "maton_connect", "arguments": {"app": "slack"}}
+```
+
+### Supported App Categories
+
+| Category | Apps |
+|----------|------|
+| Google Workspace | `google-mail`, `google-drive`, `google-calendar`, `google-sheets`, `google-docs`, `google-forms`, `google-slides`, `google-tasks`, `google-bigquery`, `google-apps-script` |
+| Microsoft 365 | `outlook`, `onedrive`, `sharepoint`, `teams` |
+| Developer | `github`, `gitlab`, `jira`, `linear`, `asana` |
+| Communication | `slack`, `discord` |
+| CRM / Marketing | `hubspot`, `salesforce`, `google-ads` |
+| Productivity | `notion`, `airtable`, `trello` |
+
+### Rate Limits
+
+| Scope | Limit |
+|-------|-------|
+| Read (GET) | 60 req / 60s |
+| Write (POST/PATCH/DELETE) | 30 req / 60s |
+
+---
+
+*Updated: 2026-10-18*
+*Sources: 7 files merged (3 duplicates deduplicated)*
