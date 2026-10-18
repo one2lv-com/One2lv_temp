@@ -54,12 +54,7 @@ else
     echo -e "${GREEN}✓ NVIDIA_API_KEY configured${NC}"
 fi
 
-if [ -z "$ANTHROPIC_API_KEY" ]; then
-    echo -e "${YELLOW}⚠️  ANTHROPIC_API_KEY not set${NC}"
-    echo "Some features may not work without Anthropic key"
-else
-    echo -e "${GREEN}✓ ANTHROPIC_API_KEY configured${NC}"
-fi
+echo -e "${GREEN}✓ Reactor fully powered by NVIDIA (Anthropic not required)${NC}"
 
 if [ -z "$ASTRA_DB_API_ENDPOINT" ]; then
     echo -e "${YELLOW}⚠️  ASTRA_DB_API_ENDPOINT not set${NC}"
@@ -75,7 +70,6 @@ MISSING_DEPS=()
 
 python3 -c "import fastapi" 2>/dev/null || MISSING_DEPS+=("fastapi")
 python3 -c "import uvicorn" 2>/dev/null || MISSING_DEPS+=("uvicorn")
-python3 -c "import anthropic" 2>/dev/null || MISSING_DEPS+=("anthropic")
 python3 -c "import httpx" 2>/dev/null || MISSING_DEPS+=("httpx")
 python3 -c "import aiofiles" 2>/dev/null || MISSING_DEPS+=("aiofiles")
 

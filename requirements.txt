@@ -28,17 +28,18 @@ httpx>=0.26.0
 astrapy>=1.0.0
 
 # ============================================
-# AI & Embeddings
+# AI & Embeddings (NVIDIA-Powered)
 # ============================================
+# Using OpenAI SDK format for NVIDIA API compatibility
 openai>=1.0.0
-anthropic>=0.18.0
 
 # ============================================
-# NVIDIA AI (Optional)
+# NVIDIA AI (Primary Reactor)
 # ============================================
-# nvidia-nim>=0.1.0
-# transformers>=4.35.0
-# torch>=2.1.0
+# All AI operations powered by NVIDIA APIs
+# - Nemotron-Super-49B: Primary reactor
+# - Gemma-4-31B-IT: Secondary reactor (Forge & Oracle)
+# No additional packages needed - using direct NVIDIA API via httpx
 
 # ============================================
 # Image Processing (O2PNG)

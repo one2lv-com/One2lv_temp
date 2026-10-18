@@ -222,17 +222,19 @@ class CouncilDecision:
 
 class ITTCouncil:
     """
-    The Council of Eight. Orchestrates the seats to produce the best
-    possible response for any given input. Hermes can reach out to
-    Gmail, Drive, GitHub, Dropbox, OneDrive, YouTube, Firebase, and more.
+    The Council of Nine. Orchestrates the seats to produce the best
+    possible response for any given input. Fully powered by NVIDIA.
+
+    - Primary Reactor (Nemotron-Super-49B): Most seats
+    - Secondary Reactor (Gemma-4-31B-IT): Forge & Oracle (code + reasoning)
     """
 
-    # Seats that run on the NVIDIA Gemma reactor (code + reasoning)
-    NVIDIA_SEATS = {"forge", "oracle"}
+    # Seats that run on the secondary NVIDIA Gemma reactor (code + reasoning)
+    SECONDARY_SEATS = {"forge", "oracle"}
 
     def __init__(self, reactor: LumenisReactor, compass: FluxCompass):
-        self.reactor = reactor
-        self.nvidia = NvidiaReactor()
+        self.reactor = reactor  # Primary NVIDIA reactor
+        self.nvidia = NvidiaReactor()  # Secondary NVIDIA reactor
         self.compass = compass
         self.bridge = MatonBridge()
         self.arcade = ArcadeBridge()
@@ -253,8 +255,8 @@ class ITTCouncil:
                 "content": f"{user_message}\n\n{extra_context}".strip(),
             }
         ]
-        # Route Forge and Oracle to NVIDIA Gemma; everything else stays on Claude
-        backend = self.nvidia if seat_key in self.NVIDIA_SEATS else self.reactor
+        # Route Forge and Oracle to secondary Gemma; everything else uses primary Nemotron
+        backend = self.nvidia if seat_key in self.SECONDARY_SEATS else self.reactor
         return await backend.call(
             messages=messages,
             system=seat["system"],

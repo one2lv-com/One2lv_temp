@@ -5,7 +5,7 @@ The foundation of energy. Runs at the Thermal Baseline of 0.18 (mapped from 18°
 This is the "Cool Fire" — fully powered, emotionally and logically stable.
 
 Real implementation:
-  - Primary:   Claude claude-opus-4-6 at temperature 0.18 (adaptive thinking)
+  - Primary:   NVIDIA Llama-3.3-Nemotron-Super-49B at temperature 0.18 (main reactor)
   - Secondary: NVIDIA Gemma-4-31B-IT with thinking enabled (streaming SSE)
   - 73ms heartbeat interval (mapped from 73Hz)
   - Streaming output on both backends
@@ -18,17 +18,16 @@ import time
 from dataclasses import dataclass, field
 from typing import AsyncIterator
 
-import anthropic
 import httpx
 
 # ─── Constants ───────────────────────────────────────────────────────────────
 THERMAL_BASELINE = 0.18          # 18°C → 0.18 temperature
 PULSE_INTERVAL_MS = 73           # 73Hz → 73ms
 NODE_COUNT = 144_382             # Vanguard lattice size (used for pool sizing / display)
-MODEL = "claude-opus-4-6"
 
 NVIDIA_API_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
-NVIDIA_MODEL   = "google/gemma-4-31b-it"
+NVIDIA_PRIMARY_MODEL = "nvidia/llama-3.3-nemotron-super-49b-v1"
+NVIDIA_SECONDARY_MODEL = "google/gemma-4-31b-it"
 
 @dataclass
 class ReactorStatus:
@@ -44,14 +43,17 @@ class LumenisReactor:
     """
     The Reactor Core. Maintains the thermal baseline, drives the heartbeat,
     and provides the LLM client with the correct energy configuration.
+    Now powered entirely by NVIDIA Nemotron-Super-49B.
     """
 
     def __init__(self):
-        self.client = anthropic.AsyncAnthropic()
+        self.api_key = os.environ.get("NVIDIA_API_KEY", "")
+        self.model = NVIDIA_PRIMARY_MODEL
         self.status = ReactorStatus()
         self._start_time = time.time()
         self._running = False
         self._pulse_callbacks: list = []
+        self._call_count = 0
 
     def on_pulse(self, cb):
         self._pulse_callbacks.append(cb)
@@ -84,22 +86,48 @@ class LumenisReactor:
     ) -> AsyncIterator[str]:
         """
         Core LLM streaming call at the Thermal Baseline temperature.
-        Uses adaptive thinking for complex reasoning.
+        Uses NVIDIA Nemotron-Super-49B for primary reasoning.
         """
-        async with self.client.messages.stream(
-            model=MODEL,
-            max_tokens=max_tokens,
-            temperature=THERMAL_BASELINE,
-            thinking={"type": "adaptive"},
-            system=system,
-            messages=messages,
-        ) as stream:
-            async for event in stream:
-                if (
-                    event.type == "content_block_delta"
-                    and event.delta.type == "text_delta"
-                ):
-                    yield event.delta.text
+        full_messages = []
+        if system:
+            full_messages.append({"role": "system", "content": system})
+        full_messages.extend(messages)
+
+        payload = {
+            "model": self.model,
+            "messages": full_messages,
+            "max_tokens": max_tokens,
+            "temperature": THERMAL_BASELINE,
+            "top_p": 0.95,
+            "stream": True,
+        }
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",
+        }
+
+        async with httpx.AsyncClient(timeout=120) as client:
+            async with client.stream(
+                "POST", NVIDIA_API_URL, headers=headers, json=payload
+            ) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if not line.startswith("data: "):
+                        continue
+                    data = line[6:].strip()
+                    if data == "[DONE]":
+                        break
+                    try:
+                        chunk = json.loads(data)
+                        delta = chunk["choices"][0]["delta"]
+                        text = delta.get("content", "")
+                        if text:
+                            self._call_count += 1
+                            yield text
+                    except Exception:
+                        continue
 
     async def call(
         self,
@@ -108,17 +136,13 @@ class LumenisReactor:
         max_tokens: int = 2048,
     ) -> str:
         """Single non-streaming call at the Thermal Baseline."""
-        response = await self.client.messages.create(
-            model=MODEL,
-            max_tokens=max_tokens,
-            temperature=THERMAL_BASELINE,
-            thinking={"type": "adaptive"},
-            system=system,
-            messages=messages,
-        )
-        return next(
-            (b.text for b in response.content if b.type == "text"), ""
-        )
+        parts = []
+        try:
+            async for chunk in self.stream_response(messages, system, max_tokens):
+                parts.append(chunk)
+        except Exception as e:
+            return f"[LumenisReactor error: {e}]"
+        return "".join(parts)
 
     def get_status(self) -> dict:
         return {
@@ -128,7 +152,9 @@ class LumenisReactor:
             "active_nodes": self.status.active_nodes,
             "frequency_hz": round(self.status.frequency_hz, 2),
             "node_lattice_size": NODE_COUNT,
-            "model": MODEL,
+            "model": self.model,
+            "tokens_streamed": self._call_count,
+            "powered_by": "NVIDIA",
         }
 
 
@@ -141,7 +167,7 @@ class NvidiaReactor:
 
     def __init__(self):
         self.api_key = os.environ.get("NVIDIA_API_KEY", "")
-        self.model = NVIDIA_MODEL
+        self.model = NVIDIA_SECONDARY_MODEL
         self._call_count = 0
         self._error_count = 0
 
