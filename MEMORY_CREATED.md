@@ -12,7 +12,7 @@ A comprehensive system configuration memory has been created in your Astra DB ve
 | **Timestamp** | 2026-09-27T02:17:51.675985 UTC |
 | **Type** | system_configuration |
 | **Category** | environment_setup |
-| **Vector Dimensions** | 1024 |
+| **Vector Dimensions** | 4096 |
 | **Database** | one2lvOS (9b5b1939-fd21-477d-95b8-a1aecc5f90b9) |
 | **Collection** | aria_memory |
 | **Status** | ✅ Active |
@@ -32,13 +32,13 @@ The memory contains complete documentation of:
 - Database ID and region (AWS us-east-2)
 - Keyspace: one2lvOS
 - Collection: aria_memory
-- Vector dimensions: 1024
+- Vector dimensions: 4096
 
 **L2 Skills (NVIDIA AI)**:
 - 6 different API keys configured
 - LLM Model: llama-3.3-nemotron-super-49b-v1
 - Base URL configured
-- ⚠️ Note: Embedding model needs update (nv-embedqa-e5-v5 deprecated)
+- Embedding model: `nvidia/nv-embed-v2` (4096-dim, cosine similarity)
 
 **External Gateways**:
 - Discord bot (Channel: 719260428836012032)

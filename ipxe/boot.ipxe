@@ -1,0 +1,59 @@
+#!ipxe
+# One2lvOS iPXE Network Boot Script
+# Run on any machine with iPXE to boot One2lvOS over HTTP.
+# Usage: chain --autofree http://<server-ip>:9000/ipxe/boot.ipxe
+
+echo
+echo ============================================================
+echo   ONE2LVOS  iPXE  NETWORK BOOT
+echo ============================================================
+echo
+
+# Detect network
+isset ${net0/mac} || goto no_nic
+dhcp net0 || goto dhcp_fail
+
+echo   MAC  : ${net0/mac}
+echo   IP   : ${net0/ip}
+echo   GW   : ${net0/gateway}
+echo
+
+:menu
+menu One2lvOS Network Boot
+item --gap        -- Boot options --
+item boot         Boot One2lvOS (HTTP)
+item bios         BIOS Setup
+item shell        iPXE Shell
+item --gap        -- Advanced --
+item sanboot      Boot from SAN (iSCSI)
+item --gap
+choose --default boot --timeout 5000 selected || goto shell
+
+goto ${selected}
+
+:boot
+echo Fetching One2lvOS...
+chain --autofree http://${next-server}:9000/os ||
+chain --autofree http://${net0/next-server}:9000/os ||
+echo Boot failed.
+goto menu
+
+:bios
+chain --autofree http://${next-server}:9000/bios ||
+goto menu
+
+:shell
+shell
+goto menu
+
+:sanboot
+echo iSCSI SAN boot not configured.
+goto menu
+
+:dhcp_fail
+echo DHCP failed. Entering shell.
+shell
+
+:no_nic
+echo No NIC found.
+shell
