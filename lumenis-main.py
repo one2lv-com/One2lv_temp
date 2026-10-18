@@ -204,11 +204,15 @@ async def handle_chat(ws: WebSocket, msg: dict):
     await ws.send_json({"type": "processing_start", "session_id": session_id})
 
     # Streaming callback: sends seat activity and response chunks to the client
+    # Gracefully handles client disconnects mid-reasoning (RuntimeError from closed WS)
     async def stream_cb(seat: str, text: str):
-        if seat == "response":
-            await ws.send_json({"type": "response_chunk", "text": text})
-        else:
-            await ws.send_json({"type": "seat_activity", "seat": seat, "text": text})
+        try:
+            if seat == "response":
+                await ws.send_json({"type": "response_chunk", "text": text})
+            else:
+                await ws.send_json({"type": "seat_activity", "seat": seat, "text": text})
+        except (RuntimeError, Exception):
+            pass  # Client disconnected while reasoning model was still thinking
 
     # Run through the council in the node pool
     async def council_task():
@@ -234,8 +238,9 @@ async def handle_chat(ws: WebSocket, msg: dict):
     # Persist assistant message
     compass.add_message(session_id, "assistant", decision.final_response, "weaver")
 
-    # Send completion metadata
-    await ws.send_json(
+    # Send completion metadata (client may have disconnected during long reasoning)
+    try:
+      await ws.send_json(
         {
             "type": "processing_done",
             "session_id": session_id,
@@ -249,6 +254,8 @@ async def handle_chat(ws: WebSocket, msg: dict):
             },
         }
     )
+    except (RuntimeError, Exception):
+        pass  # Client disconnected before completion could be sent
 
 
 # ── Frontier #3: Human-Centered Design — Serve v8 HUD ────────────────────────

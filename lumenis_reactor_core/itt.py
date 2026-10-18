@@ -261,6 +261,7 @@ class ITTCouncil:
         seat_key: str,
         user_message: str,
         extra_context: str = "",
+        complexity: str = "simple",
     ) -> str:
         seat = SEATS[seat_key]
         messages = [
@@ -269,16 +270,19 @@ class ITTCouncil:
                 "content": f"{user_message}\n\n{extra_context}".strip(),
             }
         ]
+        # Token budgets per complexity — reasoning models scale with depth needed
+        reasoning_budget = {"simple": 800, "medium": 1400, "complex": 2048}.get(complexity, 1000)
+
         # Route to the appropriate reactor per seat
         # Oracle  → Nemotron Lightning (chain-of-thought deep reasoning)
-        # Forge   → DeepSeek Flash (code & technical analysis with CoT)
+        # Forge   → Nemotron Lightning (code & technical analysis with CoT)
         # Others  → LumenisReactor primary (llama-3.2-90b, stable/fast)
         if seat_key == self.ORACLE_SEAT:
             backend = self.oracle_reactor
-            max_tok = 2048  # reasoning models need extra tokens for CoT
+            max_tok = reasoning_budget
         elif seat_key == self.FORGE_SEAT:
             backend = self.forge_reactor
-            max_tok = 2048
+            max_tok = reasoning_budget
         else:
             backend = self.reactor
             max_tok = 1024
@@ -457,12 +461,12 @@ class ITTCouncil:
 
         if "forge" in seats_needed or intent == "code":
             await notify("forge", "Building [Lightning]...")
-            specialist_output = await self._call_seat("forge", user_message, memory_context)
+            specialist_output = await self._call_seat("forge", user_message, memory_context, complexity=complexity)
             await notify("forge", "✓ Built")
 
         elif "oracle" in seats_needed or intent in ("research", "analysis"):
             await notify("oracle", "Reasoning [Lightning]...")
-            specialist_output = await self._call_seat("oracle", user_message, memory_context)
+            specialist_output = await self._call_seat("oracle", user_message, memory_context, complexity=complexity)
             await notify("oracle", "✓ Answered")
 
         elif "architect" in seats_needed or intent == "system":
