@@ -1,0 +1,10 @@
+{
+  "server_host_gateway": {
+    "ipv4": "140.82.114.3",
+    "port": 443,
+    "protocol": "https",
+    "repo": "github.com/one2lv-com/One2lvos",
+    "url": "https://140.82.114.3:443",
+    "note": "GitHub network v4 IP for one2lv-com/One2lvos — resolved 2026-10-18"
+  }
+}
