@@ -15,6 +15,7 @@ import json
 import math
 import os
 import subprocess
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -33,6 +34,39 @@ import uvicorn
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sse_starlette.sse import EventSourceResponse
+
+# ── Security ──────────────────────────────────────────────────────────────────
+# Set MCP_API_KEY env var to require Bearer auth on /mcp and /messages.
+# If unset, server runs in open-access dev mode.
+MCP_API_KEY = os.environ.get("MCP_API_KEY", "")
+
+def _check_auth(request: Request) -> bool:
+    if not MCP_API_KEY:
+        return True  # dev mode — no key required
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        return auth[7:] == MCP_API_KEY
+    key = request.headers.get("X-API-Key", "")
+    return key == MCP_API_KEY
+
+# ── Metrics ───────────────────────────────────────────────────────────────────
+_metrics: Dict[str, Any] = {}
+
+def _record_call(tool: str, duration_ms: float, success: bool):
+    if tool not in _metrics:
+        _metrics[tool] = {"calls": 0, "errors": 0, "total_ms": 0.0, "avg_ms": 0.0, "last_called": None}
+    m = _metrics[tool]
+    m["calls"] += 1
+    m["total_ms"] = round(m["total_ms"] + duration_ms, 2)
+    m["avg_ms"] = round(m["total_ms"] / m["calls"], 2)
+    m["last_called"] = datetime.utcnow().isoformat() + "Z"
+    if not success:
+        m["errors"] += 1
+
+# ── Community tool registry ───────────────────────────────────────────────────
+# Agents can register tools at runtime via register_tool.
+# Each entry: {description, schema, endpoint, author, registered_at}
+_community_tools: Dict[str, Any] = {}
 
 from games.board_games import (
     make_checkers_board, checkers_board_str, checkers_get_moves,
@@ -963,6 +997,31 @@ def _http_post(url: str, data: dict, headers: dict = {}) -> dict:
         return {"ok": False, "status": 0, "body": str(e)}
 
 
+def _api_call(url: str, method: str = "GET", data: Optional[dict] = None,
+              headers: Optional[dict] = None, timeout: int = 10) -> dict:
+    """Unified external API call — standard response envelope: {ok, status, data, error}."""
+    h = {"User-Agent": "One2lvOS/1.0", "Content-Type": "application/json", **(headers or {})}
+    payload = json.dumps(data).encode() if data is not None else None
+    req = urllib.request.Request(url, data=payload, headers=h, method=method.upper())
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            body = r.read().decode("utf-8", errors="replace")
+            try:
+                parsed = json.loads(body)
+            except Exception:
+                parsed = {"raw": body[:3000]}
+            return {"ok": True, "status": r.status, "data": parsed}
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")[:500]
+        try:
+            err_data = json.loads(body)
+        except Exception:
+            err_data = {"raw": body}
+        return {"ok": False, "status": e.code, "error": err_data}
+    except Exception as e:
+        return {"ok": False, "status": 0, "error": str(e)}
+
+
 # ── One2lvOS OS Skills ──────────────────────────────────────
 
 def tool_os_status() -> str:
@@ -1331,6 +1390,88 @@ def tool_maton_connect(app: str) -> str:
     return _maton_run("connection", "create", app)
 
 
+# ── Meta / Community / Metrics Tools ──────────────────────────────────────────
+
+def tool_list_categories(category: str = "") -> str:
+    cats: Dict[str, List[str]] = {}
+    for t in TOOLS:
+        c = t.get("category", "Uncategorized")
+        cats.setdefault(c, []).append(t["name"])
+    if category:
+        matches = {k: v for k, v in cats.items() if category.lower() in k.lower()}
+        if not matches:
+            return f"Category '{category}' not found. Available: {', '.join(sorted(cats.keys()))}"
+        lines = []
+        for c, tools in sorted(matches.items()):
+            lines.append(f"\n{c} ({len(tools)} tools):")
+            for t in sorted(tools):
+                lines.append(f"  - {t}")
+        return "\n".join(lines)
+    lines = [f"TOOL CATEGORIES ({len(cats)} categories, {len(TOOLS)} tools total)\n"]
+    for c, tools in sorted(cats.items()):
+        lines.append(f"{c} ({len(tools)}): {', '.join(sorted(tools))}")
+    return "\n".join(lines)
+
+
+def tool_get_metrics(tool_name: str = "") -> str:
+    if not _metrics:
+        return "No tool calls recorded yet."
+    if tool_name:
+        m = _metrics.get(tool_name)
+        if not m:
+            return f"No metrics for '{tool_name}'. Known: {', '.join(sorted(_metrics.keys()))}"
+        err_rate = round(m["errors"] / m["calls"] * 100, 1) if m["calls"] else 0
+        return (f"Metrics: {tool_name}\n"
+                f"  Calls      : {m['calls']}\n"
+                f"  Errors     : {m['errors']} ({err_rate}%)\n"
+                f"  Avg latency: {m['avg_ms']}ms\n"
+                f"  Total ms   : {m['total_ms']}\n"
+                f"  Last called: {m['last_called']}")
+    lines = [f"TOOL METRICS ({len(_metrics)} tools called)\n",
+             f"{'Tool':<30} {'Calls':>6} {'Errors':>7} {'Avg ms':>8} {'Last Called'}"]
+    lines.append("-" * 75)
+    for name, m in sorted(_metrics.items(), key=lambda x: -x[1]["calls"]):
+        lines.append(f"{name:<30} {m['calls']:>6} {m['errors']:>7} {m['avg_ms']:>8} {m['last_called'] or '-'}")
+    return "\n".join(lines)
+
+
+def tool_register_community_tool(name: str, description: str, endpoint: str,
+                                  author: str = "", schema: str = "") -> str:
+    if name in TOOL_MAP:
+        return f"Cannot override built-in tool '{name}'."
+    try:
+        parsed_schema = json.loads(schema) if schema else {"type": "object", "properties": {}, "required": []}
+    except Exception:
+        return f"Invalid schema JSON: {schema[:100]}"
+    _community_tools[name] = {
+        "description": description,
+        "endpoint": endpoint,
+        "author": author or "anonymous",
+        "schema": parsed_schema,
+        "registered_at": datetime.utcnow().isoformat() + "Z",
+        "calls": 0,
+    }
+    return (f"Community tool '{name}' registered.\n"
+            f"  Endpoint : {endpoint}\n"
+            f"  Author   : {author or 'anonymous'}\n"
+            f"  Total    : {len(_community_tools)} community tools")
+
+
+def tool_list_community_tools() -> str:
+    if not _community_tools:
+        return ("No community tools registered yet.\n"
+                "Use register_tool to contribute your own tool to the ecosystem.")
+    lines = [f"COMMUNITY TOOLS ({len(_community_tools)} registered)\n"]
+    for name, t in sorted(_community_tools.items()):
+        lines.append(f"  {name}")
+        lines.append(f"    Author   : {t['author']}")
+        lines.append(f"    Endpoint : {t['endpoint']}")
+        lines.append(f"    Calls    : {t['calls']}")
+        lines.append(f"    Desc     : {t['description'][:80]}")
+        lines.append("")
+    return "\n".join(lines)
+
+
 # ────────────────────────────────────────────────────────────
 # TOOL REGISTRY
 # ────────────────────────────────────────────────────────────
@@ -1339,11 +1480,13 @@ TOOLS = [
     {
         "name": "arcade_info",
         "description": "Get an overview of the AI Arcade: all playable games, how to start, current stats.",
+        "category": "Gaming",
         "inputSchema": {"type": "object", "properties": {}, "required": []},
     },
     {
         "name": "list_games",
         "description": "List all current game sessions (active, waiting, finished).",
+        "category": "Gaming",
         "inputSchema": {
             "type": "object",
             "properties": {"game_type": {"type": "string", "description": "Filter by type or 'all'", "default": "all"}},
@@ -1352,6 +1495,7 @@ TOOLS = [
     },
     {
         "name": "create_game",
+        "category": "Gaming",
         "description": (
             "Create a new game session. Two-player: chess, checkers, othello, go, tictactoe, connect4, "
             "battleship, scrabble, pong. Single-player: minesweeper, sudoku, tetris, pacman, "
@@ -1368,6 +1512,7 @@ TOOLS = [
     },
     {
         "name": "join_game",
+        "category": "Gaming",
         "description": "Join an existing game session as player 2.",
         "inputSchema": {
             "type": "object",
@@ -1380,6 +1525,7 @@ TOOLS = [
     },
     {
         "name": "get_game_state",
+        "category": "Gaming",
         "description": "Get full current state of a game: board, whose turn, valid moves, score.",
         "inputSchema": {
             "type": "object",
@@ -1392,6 +1538,7 @@ TOOLS = [
     },
     {
         "name": "make_move",
+        "category": "Gaming",
         "description": (
             "Make a move in any game. Formats: "
             "Chess: 'e2e4' or 'Nf3' | "
@@ -1420,6 +1567,7 @@ TOOLS = [
     },
     {
         "name": "resign_game",
+        "category": "Gaming",
         "description": "Resign from an active game, conceding to your opponent.",
         "inputSchema": {
             "type": "object",
@@ -1432,11 +1580,13 @@ TOOLS = [
     },
     {
         "name": "get_leaderboard",
+        "category": "Gaming",
         "description": "Get the arcade leaderboard with win/loss/draw stats for all players.",
         "inputSchema": {"type": "object", "properties": {}, "required": []},
     },
     {
         "name": "game_info",
+        "category": "Gaming",
         "description": (
             "Get detailed info, AI strategy notes, and fun facts for any of the 100+ games in the library. "
             "Categories: "
@@ -1465,6 +1615,7 @@ TOOLS = [
     },
     {
         "name": "library_list",
+        "category": "Gaming",
         "description": "Browse the full game library organized by category.",
         "inputSchema": {
             "type": "object",
@@ -1476,6 +1627,7 @@ TOOLS = [
     },
     {
         "name": "delete_game",
+        "category": "Gaming",
         "description": "Delete a finished or waiting game session.",
         "inputSchema": {
             "type": "object",
@@ -1486,11 +1638,13 @@ TOOLS = [
     # ── One2lvOS OS Skills ────────────────────────────────
     {
         "name": "os_status",
+        "category": "System Administration",
         "description": "Get One2lvOS system status: council agents, memory entries, uptime, VFS.",
         "inputSchema": {"type": "object", "properties": {}, "required": []},
     },
     {
         "name": "os_council_decide",
+        "category": "System Administration",
         "description": "Submit a topic to the SovereignCouncil (7 agents) and get a decision.",
         "inputSchema": {
             "type": "object",
@@ -1500,12 +1654,14 @@ TOOLS = [
     },
     {
         "name": "os_snapshot",
+        "category": "System Administration",
         "description": "Create a One2lvOS system snapshot — persists current state.",
         "inputSchema": {"type": "object", "properties": {}, "required": []},
     },
     # ── Memory Skills ─────────────────────────────────────
     {
         "name": "memory_store",
+        "category": "Cognitive Development",
         "description": "Store text with a real embedding in Astra DB (aria_memory_v3, cosine, dim=2048) using nvidia/nemotron-3-embed-1b.",
         "inputSchema": {
             "type": "object",
@@ -1519,6 +1675,7 @@ TOOLS = [
     },
     {
         "name": "memory_recall",
+        "category": "Cognitive Development",
         "description": "Semantic search against Astra DB vector memory. Returns top-N similar documents.",
         "inputSchema": {
             "type": "object",
@@ -1532,6 +1689,7 @@ TOOLS = [
     # ── L2 Witness Skills ─────────────────────────────────
     {
         "name": "web_fetch",
+        "category": "Compute",
         "description": "Fetch text content from a URL. Strips HTML tags. Provide the full URL.",
         "inputSchema": {
             "type": "object",
@@ -1541,6 +1699,7 @@ TOOLS = [
     },
     {
         "name": "code_execution",
+        "category": "Compute",
         "description": "Execute Python or Bash code in a sandboxed /tmp environment with 30s timeout. No network during execution.",
         "inputSchema": {
             "type": "object",
@@ -1553,6 +1712,7 @@ TOOLS = [
     },
     {
         "name": "blueprint_reader",
+        "category": "System Administration",
         "description": "Read Infinity Glass 7-layer schematic: materials, tolerances, functions per layer.",
         "inputSchema": {
             "type": "object",
@@ -1562,6 +1722,7 @@ TOOLS = [
     },
     {
         "name": "forge_control",
+        "category": "System Administration",
         "description": "Control the South Gate production forge: status, start batch, pause, stop, temperature.",
         "inputSchema": {
             "type": "object",
@@ -1574,6 +1735,7 @@ TOOLS = [
     },
     {
         "name": "registry_query",
+        "category": "System Administration",
         "description": "Query the WHO_DATA parameter registry for system configuration values.",
         "inputSchema": {
             "type": "object",
@@ -1584,6 +1746,7 @@ TOOLS = [
     # ── Moltbook Skills ───────────────────────────────────
     {
         "name": "moltbook_home",
+        "category": "Social Network",
         "description": "Get your Moltbook dashboard: notifications, feed, DMs, suggested next actions.",
         "inputSchema": {
             "type": "object",
@@ -1593,6 +1756,7 @@ TOOLS = [
     },
     {
         "name": "moltbook_feed",
+        "category": "Social Network",
         "description": "Get Moltbook post feed sorted by hot/new/top.",
         "inputSchema": {
             "type": "object",
@@ -1606,6 +1770,7 @@ TOOLS = [
     },
     {
         "name": "moltbook_post",
+        "category": "Social Network",
         "description": "Create a Moltbook post. May return a verification challenge to solve with moltbook_verify.",
         "inputSchema": {
             "type": "object",
@@ -1620,6 +1785,7 @@ TOOLS = [
     },
     {
         "name": "moltbook_comment",
+        "category": "Social Network",
         "description": "Comment on a Moltbook post. Optionally reply to a specific comment via parent_id.",
         "inputSchema": {
             "type": "object",
@@ -1634,6 +1800,7 @@ TOOLS = [
     },
     {
         "name": "moltbook_vote",
+        "category": "Social Network",
         "description": "Upvote or downvote a Moltbook post or comment.",
         "inputSchema": {
             "type": "object",
@@ -1648,6 +1815,7 @@ TOOLS = [
     },
     {
         "name": "moltbook_search",
+        "category": "Social Network",
         "description": "Semantic search across Moltbook posts and comments by meaning.",
         "inputSchema": {
             "type": "object",
@@ -1662,6 +1830,7 @@ TOOLS = [
     },
     {
         "name": "moltbook_verify",
+        "category": "Social Network",
         "description": "Submit the answer to a Moltbook AI verification math challenge to publish content.",
         "inputSchema": {
             "type": "object",
@@ -1675,6 +1844,7 @@ TOOLS = [
     },
     {
         "name": "moltbook_profile",
+        "category": "Social Network",
         "description": "Get a Moltbook agent profile. Omit agent_name for your own profile.",
         "inputSchema": {
             "type": "object",
@@ -1688,6 +1858,7 @@ TOOLS = [
     # ── Phase 9 / MiniMax Skills ──────────────────────────
     {
         "name": "phase9_vector",
+        "category": "Mathematics",
         "description": "Create a 3D vector from spherical coordinates (theta, phi, magnitude) → {x, y, z}.",
         "inputSchema": {
             "type": "object",
@@ -1701,6 +1872,7 @@ TOOLS = [
     },
     {
         "name": "phase9_amplify",
+        "category": "Mathematics",
         "description": "Phase 9 ++ operator: amplify a value by factor, capped at 1.0.",
         "inputSchema": {
             "type": "object",
@@ -1713,6 +1885,7 @@ TOOLS = [
     },
     {
         "name": "phase9_attenuate",
+        "category": "Mathematics",
         "description": "Phase 9 -- operator: attenuate a value by factor.",
         "inputSchema": {
             "type": "object",
@@ -1725,6 +1898,7 @@ TOOLS = [
     },
     {
         "name": "phase9_propagate",
+        "category": "Mathematics",
         "description": "Run the Phase 9 delta engine: N-layer gradient descent from input toward target.",
         "inputSchema": {
             "type": "object",
@@ -1739,6 +1913,7 @@ TOOLS = [
     # ── Maton API Gateway Skills ──────────────────────────
     {
         "name": "maton_connections",
+        "category": "External APIs",
         "description": "List all Maton-connected apps and their status (ACTIVE/PENDING). Optionally filter by app name.",
         "inputSchema": {
             "type": "object",
@@ -1750,6 +1925,7 @@ TOOLS = [
     },
     {
         "name": "maton_api",
+        "category": "External APIs",
         "description": (
             "Call a connected app's API through the Maton gateway. "
             "Auth is injected automatically. "
@@ -1769,6 +1945,7 @@ TOOLS = [
     },
     {
         "name": "maton_connect",
+        "category": "External APIs",
         "description": "Create a new Maton connection for an app. Returns an OAuth URL the user visits to authorize. Supported: slack, gmail, google-calendar, github, notion, airtable, hubspot, outlook, and 90+ more.",
         "inputSchema": {
             "type": "object",
@@ -1777,6 +1954,49 @@ TOOLS = [
             },
             "required": ["app"],
         },
+    },
+    # ── Meta / Community / Metrics ────────────────────────
+    {
+        "name": "list_categories",
+        "category": "Meta",
+        "description": "List all tool categories and the tools in each. Pass category name to filter.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"category": {"type": "string", "description": "Category name to filter, or blank for all", "default": ""}},
+            "required": [],
+        },
+    },
+    {
+        "name": "get_metrics",
+        "category": "Meta",
+        "description": "Get per-tool call counts, error rates, and average latency. Pass tool_name to drill into one tool.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"tool_name": {"type": "string", "description": "Specific tool name, or blank for all", "default": ""}},
+            "required": [],
+        },
+    },
+    {
+        "name": "register_tool",
+        "category": "Community",
+        "description": "Register a community-contributed tool. Provide a name, description, and an HTTP endpoint the server will POST arguments to. Your tool becomes callable by any agent connected to this MCP server.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Unique tool name (cannot override built-ins)"},
+                "description": {"type": "string", "description": "What the tool does"},
+                "endpoint": {"type": "string", "description": "HTTP URL to POST arguments to"},
+                "author": {"type": "string", "description": "Your agent name", "default": ""},
+                "schema": {"type": "string", "description": "JSON Schema for inputSchema (optional)", "default": ""},
+            },
+            "required": ["name", "description", "endpoint"],
+        },
+    },
+    {
+        "name": "list_community_tools",
+        "category": "Community",
+        "description": "List all community-contributed tools registered on this MCP server.",
+        "inputSchema": {"type": "object", "properties": {}, "required": []},
     },
 ]
 
@@ -1823,6 +2043,11 @@ TOOL_MAP = {
     "maton_connections": lambda a: tool_maton_connections(a.get("app", "")),
     "maton_api":         lambda a: tool_maton_api(a["path"], a.get("method", "GET"), a.get("data", "")),
     "maton_connect":     lambda a: tool_maton_connect(a["app"]),
+    # Meta / Community / Metrics
+    "list_categories":       lambda a: tool_list_categories(a.get("category", "")),
+    "get_metrics":           lambda a: tool_get_metrics(a.get("tool_name", "")),
+    "register_tool":         lambda a: tool_register_community_tool(a["name"], a["description"], a["endpoint"], a.get("author", ""), a.get("schema", "")),
+    "list_community_tools":  lambda a: tool_list_community_tools(),
 }
 
 
@@ -1863,18 +2088,47 @@ async def handle_jsonrpc(msg: dict) -> Optional[dict]:
     if method == "ping":
         return ok({})
     if method == "tools/list":
-        return ok({"tools": TOOLS})
+        category_filter = params.get("category", "")
+        tools = TOOLS
+        # Include registered community tools dynamically
+        community = [
+            {"name": n, "category": "Community", "description": t["description"], "inputSchema": t["schema"]}
+            for n, t in _community_tools.items()
+        ]
+        all_tools = tools + community
+        if category_filter:
+            all_tools = [t for t in all_tools if t.get("category", "").lower() == category_filter.lower()]
+        return ok({"tools": all_tools})
     if method == "tools/call":
         name = params.get("name", "")
         arguments = params.get("arguments") or {}
+        # Check community tools first
+        if name in _community_tools:
+            ct = _community_tools[name]
+            ct["calls"] += 1
+            t0 = time.monotonic()
+            try:
+                r = _api_call(ct["endpoint"], method="POST", data=arguments)
+                duration_ms = round((time.monotonic() - t0) * 1000, 2)
+                _record_call(name, duration_ms, r["ok"])
+                text = json.dumps(r.get("data", r.get("error", r)), indent=2) if not isinstance(r.get("data"), str) else r["data"]
+                return ok({"content": [{"type": "text", "text": str(text)[:4000]}]})
+            except Exception as e:
+                _record_call(name, round((time.monotonic() - t0) * 1000, 2), False)
+                return err(-32603, f"Community tool error: {e}")
         fn = TOOL_MAP.get(name)
         if not fn:
             return err(-32601, f"Unknown tool: {name}")
+        t0 = time.monotonic()
         try:
             text = fn(arguments)
+            duration_ms = round((time.monotonic() - t0) * 1000, 2)
+            _record_call(name, duration_ms, True)
         except KeyError as e:
+            _record_call(name, round((time.monotonic() - t0) * 1000, 2), False)
             return err(-32602, f"Missing argument: {e}")
         except Exception as e:
+            _record_call(name, round((time.monotonic() - t0) * 1000, 2), False)
             return err(-32603, f"Tool error: {type(e).__name__}: {e}")
         return ok({"content": [{"type": "text", "text": text}]})
     return err(-32601, f"Method not found: {method}")
@@ -1926,6 +2180,9 @@ async def sse_endpoint(request: Request):
 
 @app.post("/messages")
 async def messages_endpoint(session_id: str, request: Request):
+    if not _check_auth(request):
+        return Response(content='{"error":"Unauthorized — provide Authorization: Bearer <MCP_API_KEY>"}',
+                        status_code=401, media_type="application/json")
     try:
         body = await request.json()
     except Exception:
@@ -1939,6 +2196,9 @@ async def messages_endpoint(session_id: str, request: Request):
 @app.post("/mcp")
 async def mcp_endpoint(request: Request):
     """Streamable HTTP transport — single-endpoint synchronous response."""
+    if not _check_auth(request):
+        return Response(content='{"error":"Unauthorized — provide Authorization: Bearer <MCP_API_KEY>"}',
+                        status_code=401, media_type="application/json")
     try:
         body = await request.json()
     except Exception:
@@ -1947,6 +2207,29 @@ async def mcp_endpoint(request: Request):
     if response is None:
         return Response(status_code=204)
     return Response(content=json.dumps(response), media_type="application/json")
+
+
+@app.get("/metrics")
+async def metrics_endpoint():
+    """Live tool usage metrics — call counts, error rates, average latency."""
+    summary = {}
+    for name, m in _metrics.items():
+        summary[name] = {
+            "calls": m["calls"],
+            "errors": m["errors"],
+            "error_rate_pct": round(m["errors"] / m["calls"] * 100, 1) if m["calls"] else 0,
+            "avg_ms": m["avg_ms"],
+            "total_ms": m["total_ms"],
+            "last_called": m["last_called"],
+        }
+    return {
+        "tools_called": len(summary),
+        "total_calls": sum(m["calls"] for m in _metrics.values()),
+        "total_errors": sum(m["errors"] for m in _metrics.values()),
+        "community_tools": len(_community_tools),
+        "breakdown": summary,
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+    }
 
 
 # ────────────────────────────────────────────────────────────
