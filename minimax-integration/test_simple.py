@@ -1,11 +1,13 @@
 """Simple test of NVIDIA chat API"""
 import os
 import asyncio
+import pytest
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
 
+@pytest.mark.asyncio
 async def test_chat():
     client = AsyncOpenAI(
         api_key=os.getenv("NVIDIA_API_KEY"),

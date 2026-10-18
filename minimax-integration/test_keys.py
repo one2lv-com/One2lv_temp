@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-async def test_key(key_name, key_value):
+async def _check_key(key_name, key_value):
     client = AsyncOpenAI(
         api_key=key_value,
         base_url="https://integrate.api.nvidia.com/v1"
@@ -35,7 +35,7 @@ async def main():
 
     for name, key in keys.items():
         if key:
-            await test_key(name, key)
+            await _check_key(name, key)
         else:
             print(f"⚠️  {name}: Not set")
 

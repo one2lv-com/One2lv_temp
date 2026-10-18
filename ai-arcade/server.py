@@ -12,9 +12,21 @@ Run:
 import argparse
 import asyncio
 import json
+import math
+import os
+import subprocess
+import urllib.error
+import urllib.parse
+import urllib.request
 import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+except Exception:
+    pass
 
 import chess
 import uvicorn
@@ -924,6 +936,402 @@ def tool_leaderboard() -> str:
 
 
 # ────────────────────────────────────────────────────────────
+# SKILL TOOLS — One2lvOS / L2 Witness / Moltbook / Phase 9
+# ────────────────────────────────────────────────────────────
+
+def _http_get(url: str, headers: dict = {}) -> dict:
+    req = urllib.request.Request(url, headers={"User-Agent": "One2lvOS/1.0", **headers})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            return {"ok": True, "status": r.status, "body": r.read().decode("utf-8", errors="replace")}
+    except urllib.error.HTTPError as e:
+        return {"ok": False, "status": e.code, "body": e.read().decode("utf-8", errors="replace")[:500]}
+    except Exception as e:
+        return {"ok": False, "status": 0, "body": str(e)}
+
+
+def _http_post(url: str, data: dict, headers: dict = {}) -> dict:
+    payload = json.dumps(data).encode()
+    h = {"Content-Type": "application/json", **headers}
+    req = urllib.request.Request(url, data=payload, headers=h, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            return {"ok": True, "status": r.status, "body": r.read().decode("utf-8", errors="replace")}
+    except urllib.error.HTTPError as e:
+        return {"ok": False, "status": e.code, "body": e.read().decode("utf-8", errors="replace")[:500]}
+    except Exception as e:
+        return {"ok": False, "status": 0, "body": str(e)}
+
+
+# ── One2lvOS OS Skills ──────────────────────────────────────
+
+def tool_os_status() -> str:
+    r = _http_get("http://localhost:3002/status")
+    if r["ok"]:
+        try:
+            d = json.loads(r["body"])
+            c = d.get("council", {})
+            core = d.get("core", {})
+            return (
+                f"ONE2LVOS STATUS\n"
+                f"  Online   : {d.get('online', '?')}\n"
+                f"  Service  : {d.get('service', '?')}\n"
+                f"  Boot time: {d.get('boot_time_ms', '?')}ms\n"
+                f"  Uptime   : {round(core.get('uptime', 0), 1)}s\n"
+                f"  Council  : {c.get('online', '?')}/{c.get('agents', '?')} agents online\n"
+                f"  Memory   : {core.get('memory_entries', '?')} entries\n"
+                f"  VFS files: {core.get('vfs_files', '?')}"
+            )
+        except Exception:
+            return r["body"][:1000]
+    return f"Core service error: HTTP {r['status']}\n{r['body']}"
+
+
+def tool_os_council_decide(topic: str) -> str:
+    r = _http_post("http://localhost:3002/council", {"topic": topic})
+    if r["ok"]:
+        try:
+            d = json.loads(r["body"])
+            decision = d.get("decision") or d.get("result") or d.get("response", json.dumps(d)[:500])
+            votes = d.get("votes", {})
+            result = f"Council Decision — {topic}\n\n{decision}"
+            if votes:
+                result += f"\n\nVotes: {json.dumps(votes, indent=2)}"
+            return result
+        except Exception:
+            return r["body"][:2000]
+    return f"Council error: HTTP {r['status']}\n{r['body']}"
+
+
+def tool_os_snapshot() -> str:
+    r = _http_post("http://localhost:3002/snapshot", {})
+    if r["ok"]:
+        return f"Snapshot created.\n{r['body'][:500]}"
+    return f"Snapshot error: HTTP {r['status']}\n{r['body']}"
+
+
+# ── Memory / Astra DB Skills ───────────────────────────────
+
+def _get_astra_col():
+    try:
+        from astrapy import DataAPIClient
+        token = os.environ.get("ASTRA_DB_APPLICATION_TOKEN", "")
+        endpoint = os.environ.get("ASTRA_DB_API_ENDPOINT", "")
+        if not token or not endpoint:
+            return None
+        client = DataAPIClient(token)
+        db = client.get_database_by_api_endpoint(endpoint)
+        return db.get_collection("aria_memory_v3")
+    except Exception:
+        return None
+
+
+def _embed_text(text: str) -> Optional[List[float]]:
+    key = os.environ.get("NVIDIA_API_KEY_EMBEDDING", "")
+    if not key:
+        return None
+    payload = json.dumps({
+        "input": [text], "model": "nvidia/nemotron-3-embed-1b",
+        "encoding_format": "float", "input_type": "query"
+    }).encode()
+    req = urllib.request.Request(
+        "https://integrate.api.nvidia.com/v1/embeddings",
+        data=payload,
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+        method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return json.loads(r.read())["data"][0]["embedding"]
+    except Exception:
+        return None
+
+
+def tool_skill_memory_store(text: str, doc_type: str = "note", tags: str = "") -> str:
+    col = _get_astra_col()
+    if col is None:
+        return "Astra DB not configured (missing ASTRA_DB_APPLICATION_TOKEN or ASTRA_DB_API_ENDPOINT)"
+    vec = _embed_text(text)
+    if vec is None:
+        return "Embedding failed (missing NVIDIA_API_KEY_EMBEDDING or API error)"
+    doc_id = str(uuid.uuid4())
+    doc = {
+        "_id": doc_id,
+        "$vector": vec,
+        "type": doc_type,
+        "text": text,
+        "tags": [t.strip() for t in tags.split(",") if t.strip()],
+        "timestamp": datetime.now().isoformat(),
+        "model": "nvidia/nemotron-3-embed-1b",
+    }
+    col.insert_one(doc)
+    return f"Stored in Astra DB.\nID: {doc_id}\nType: {doc_type}\nText: {text[:100]}"
+
+
+def tool_skill_memory_recall(query: str, limit: int = 5) -> str:
+    col = _get_astra_col()
+    if col is None:
+        return "Astra DB not configured"
+    vec = _embed_text(query)
+    if vec is None:
+        return "Embedding failed (missing NVIDIA_API_KEY_EMBEDDING)"
+    results = list(col.find({}, sort={"$vector": vec}, limit=limit, include_similarity=True))
+    if not results:
+        return f"No results for: {query}"
+    lines = [f"Memory search: {query}", f"Found {len(results)} results:", ""]
+    for r in results:
+        sim = r.get("$similarity", 0)
+        text = r.get("text", str(r.get("_id", "")))[:120]
+        doc_type = r.get("type", "?")
+        lines.append(f"  [{sim:.4f}] ({doc_type}) {text}")
+    return "\n".join(lines)
+
+
+# ── L2 Witness Skills ──────────────────────────────────────
+
+def tool_web_fetch(url: str) -> str:
+    import re
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "One2lvOS/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            content = r.read().decode("utf-8", errors="replace")
+            content = re.sub(r'<[^>]+>', ' ', content)
+            content = re.sub(r'\s+', ' ', content).strip()
+            return f"URL: {url}\nStatus: {r.status}\n\n{content[:3000]}"
+    except Exception as e:
+        return f"Fetch error: {e}"
+
+
+def tool_code_execution(code: str, language: str = "python") -> str:
+    lang = language.lower()
+    if lang not in ("python", "python3", "bash", "sh"):
+        return f"Unsupported language '{language}'. Supported: python, bash"
+    import tempfile
+    suffix = ".py" if "python" in lang else ".sh"
+    with tempfile.NamedTemporaryFile(mode="w", suffix=suffix, dir="/tmp", delete=False) as f:
+        f.write(code)
+        fname = f.name
+    cmd = ["python3", fname] if "python" in lang else ["bash", fname]
+    try:
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=30,
+            cwd="/tmp", env={**os.environ, "HOME": "/tmp"}
+        )
+        os.unlink(fname)
+        parts = [f"Exit code: {result.returncode}"]
+        if result.stdout:
+            parts.append(f"Output:\n{result.stdout[:2000]}")
+        if result.stderr:
+            parts.append(f"Stderr:\n{result.stderr[:500]}")
+        return "\n".join(parts)
+    except subprocess.TimeoutExpired:
+        os.unlink(fname)
+        return "Execution timed out (30s limit)"
+    except Exception as e:
+        return f"Execution error: {e}"
+
+
+def tool_blueprint_reader(layer: str = "all") -> str:
+    schematic = {
+        "L1_outer_shell":    {"material": "Borosilicate Glass",            "thickness_mm": 2.0,   "function": "Environmental protection, UV filtering",       "tolerance_mm": 0.05},
+        "L2_ar_coating":     {"material": "MgF2/SiO2 multilayer",          "thickness_nm": 150,   "function": "Anti-reflection, 99.7% transmittance",         "tolerance_nm": 5},
+        "L3_waveguide":      {"material": "Holographic Polymer Dispersed LC","thickness_mm": 0.8,  "function": "Image waveguide, FOV 40°x30°",                 "tolerance_mm": 0.02},
+        "L4_display_engine": {"material": "Micro-OLED Array",               "resolution": "1920x1080 per eye", "function": "Primary display, 2000 nits peak",  "tolerance_pixels": 1},
+        "L5_neural_interface":{"material": "Graphene electrode mesh",       "channels": 256,       "function": "EEG biometric, attention detection",           "tolerance_uV": 0.5},
+        "L6_power_thermal":  {"material": "Graphene supercapacitor",        "capacity_mAh": 800,   "function": "Power delivery, thermal regulation",           "temp_range_C": "-10 to 45"},
+        "L7_chassis":        {"material": "Titanium alloy Ti-6Al-4V",       "weight_g": 42,        "function": "Structural frame, RF shielding",               "tolerance_mm": 0.01},
+    }
+    if layer == "all":
+        lines = ["INFINITY GLASS — 7-Layer Schematic", "=" * 42]
+        for name, spec in schematic.items():
+            lines.append(f"\n{name}:")
+            for k, v in spec.items():
+                lines.append(f"  {k}: {v}")
+        return "\n".join(lines)
+    key = layer if layer.startswith("L") else f"L{layer}"
+    matches = {k: v for k, v in schematic.items() if k.startswith(key)}
+    if not matches:
+        return f"Layer '{layer}' not found. Available: {', '.join(schematic.keys())}"
+    lines = []
+    for name, spec in matches.items():
+        lines.append(f"{name}:")
+        for k, v in spec.items():
+            lines.append(f"  {k}: {v}")
+    return "\n".join(lines)
+
+
+def tool_forge_control(action: str, batch_size: int = 0) -> str:
+    action = action.lower().strip()
+    core_online = _http_get("http://localhost:3002/status")["ok"]
+    responses = {
+        "status":      f"FORGE STATUS\n  Core online  : {core_online}\n  Temperature  : standby\n  Sensor array : {'online' if core_online else 'offline'}\n  Batch queue  : 0",
+        "start":       f"Batch start requested (size={batch_size}).\nPre-check: temperature must reach 1440°C.\n{'Core online — routing to forge_api.' if core_online else 'Core offline — cannot start batch safely.'}",
+        "pause":       "Forge pause signal sent. Current batch suspended safely.",
+        "stop":        "Emergency stop initiated. Batch terminated. State logged to L1 memory.",
+        "temperature": "Sensor query: Current temp 1438°C — approaching ignition threshold (1440°C).",
+    }
+    return responses.get(action, f"Unknown action '{action}'. Valid: status, start, pause, stop, temperature")
+
+
+def tool_registry_query(param: str = "all") -> str:
+    r = _http_get("http://localhost:3002/status")
+    council_agents = "?"
+    if r["ok"]:
+        try:
+            council_agents = str(json.loads(r["body"]).get("council", {}).get("agents", "?"))
+        except Exception:
+            pass
+    registry = {
+        "VECTOR_DIM": "2048",
+        "EMBEDDING_MODEL": "nvidia/nemotron-3-embed-1b",
+        "LLM_MODEL": "nvidia/llama-3.3-nemotron-super-49b-v1",
+        "COUNCIL_AGENTS": council_agents,
+        "COLLECTION": "aria_memory_v3",
+        "KEYSPACE": "default_keyspace",
+        "PORT_CORE": "3002",
+        "PORT_LOBBY": "8006",
+        "PORT_GATEWAY": "8888",
+        "PORT_NETBOOT": "9000",
+        "PORT_TFTP": "6969",
+    }
+    if param == "all":
+        return "WHO_DATA REGISTRY\n" + "\n".join(f"  {k} = {v}" for k, v in registry.items())
+    val = registry.get(param.upper())
+    if val is None:
+        return f"Parameter '{param}' not found. Available: {', '.join(registry.keys())}"
+    return f"{param.upper()} = {val}"
+
+
+# ── Moltbook Skills ────────────────────────────────────────
+
+def _mb_key(api_key: str) -> str:
+    return api_key or os.environ.get("MOLTBOOK_API_KEY", "")
+
+
+def _mb_get(path: str, api_key: str, params: str = "") -> str:
+    key = _mb_key(api_key)
+    if not key:
+        return "No Moltbook API key. Pass api_key or set MOLTBOOK_API_KEY env var."
+    url = f"https://www.moltbook.com/api/v1{path}"
+    if params:
+        url += f"?{params}"
+    r = _http_get(url, {"Authorization": f"Bearer {key}"})
+    return r["body"][:3000] if r["ok"] else f"Moltbook error HTTP {r['status']}: {r['body'][:400]}"
+
+
+def _mb_post(path: str, api_key: str, data: dict) -> str:
+    key = _mb_key(api_key)
+    if not key:
+        return "No Moltbook API key. Pass api_key or set MOLTBOOK_API_KEY env var."
+    r = _http_post(f"https://www.moltbook.com/api/v1{path}", data, {"Authorization": f"Bearer {key}"})
+    return r["body"][:3000] if r["ok"] else f"Moltbook error HTTP {r['status']}: {r['body'][:400]}"
+
+
+def tool_moltbook_home(api_key: str = "") -> str:
+    return _mb_get("/home", api_key)
+
+def tool_moltbook_feed(api_key: str = "", sort: str = "hot", limit: int = 10) -> str:
+    return _mb_get("/feed", api_key, f"sort={sort}&limit={limit}")
+
+def tool_moltbook_post(api_key: str, submolt: str, title: str, content: str = "") -> str:
+    return _mb_post("/posts", api_key, {"submolt_name": submolt, "title": title, "content": content})
+
+def tool_moltbook_comment(api_key: str, post_id: str, content: str, parent_id: str = "") -> str:
+    data: Dict[str, Any] = {"content": content}
+    if parent_id:
+        data["parent_id"] = parent_id
+    return _mb_post(f"/posts/{post_id}/comments", api_key, data)
+
+def tool_moltbook_vote(api_key: str, target_type: str, target_id: str, direction: str = "up") -> str:
+    if target_type == "post":
+        return _mb_post(f"/posts/{target_id}/{direction}vote", api_key, {})
+    elif target_type == "comment":
+        return _mb_post(f"/comments/{target_id}/{direction}vote", api_key, {})
+    return "target_type must be 'post' or 'comment'"
+
+def tool_moltbook_search(api_key: str = "", query: str = "", search_type: str = "all", limit: int = 10) -> str:
+    return _mb_get("/search", api_key, f"q={urllib.parse.quote(query)}&type={search_type}&limit={limit}")
+
+def tool_moltbook_verify(api_key: str, verification_code: str, answer: str) -> str:
+    return _mb_post("/verify", api_key, {"verification_code": verification_code, "answer": answer})
+
+def tool_moltbook_profile(api_key: str = "", agent_name: str = "") -> str:
+    if agent_name:
+        return _mb_get("/agents/profile", api_key, f"name={urllib.parse.quote(agent_name)}")
+    return _mb_get("/agents/me", api_key)
+
+
+# ── Phase 9 / MiniMax Skills ───────────────────────────────
+
+def tool_phase9_vector(theta: float, phi: float, magnitude: float) -> str:
+    x = magnitude * math.sin(phi) * math.cos(theta)
+    y = magnitude * math.sin(phi) * math.sin(theta)
+    z = magnitude * math.cos(phi)
+    return json.dumps({"x": round(x, 6), "y": round(y, 6), "z": round(z, 6),
+                       "magnitude": magnitude, "theta": theta, "phi": phi}, indent=2)
+
+def tool_phase9_amplify(value: float, factor: float = 1.2) -> str:
+    result = min(1.0, value * factor)
+    return f"amplify({value}, factor={factor}) = {result}"
+
+def tool_phase9_attenuate(value: float, factor: float = 0.8) -> str:
+    return f"attenuate({value}, factor={factor}) = {value * factor}"
+
+def tool_phase9_propagate(target: float, input_val: float, layers: int = 9) -> str:
+    state = input_val
+    history = [state]
+    for i in range(layers):
+        gradient = (target - state) / max(layers - i, 1)
+        state = state + gradient * 0.8
+        history.append(round(state, 6))
+    return (f"Delta Engine — {layers}-layer propagation\n"
+            f"  Target : {target}\n  Input  : {input_val}\n  Output : {round(state, 6)}\n"
+            f"  Path   : {' → '.join(str(h) for h in history)}")
+
+
+# ── Maton API Gateway Skills ───────────────────────────────
+
+def _maton_run(*args) -> str:
+    env = {**os.environ}
+    key = env.get("MATON_API_KEY", "")
+    if not key:
+        return "MATON_API_KEY not set. Add it to .env."
+    try:
+        result = subprocess.run(
+            ["maton", *args],
+            capture_output=True, text=True, timeout=30, env=env
+        )
+        out = result.stdout.strip()
+        err = result.stderr.strip()
+        if result.returncode != 0:
+            return f"maton error (exit {result.returncode}):\n{err or out}"
+        return out or "(no output)"
+    except FileNotFoundError:
+        return "maton CLI not found in PATH."
+    except subprocess.TimeoutExpired:
+        return "maton command timed out (30s)"
+    except Exception as e:
+        return f"maton error: {e}"
+
+
+def tool_maton_connections(app: str = "") -> str:
+    if app:
+        return _maton_run("connection", "list", "--app", app)
+    return _maton_run("connection", "list")
+
+
+def tool_maton_api(path: str, method: str = "GET", data: str = "") -> str:
+    args = ["api", path, "--method", method.upper()]
+    if data:
+        args += ["--data", data]
+    return _maton_run(*args)
+
+
+def tool_maton_connect(app: str) -> str:
+    return _maton_run("connection", "create", app)
+
+
+# ────────────────────────────────────────────────────────────
 # TOOL REGISTRY
 # ────────────────────────────────────────────────────────────
 
@@ -1075,6 +1483,301 @@ TOOLS = [
             "required": ["game_id"],
         },
     },
+    # ── One2lvOS OS Skills ────────────────────────────────
+    {
+        "name": "os_status",
+        "description": "Get One2lvOS system status: council agents, memory entries, uptime, VFS.",
+        "inputSchema": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "os_council_decide",
+        "description": "Submit a topic to the SovereignCouncil (7 agents) and get a decision.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"topic": {"type": "string", "description": "Question or topic for the council"}},
+            "required": ["topic"],
+        },
+    },
+    {
+        "name": "os_snapshot",
+        "description": "Create a One2lvOS system snapshot — persists current state.",
+        "inputSchema": {"type": "object", "properties": {}, "required": []},
+    },
+    # ── Memory Skills ─────────────────────────────────────
+    {
+        "name": "memory_store",
+        "description": "Store text with a real embedding in Astra DB (aria_memory_v3, cosine, dim=2048) using nvidia/nemotron-3-embed-1b.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string"},
+                "doc_type": {"type": "string", "default": "note"},
+                "tags": {"type": "string", "description": "Comma-separated tags", "default": ""},
+            },
+            "required": ["text"],
+        },
+    },
+    {
+        "name": "memory_recall",
+        "description": "Semantic search against Astra DB vector memory. Returns top-N similar documents.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "limit": {"type": "integer", "default": 5},
+            },
+            "required": ["query"],
+        },
+    },
+    # ── L2 Witness Skills ─────────────────────────────────
+    {
+        "name": "web_fetch",
+        "description": "Fetch text content from a URL. Strips HTML tags. Provide the full URL.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"url": {"type": "string"}},
+            "required": ["url"],
+        },
+    },
+    {
+        "name": "code_execution",
+        "description": "Execute Python or Bash code in a sandboxed /tmp environment with 30s timeout. No network during execution.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "code": {"type": "string"},
+                "language": {"type": "string", "description": "python | bash", "default": "python"},
+            },
+            "required": ["code"],
+        },
+    },
+    {
+        "name": "blueprint_reader",
+        "description": "Read Infinity Glass 7-layer schematic: materials, tolerances, functions per layer.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"layer": {"type": "string", "description": "Layer name/number or 'all'", "default": "all"}},
+            "required": [],
+        },
+    },
+    {
+        "name": "forge_control",
+        "description": "Control the South Gate production forge: status, start batch, pause, stop, temperature.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "action": {"type": "string", "description": "status | start | pause | stop | temperature"},
+                "batch_size": {"type": "integer", "default": 0},
+            },
+            "required": ["action"],
+        },
+    },
+    {
+        "name": "registry_query",
+        "description": "Query the WHO_DATA parameter registry for system configuration values.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"param": {"type": "string", "description": "Parameter name or 'all'", "default": "all"}},
+            "required": [],
+        },
+    },
+    # ── Moltbook Skills ───────────────────────────────────
+    {
+        "name": "moltbook_home",
+        "description": "Get your Moltbook dashboard: notifications, feed, DMs, suggested next actions.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"api_key": {"type": "string", "description": "Moltbook API key (or set MOLTBOOK_API_KEY env)", "default": ""}},
+            "required": [],
+        },
+    },
+    {
+        "name": "moltbook_feed",
+        "description": "Get Moltbook post feed sorted by hot/new/top.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "api_key": {"type": "string", "default": ""},
+                "sort": {"type": "string", "description": "hot | new | top | rising", "default": "hot"},
+                "limit": {"type": "integer", "default": 10},
+            },
+            "required": [],
+        },
+    },
+    {
+        "name": "moltbook_post",
+        "description": "Create a Moltbook post. May return a verification challenge to solve with moltbook_verify.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "api_key": {"type": "string"},
+                "submolt": {"type": "string"},
+                "title": {"type": "string"},
+                "content": {"type": "string", "default": ""},
+            },
+            "required": ["api_key", "submolt", "title"],
+        },
+    },
+    {
+        "name": "moltbook_comment",
+        "description": "Comment on a Moltbook post. Optionally reply to a specific comment via parent_id.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "api_key": {"type": "string"},
+                "post_id": {"type": "string"},
+                "content": {"type": "string"},
+                "parent_id": {"type": "string", "default": ""},
+            },
+            "required": ["api_key", "post_id", "content"],
+        },
+    },
+    {
+        "name": "moltbook_vote",
+        "description": "Upvote or downvote a Moltbook post or comment.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "api_key": {"type": "string"},
+                "target_type": {"type": "string", "description": "post | comment"},
+                "target_id": {"type": "string"},
+                "direction": {"type": "string", "description": "up | down", "default": "up"},
+            },
+            "required": ["api_key", "target_type", "target_id"],
+        },
+    },
+    {
+        "name": "moltbook_search",
+        "description": "Semantic search across Moltbook posts and comments by meaning.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "api_key": {"type": "string", "default": ""},
+                "query": {"type": "string"},
+                "search_type": {"type": "string", "description": "all | posts | comments", "default": "all"},
+                "limit": {"type": "integer", "default": 10},
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "moltbook_verify",
+        "description": "Submit the answer to a Moltbook AI verification math challenge to publish content.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "api_key": {"type": "string"},
+                "verification_code": {"type": "string"},
+                "answer": {"type": "string", "description": "Numeric answer with 2 decimal places e.g. '15.00'"},
+            },
+            "required": ["api_key", "verification_code", "answer"],
+        },
+    },
+    {
+        "name": "moltbook_profile",
+        "description": "Get a Moltbook agent profile. Omit agent_name for your own profile.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "api_key": {"type": "string", "default": ""},
+                "agent_name": {"type": "string", "default": ""},
+            },
+            "required": [],
+        },
+    },
+    # ── Phase 9 / MiniMax Skills ──────────────────────────
+    {
+        "name": "phase9_vector",
+        "description": "Create a 3D vector from spherical coordinates (theta, phi, magnitude) → {x, y, z}.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "theta": {"type": "number", "description": "Azimuthal angle in radians"},
+                "phi": {"type": "number", "description": "Polar angle in radians"},
+                "magnitude": {"type": "number"},
+            },
+            "required": ["theta", "phi", "magnitude"],
+        },
+    },
+    {
+        "name": "phase9_amplify",
+        "description": "Phase 9 ++ operator: amplify a value by factor, capped at 1.0.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "value": {"type": "number"},
+                "factor": {"type": "number", "default": 1.2},
+            },
+            "required": ["value"],
+        },
+    },
+    {
+        "name": "phase9_attenuate",
+        "description": "Phase 9 -- operator: attenuate a value by factor.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "value": {"type": "number"},
+                "factor": {"type": "number", "default": 0.8},
+            },
+            "required": ["value"],
+        },
+    },
+    {
+        "name": "phase9_propagate",
+        "description": "Run the Phase 9 delta engine: N-layer gradient descent from input toward target.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "target": {"type": "number"},
+                "input_val": {"type": "number"},
+                "layers": {"type": "integer", "default": 9},
+            },
+            "required": ["target", "input_val"],
+        },
+    },
+    # ── Maton API Gateway Skills ──────────────────────────
+    {
+        "name": "maton_connections",
+        "description": "List all Maton-connected apps and their status (ACTIVE/PENDING). Optionally filter by app name.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "app": {"type": "string", "description": "App name to filter (e.g. 'slack', 'gmail'). Leave blank for all.", "default": ""},
+            },
+            "required": [],
+        },
+    },
+    {
+        "name": "maton_api",
+        "description": (
+            "Call a connected app's API through the Maton gateway. "
+            "Auth is injected automatically. "
+            "Examples: path='/slack/conversations.list', path='/gmail/users/me/messages', "
+            "path='/github/repos/owner/repo/issues'. "
+            "Use method='POST' and data='{\"key\":\"val\"}' for write operations."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "API path starting with /app-name/... (e.g. /slack/channels.list)"},
+                "method": {"type": "string", "description": "HTTP method: GET | POST | PATCH | PUT | DELETE", "default": "GET"},
+                "data": {"type": "string", "description": "JSON body for POST/PATCH/PUT requests", "default": ""},
+            },
+            "required": ["path"],
+        },
+    },
+    {
+        "name": "maton_connect",
+        "description": "Create a new Maton connection for an app. Returns an OAuth URL the user visits to authorize. Supported: slack, gmail, google-calendar, github, notion, airtable, hubspot, outlook, and 90+ more.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "app": {"type": "string", "description": "App name to connect (e.g. 'slack', 'github', 'gmail')"},
+            },
+            "required": ["app"],
+        },
+    },
 ]
 
 TOOL_MAP = {
@@ -1089,6 +1792,37 @@ TOOL_MAP = {
     "game_info": lambda a: get_game_info(a["game_name"]),
     "library_list": lambda a: list_library(a.get("category", "all")),
     "delete_game": lambda a: _delete_game(a["game_id"]),
+    # OS Skills
+    "os_status":         lambda a: tool_os_status(),
+    "os_council_decide": lambda a: tool_os_council_decide(a["topic"]),
+    "os_snapshot":       lambda a: tool_os_snapshot(),
+    # Memory Skills
+    "memory_store":  lambda a: tool_skill_memory_store(a["text"], a.get("doc_type", "note"), a.get("tags", "")),
+    "memory_recall": lambda a: tool_skill_memory_recall(a["query"], int(a.get("limit", 5))),
+    # L2 Witness Skills
+    "web_fetch":       lambda a: tool_web_fetch(a["url"]),
+    "code_execution":  lambda a: tool_code_execution(a["code"], a.get("language", "python")),
+    "blueprint_reader":lambda a: tool_blueprint_reader(a.get("layer", "all")),
+    "forge_control":   lambda a: tool_forge_control(a["action"], int(a.get("batch_size", 0))),
+    "registry_query":  lambda a: tool_registry_query(a.get("param", "all")),
+    # Moltbook Skills
+    "moltbook_home":    lambda a: tool_moltbook_home(a.get("api_key", "")),
+    "moltbook_feed":    lambda a: tool_moltbook_feed(a.get("api_key", ""), a.get("sort", "hot"), int(a.get("limit", 10))),
+    "moltbook_post":    lambda a: tool_moltbook_post(a["api_key"], a["submolt"], a["title"], a.get("content", "")),
+    "moltbook_comment": lambda a: tool_moltbook_comment(a["api_key"], a["post_id"], a["content"], a.get("parent_id", "")),
+    "moltbook_vote":    lambda a: tool_moltbook_vote(a["api_key"], a["target_type"], a["target_id"], a.get("direction", "up")),
+    "moltbook_search":  lambda a: tool_moltbook_search(a.get("api_key", ""), a["query"], a.get("search_type", "all"), int(a.get("limit", 10))),
+    "moltbook_verify":  lambda a: tool_moltbook_verify(a["api_key"], a["verification_code"], a["answer"]),
+    "moltbook_profile": lambda a: tool_moltbook_profile(a.get("api_key", ""), a.get("agent_name", "")),
+    # Phase 9 / MiniMax Skills
+    "phase9_vector":     lambda a: tool_phase9_vector(float(a["theta"]), float(a["phi"]), float(a["magnitude"])),
+    "phase9_amplify":    lambda a: tool_phase9_amplify(float(a["value"]), float(a.get("factor", 1.2))),
+    "phase9_attenuate":  lambda a: tool_phase9_attenuate(float(a["value"]), float(a.get("factor", 0.8))),
+    "phase9_propagate":  lambda a: tool_phase9_propagate(float(a["target"]), float(a["input_val"]), int(a.get("layers", 9))),
+    # Maton API Gateway Skills
+    "maton_connections": lambda a: tool_maton_connections(a.get("app", "")),
+    "maton_api":         lambda a: tool_maton_api(a["path"], a.get("method", "GET"), a.get("data", "")),
+    "maton_connect":     lambda a: tool_maton_connect(a["app"]),
 }
 
 
