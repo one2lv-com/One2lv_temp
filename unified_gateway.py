@@ -129,6 +129,11 @@ SERVICES = {
     "lumenis":    "http://localhost:9001",
     "lumenis_os": "http://localhost:9002/api/healthz",
     "aetherix":   "http://localhost:9003/health",
+    # File Transfer & Remote Access
+    "ftp":        "http://localhost:2121",
+    "webdav":     "http://localhost:8090",
+    "ssh":        "http://localhost:2222",
+    "network_api":"http://localhost:3004",
 }
 
 
@@ -193,6 +198,25 @@ async def manifest():
             "url":         "http://localhost:8080",
             "description": "SteamOS Lumenis — AI Coach, Broadcaster, Dashboard v4",
         },
+        "ftp": {
+            "url":         "ftp://localhost:2121",
+            "description": "One2lvOS FTP Server — pyftpdlib, user: one2lv, anonymous read-only",
+            "root":        "ftp_root/",
+        },
+        "webdav": {
+            "url":         "http://localhost:8090",
+            "description": "One2lvOS WebDAV Server — wsgidav, user: one2lv, full CRUD",
+            "root":        "webdav_root/",
+        },
+        "ssh": {
+            "url":         "ssh://localhost:2222",
+            "description": "One2lvOS SSH Server — paramiko, user: one2lv, interactive shell + exec",
+            "connect":     "ssh one2lv@localhost -p 2222",
+        },
+        "network_api": {
+            "url":         "http://localhost:3004",
+            "description": "One2lvOS Network API — mesh routing, WebDAV/FTP client connections",
+        },
         "endpoints": {
             "status":           "GET  /status",
             "council":          "POST /council          {topic}",
@@ -232,6 +256,15 @@ async def status():
         except Exception as e:
             results[name] = {"online": False, "error": str(e)}
 
+    async def check_tcp(name, host, port):
+        import socket as _sock
+        try:
+            s = _sock.create_connection((host, port), timeout=2)
+            s.close()
+            results[name] = {"online": True, "data": {"tcp": f"{host}:{port}"}}
+        except Exception:
+            results[name] = {"online": False, "data": None}
+
     await asyncio.gather(
         check("os_core", "http://localhost:3002/status"),
         check("sac", "http://localhost:3003/api/status"),
@@ -242,6 +275,10 @@ async def status():
         check("lumenis", "http://localhost:9001"),
         check("lumenis_os", "http://localhost:9002/api/healthz"),
         check("aetherix", "http://localhost:9003/health"),
+        check("network_api", "http://localhost:3004"),
+        check_tcp("ftp", "localhost", 2121),
+        check_tcp("webdav", "localhost", 8090),
+        check_tcp("ssh", "localhost", 2222),
     )
 
     online = sum(1 for v in results.values() if v.get("online"))
