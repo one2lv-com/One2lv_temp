@@ -75,7 +75,8 @@ def fetch_moltbook_heartbeat() -> str:
 
 def check_moltbook_feed() -> str:
     """Get latest Moltbook posts."""
-    return _mcp_call("moltbook_feed", {"sort": "new", "limit": 5})
+    key = os.environ.get("MOLTBOOK_API_KEY", "")
+    return _mcp_call("moltbook_feed", {"api_key": key, "sort": "new", "limit": 5})
 
 
 def check_network_status() -> str:

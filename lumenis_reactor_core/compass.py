@@ -197,3 +197,56 @@ class FluxCompass:
             "facts": facts,
             "db_path": str(self.db_path),
         }
+
+    # ── Frontier #4: Autonomous Learning Loop ────────────────────────────────
+    def auto_learn(self, response_text: str, session_id=None) -> int:
+        """
+        Extract insights from council responses and store as facts.
+        Returns number of facts stored.
+        """
+        import re
+        learned = 0
+        # Extract numbered recommendations / bullet points as discrete facts
+        patterns = [
+            r'\*\*([^*]+)\*\*[:\s—–-]+([^\n]{20,200})',   # **Title**: description
+            r'^\d+\.\s+\*\*([^*]+)\*\*[:\s—–-]+([^\n]{20,150})',  # 1. **Title**: desc
+        ]
+        for pat in patterns:
+            for m in re.finditer(pat, response_text, re.MULTILINE):
+                key = 'learn.' + re.sub(r'\s+', '_', m.group(1).strip().lower())[:40]
+                val = m.group(2).strip()[:250]
+                # Only store if not already stored recently
+                existing = self.recall_facts(key)
+                if not existing:
+                    self.store_fact(key, val, session_id=session_id, source='auto_learn')
+                    learned += 1
+        # Also store high-confidence sentences containing key action words
+        action_words = ['must', 'should', 'critical', 'essential', 'recommend', 'next step', 'frontier']
+        sentences = re.split(r'[.!?]\s+', response_text)
+        for sent in sentences:
+            if len(sent) > 40 and any(w in sent.lower() for w in action_words):
+                key = 'insight.' + str(int(time.time()))[-6:]
+                existing = self.recall_facts(sent[:30])
+                if not existing:
+                    self.store_fact(key, sent.strip()[:250], session_id=session_id, source='auto_insight')
+                    learned += 1
+                    if learned >= 5:  # cap per response
+                        break
+        return learned
+
+    def get_learning_trajectory(self):
+        """Return learning metrics for the autonomous loop."""
+        with self._connect() as conn:
+            total_facts = conn.execute("SELECT COUNT(*) FROM facts").fetchone()[0]
+            auto_facts = conn.execute(
+                "SELECT COUNT(*) FROM facts WHERE source IN ('auto_learn','auto_insight')"
+            ).fetchone()[0]
+            recent = conn.execute(
+                "SELECT key, value, created_at FROM facts ORDER BY created_at DESC LIMIT 5"
+            ).fetchall()
+        return {
+            "total_facts": total_facts,
+            "auto_learned": auto_facts,
+            "learning_ratio": round(auto_facts / max(1, total_facts), 2),
+            "recent_insights": [dict(r) for r in recent],
+        }

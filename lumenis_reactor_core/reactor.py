@@ -26,8 +26,8 @@ PULSE_INTERVAL_MS = 73           # 73Hz → 73ms
 NODE_COUNT = 144_382             # Vanguard lattice size (used for pool sizing / display)
 
 NVIDIA_API_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
-NVIDIA_PRIMARY_MODEL = "nvidia/llama-3.1-nemotron-70b-instruct"
-NVIDIA_SECONDARY_MODEL = "nvidia/llama-3.1-nemotron-51b-instruct"
+NVIDIA_PRIMARY_MODEL = os.environ.get("LLM_PRIMARY_MODEL", "meta/llama-3.2-90b-vision-instruct")
+NVIDIA_SECONDARY_MODEL = os.environ.get("LLM_SECONDARY_MODEL", "meta/llama-3.2-11b-vision-instruct")
 
 @dataclass
 class ReactorStatus:

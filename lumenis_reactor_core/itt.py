@@ -473,7 +473,13 @@ Plan: {plan}"""
         final = "".join(full_response)
         await notify("weaver", "✓ Done")
 
-        # ── Step 7: Auto-extract facts ────────────────────────────────────────
+        # ── Step 7: Autonomous Learning (Frontier #4) ───────────────────────────
+        learned = self.compass.auto_learn(final, session_id)
+        if learned:
+            await notify("witness", f"✓ Auto-learned {learned} insight(s)")
+
+        # Also store user message in compass for context
+        # ── Step 7b: Auto-extract facts ──────────────────────────────────────
         if "my name is" in user_message.lower():
             name_start = user_message.lower().index("my name is") + 11
             name = user_message[name_start:].split()[0].strip(".,!?")

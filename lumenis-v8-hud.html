@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>One2lvOS // LUMENIS v8.0 • CYBERPUNK_SPATIAL_HUD</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@500;700;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        :root {
+            --cyan: #00f0ff; --magenta: #ff00d4; --yellow: #fcee0a;
+            --pink: #ff003c; --green: #00ff88;
+            --bg-0: #04010a; --bg-1: #090218; --bg-2: #120329;
+            --grid: rgba(255, 0, 212, 0.08);
+            --glow-cyan: 0 0 15px rgba(0, 240, 255, 0.45);
+            --glow-magenta: 0 0 15px rgba(255, 0, 212, 0.45);
+            --glass-panel: rgba(8, 2, 22, 0.82);
+            --border-glass: rgba(0, 240, 255, 0.35);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; width: 100%; overflow: hidden; background: var(--bg-0); color: var(--cyan); font-family: 'Share Tech Mono', monospace; }
+        #webgl-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+        body::before {
+            content: ''; position: fixed; inset: 0;
+            background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+            background-size: 44px 44px; animation: gridDrift 40s linear infinite; z-index: 1; pointer-events: none;
+        }
+        @keyframes gridDrift { 0% { background-position: 0 0; } 100% { background-position: 44px 44px; } }
+        body::after {
+            content: ''; position: fixed; inset: 0;
+            background: repeating-linear-gradient(0deg, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,240,255,0.025) 3px, rgba(0,0,0,0) 4px);
+            pointer-events: none; z-index: 900;
+        }
+        .vignette { position: fixed; inset: 0; background: radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.85) 100%); pointer-events: none; z-index: 899; }
+        .glitch { position: relative; font-family: 'Orbitron', monospace; font-weight: 900; letter-spacing: 3px; color: #fff; text-shadow: 0 0 10px var(--cyan), 0 0 20px var(--cyan), 0 0 30px var(--magenta); }
+        .glitch::before, .glitch::after { content: attr(data-text); position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .glitch::before { color: var(--magenta); animation: glitchA 3.5s infinite; clip-path: polygon(0 0, 100% 0, 100% 35%, 0 35%); }
+        .glitch::after { color: var(--cyan); animation: glitchB 3.5s infinite; clip-path: polygon(0 65%, 100% 65%, 100% 100%, 0 100%); }
+        @keyframes glitchA { 0%,90%,100%{transform:translate(0)} 92%{transform:translate(-3px,1px)} 94%{transform:translate(3px,-1px)} }
+        @keyframes glitchB { 0%,90%,100%{transform:translate(0)} 91%{transform:translate(2px,-1px)} 93%{transform:translate(-3px,1px)} }
+        .spatial-card {
+            background: var(--glass-panel); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+            border: 1px solid var(--border-glass);
+            box-shadow: inset 0 0 25px rgba(0,240,255,0.08), 0 12px 40px rgba(0,0,0,0.85), var(--glow-cyan);
+            border-radius: 14px; display: flex; flex-direction: column; position: fixed;
+            pointer-events: auto; transition: border-color 0.2s ease, box-shadow 0.2s ease; z-index: 50;
+        }
+        .spatial-card:hover { border-color: var(--cyan); box-shadow: inset 0 0 30px rgba(0,240,255,0.15), 0 16px 50px rgba(0,0,0,0.95), 0 0 25px var(--cyan); }
+        @keyframes raccoonSnap { 0%,100%{transform:scale(1);filter:brightness(1)} 50%{transform:scale(1.03);filter:brightness(1.3) drop-shadow(0 0 25px var(--magenta))} }
+        .raccoon-unit { position: absolute; font-size: 40px; top: -38px; right: -15px; user-select: none; pointer-events: none; filter: drop-shadow(0 0 12px rgba(0,240,255,0.7)); z-index: 60; transition: transform 0.3s ease; }
+        .card-header { padding: 10px 16px; background: linear-gradient(90deg, rgba(0,240,255,0.12), rgba(255,0,212,0.08)); border-bottom: 1px solid var(--border-glass); border-radius: 14px 14px 0 0; display: flex; justify-content: space-between; align-items: center; cursor: move; user-select: none; }
+        .card-title { font-family: 'Orbitron', monospace; font-size: 11px; font-weight: 700; letter-spacing: 2px; color: var(--cyan); text-shadow: 0 0 6px var(--cyan); }
+        .card-title.magenta { color: var(--magenta); text-shadow: 0 0 6px var(--magenta); }
+        .card-title.yellow { color: var(--yellow); text-shadow: 0 0 6px var(--yellow); }
+        .card-title.green { color: var(--green); text-shadow: 0 0 6px var(--green); }
+        .btn-close { color: var(--pink); font-weight: bold; font-size: 15px; cursor: pointer; padding: 0 4px; }
+        .btn-close:hover { color: #fff; text-shadow: 0 0 8px var(--pink); }
+        .card-body { flex: 1; padding: 14px; overflow-y: auto; font-size: 11.5px; display: flex; flex-direction: column; gap: 8px; }
+        .btn-hud { background: rgba(0,240,255,0.06); border: 1px solid var(--cyan); color: var(--cyan); padding: 6px 12px; font-size: 11px; font-family: 'Share Tech Mono', monospace; letter-spacing: 1px; text-transform: uppercase; clip-path: polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px); cursor: pointer; transition: all 0.18s ease; user-select: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn-hud:hover { background: var(--cyan); color: var(--bg-0); box-shadow: 0 0 16px var(--cyan); }
+        .btn-hud-magenta { border-color: var(--magenta); color: var(--magenta); }
+        .btn-hud-magenta:hover { background: var(--magenta); color: #000; box-shadow: 0 0 18px var(--magenta); }
+        .btn-hud-yellow { border-color: var(--yellow); color: var(--yellow); }
+        .btn-hud-yellow:hover { background: var(--yellow); color: #000; box-shadow: 0 0 18px var(--yellow); }
+        .btn-hud-green { border-color: var(--green); color: var(--green); }
+        .btn-hud-green:hover { background: var(--green); color: #000; box-shadow: 0 0 18px var(--green); }
+        .input-hud { background: rgba(0,240,255,0.07); border: 1px solid var(--cyan); padding: 5px 8px; color: var(--cyan); font-size: 11px; font-family: 'Share Tech Mono', monospace; outline: none; clip-path: polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px); }
+        .input-hud:focus { background: rgba(0,240,255,0.14); box-shadow: 0 0 12px rgba(0,240,255,0.4); }
+        .term-box { background: rgba(0,0,0,0.6); border: 1px solid rgba(0,240,255,0.2); padding: 8px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--green); overflow-y: auto; border-radius: 6px; }
+        .msg-user { border-left: 2px solid var(--cyan); padding: 4px 8px; margin-bottom: 6px; background: rgba(0,240,255,0.05); }
+        .msg-agent { border-left: 2px solid var(--magenta); padding: 4px 8px; margin-bottom: 6px; background: rgba(255,0,212,0.05); }
+        .msg-tool { border-left: 2px solid var(--yellow); padding: 2px 6px; margin-bottom: 4px; font-size: 9.5px; background: rgba(252,238,10,0.05); word-break: break-all; }
+        .msg-system { border-left: 2px solid var(--green); padding: 2px 6px; margin-bottom: 4px; font-size: 9.5px; background: rgba(0,255,136,0.05); color: var(--green); }
+        .hud-top-bar { position: fixed; top: 0; left: 0; width: 100%; z-index: 100; pointer-events: auto; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 8px var(--cyan); display: inline-block; animation: pulseDot 1.6s infinite; }
+        .status-dot.work { background: var(--yellow); box-shadow: 0 0 10px var(--yellow); }
+        .status-dot.error { background: var(--pink); box-shadow: 0 0 10px var(--pink); }
+        @keyframes pulseDot { 0%,100%{opacity:1} 50%{opacity:0.35} }
+        .toast-notify { position: fixed; bottom: 80px; right: 24px; background: var(--bg-1); border: 1px solid var(--cyan); padding: 8px 16px; font-size: 11px; color: var(--cyan); letter-spacing: 1px; box-shadow: 0 0 20px rgba(0,240,255,0.4); opacity: 0; transform: translateY(15px); transition: all 0.3s ease; z-index: 1000; pointer-events: none; }
+        .toast-notify.active { opacity: 1; transform: translateY(0); }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, var(--cyan), var(--magenta)); }
+        ::-webkit-scrollbar-track { background: rgba(0,240,255,0.05); }
+        .learning-bar { height: 4px; background: rgba(0,255,136,0.15); border-radius: 2px; overflow: hidden; margin: 2px 0; }
+        .learning-bar-fill { height: 100%; background: linear-gradient(90deg, var(--green), var(--cyan)); transition: width 1s ease; }
+        .council-seat { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid rgba(0,240,255,0.2); border-radius: 4px; font-size: 10px; margin-bottom: 3px; }
+        .council-seat.active { border-color: var(--magenta); background: rgba(255,0,212,0.08); }
+    </style>
+</head>
+<body class="select-none">
+
+<div id="webgl-bg"></div>
+<div class="vignette"></div>
+<div id="toast" class="toast-notify">STATUS</div>
+
+<!-- TOP GLOBAL HUD -->
+<header class="hud-top-bar p-3 bg-slate-950/80 backdrop-blur-md border-b border-cyan-500/30 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-4">
+        <div class="text-2xl cursor-pointer" onclick="AppActions.triggerRaccoonAnchoringFeedback()" title="Raccoon Anchoring Matrix">🌷</div>
+        <div>
+            <div class="glitch text-lg font-bold" data-text="ONE2LVOS // LUMENIS v8.0">ONE2LVOS // LUMENIS v8.0</div>
+            <div class="text-[10px] text-yellow-400 tracking-widest flex items-center gap-2">
+                <span class="status-dot" id="ws-dot"></span>
+                <span id="ws-status">CONNECTING...</span>
+                &bull; SOVEREIGN KERNEL &bull; SPATIAL PROXY LINK
+            </div>
+        </div>
+    </div>
+    <div class="flex gap-2 flex-wrap items-center">
+        <button class="btn-hud btn-hud-magenta" onclick="WM.toggle('panel-chat')">💬 Neural Chat</button>
+        <button class="btn-hud btn-hud-yellow" onclick="WM.toggle('panel-learn')">🧠 Auto-Learn</button>
+        <button class="btn-hud btn-hud-green" onclick="WM.toggle('panel-council')">⚡ Council</button>
+        <button class="btn-hud" onclick="WM.toggle('panel-integrate')">🔗 Integrations</button>
+        <button class="btn-hud" onclick="WM.toggle('panel-metrics')">📊 Telemetry</button>
+        <button class="btn-hud btn-hud-yellow" onclick="WM.resetAll()">↺ Reset HUD</button>
+    </div>
+    <div class="flex items-center gap-3 text-[10px]">
+        <div class="text-slate-400">SAC <span id="hud-pulses" class="text-cyan-400">---</span> pulses</div>
+        <div class="text-slate-400">SESSIONS <span id="hud-sessions" class="text-cyan-400">---</span></div>
+        <div class="text-slate-400">MATON <span id="hud-maton" class="text-green-400">---</span></div>
+    </div>
+</header>
+
+<!-- PANEL 1: NEURAL LINK CHAT -->
+<div class="spatial-card" id="panel-chat" style="width:480px;height:460px;left:80px;top:90px;">
+    <div class="raccoon-unit">🦝</div>
+    <div class="card-header" data-panel="panel-chat">
+        <span class="card-title magenta">◆ NEURAL_LINK // LUMENIS CHAT</span>
+        <div class="flex items-center gap-2">
+            <span class="status-dot work" id="chat-dot"></span>
+            <span class="btn-close" onclick="WM.close('panel-chat')">&times;</span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div id="chat-log" class="flex-1 overflow-y-auto border border-cyan-500/20 p-2 bg-black/40 rounded min-h-0" style="min-height:200px;max-height:300px;"></div>
+        <div class="flex gap-2 pt-2 border-t border-magenta-500/30">
+            <input id="chat-input" type="text" placeholder="// query Lumenis neural link..." class="flex-1 input-hud text-xs" autocomplete="off">
+            <button id="send-btn" class="btn-hud btn-hud-magenta px-4">SEND</button>
+        </div>
+        <div class="flex gap-1 pt-1 flex-wrap">
+            <button class="btn-hud text-[9px] px-2 py-0.5" onclick="AppActions.quickChat('What is the current system state?')">System State</button>
+            <button class="btn-hud text-[9px] px-2 py-0.5 btn-hud-yellow" onclick="AppActions.quickChat('Analyze the SAC reactor performance and suggest optimizations')">Optimize SAC</button>
+            <button class="btn-hud text-[9px] px-2 py-0.5 btn-hud-magenta" onclick="AppActions.quickChat('What have you learned from our recent sessions?')">Recall Memory</button>
+            <button class="btn-hud text-[9px] px-2 py-0.5 btn-hud-green" onclick="AppActions.quickChat('Frontier update: what is our next action?')">Next Action</button>
+        </div>
+    </div>
+</div>
+
+<!-- PANEL 2: AUTONOMOUS LEARNING -->
+<div class="spatial-card" id="panel-learn" style="width:420px;height:380px;left:580px;top:90px;display:none;">
+    <div class="raccoon-unit">🦝</div>
+    <div class="card-header" data-panel="panel-learn">
+        <span class="card-title green">◆ AUTONOMOUS_LEARN // MEMORY ENGINE</span>
+        <span class="btn-close" onclick="WM.close('panel-learn')">&times;</span>
+    </div>
+    <div class="card-body">
+        <div class="flex justify-between text-[10px] mb-2">
+            <span class="text-slate-400">COMPASS DB</span>
+            <span class="text-green-400" id="learn-stats">Loading...</span>
+        </div>
+        <div id="learn-facts" class="term-box flex-1 overflow-y-auto" style="max-height:160px;">
+            <div class="text-slate-500 text-[9px]">// Loading memory entries...</div>
+        </div>
+        <div class="border-t border-green-500/30 pt-2">
+            <div class="text-[10px] text-slate-400 mb-1">LEARNING LOOP STATUS</div>
+            <div id="learn-loop-bars"></div>
+        </div>
+        <div class="flex gap-2 pt-1">
+            <input id="fact-key" type="text" placeholder="fact.key" class="input-hud w-24 text-[10px]">
+            <input id="fact-val" type="text" placeholder="value..." class="flex-1 input-hud text-[10px]">
+            <button class="btn-hud btn-hud-green text-[9px]" onclick="AppActions.storeFact()">STORE</button>
+        </div>
+        <button class="btn-hud btn-hud-green w-full text-[10px]" onclick="AppActions.recallFacts()">RECALL ALL FACTS</button>
+    </div>
+</div>
+
+<!-- PANEL 3: COUNCIL OF NINE STATUS -->
+<div class="spatial-card" id="panel-council" style="width:400px;height:400px;left:580px;top:90px;display:none;">
+    <div class="raccoon-unit">🦝</div>
+    <div class="card-header" data-panel="panel-council">
+        <span class="card-title yellow">◆ COUNCIL_OF_NINE // SEAT STATUS</span>
+        <span class="btn-close" onclick="WM.close('panel-council')">&times;</span>
+    </div>
+    <div class="card-body">
+        <div id="council-seats" class="flex flex-col gap-1">
+            <div class="text-slate-500 text-[9px]">// Loading council...</div>
+        </div>
+        <div class="border-t border-yellow-500/30 pt-2">
+            <div class="text-[10px] text-slate-400 mb-1">REACTOR STATUS</div>
+            <div id="reactor-stats" class="term-box text-[10px]">// fetching...</div>
+        </div>
+        <button class="btn-hud btn-hud-yellow w-full text-[10px]" onclick="AppActions.refreshCouncil()">REFRESH COUNCIL</button>
+    </div>
+</div>
+
+<!-- PANEL 4: EXTERNAL INTEGRATIONS -->
+<div class="spatial-card" id="panel-integrate" style="width:440px;height:380px;left:100px;top:480px;display:none;">
+    <div class="raccoon-unit">🦝</div>
+    <div class="card-header" data-panel="panel-integrate">
+        <span class="card-title">◆ EXTERNAL_INTEGRATION // MATON MATRIX</span>
+        <span class="btn-close" onclick="WM.close('panel-integrate')">&times;</span>
+    </div>
+    <div class="card-body">
+        <div id="maton-services" class="flex flex-wrap gap-1 mb-2">
+            <div class="text-slate-500 text-[9px]">// Loading Maton services...</div>
+        </div>
+        <div class="border-t border-cyan-500/30 pt-2">
+            <div class="text-[10px] text-slate-400 mb-1">IOT / VOICE / AR FRONTIERS</div>
+            <div class="flex flex-col gap-1">
+                <div class="council-seat">
+                    <span class="text-yellow-400">🌐</span>
+                    <span class="flex-1">WebSocket Relay — real-time event bridge</span>
+                    <span class="text-green-400 text-[9px]">ACTIVE</span>
+                </div>
+                <div class="council-seat">
+                    <span class="text-cyan-400">🎙️</span>
+                    <span class="flex-1">Voice NLP — Web Speech API intent parser</span>
+                    <span class="text-yellow-400 text-[9px] cursor-pointer" onclick="AppActions.startVoice()">START</span>
+                </div>
+                <div class="council-seat">
+                    <span class="text-magenta-400">📡</span>
+                    <span class="flex-1">IoT MQTT Bridge — sensor data ingestion</span>
+                    <span class="text-slate-500 text-[9px]">PLANNED</span>
+                </div>
+                <div class="council-seat">
+                    <span class="text-green-400">🥽</span>
+                    <span class="flex-1">AR Overlay — WebXR spatial interface</span>
+                    <span class="text-slate-500 text-[9px]">PLANNED</span>
+                </div>
+            </div>
+        </div>
+        <div id="voice-status" class="text-[9px] text-yellow-400 hidden">🎙️ Listening... speak a command</div>
+    </div>
+</div>
+
+<!-- PANEL 5: TELEMETRY -->
+<div class="spatial-card" id="panel-metrics" style="width:440px;height:380px;left:580px;top:480px;display:none;">
+    <div class="raccoon-unit">🦝</div>
+    <div class="card-header" data-panel="panel-metrics">
+        <span class="card-title">◆ TELEMETRY // SYSTEM METRICS</span>
+        <span class="btn-close" onclick="WM.close('panel-metrics')">&times;</span>
+    </div>
+    <div class="card-body">
+        <div id="metrics-grid" class="grid grid-cols-2 gap-2 text-[10px]">
+            <div class="bg-black/40 border border-cyan-500/20 rounded p-2">
+                <div class="text-slate-400 text-[9px]">PULSES</div>
+                <div class="text-cyan-400 text-lg font-bold" id="m-pulses">---</div>
+            </div>
+            <div class="bg-black/40 border border-cyan-500/20 rounded p-2">
+                <div class="text-slate-400 text-[9px]">UPTIME</div>
+                <div class="text-green-400 text-lg font-bold" id="m-uptime">---</div>
+            </div>
+            <div class="bg-black/40 border border-cyan-500/20 rounded p-2">
+                <div class="text-slate-400 text-[9px]">TOKENS STREAMED</div>
+                <div class="text-yellow-400 text-lg font-bold" id="m-tokens">---</div>
+            </div>
+            <div class="bg-black/40 border border-cyan-500/20 rounded p-2">
+                <div class="text-slate-400 text-[9px]">SESSIONS</div>
+                <div class="text-magenta-400 text-lg font-bold" id="m-sessions" style="color:var(--magenta)">---</div>
+            </div>
+            <div class="bg-black/40 border border-cyan-500/20 rounded p-2">
+                <div class="text-slate-400 text-[9px]">THERMAL BASE</div>
+                <div class="text-cyan-400 text-lg font-bold" id="m-temp">---</div>
+            </div>
+            <div class="bg-black/40 border border-cyan-500/20 rounded p-2">
+                <div class="text-slate-400 text-[9px]">LATTICE NODES</div>
+                <div class="text-green-400 text-lg font-bold" id="m-nodes">---</div>
+            </div>
+        </div>
+        <div class="border-t border-cyan-500/30 pt-2">
+            <div class="text-[10px] text-slate-400 mb-1">SERVICES ONLINE</div>
+            <div id="services-status" class="flex flex-wrap gap-1"></div>
+        </div>
+        <button class="btn-hud w-full text-[10px]" onclick="AppActions.refreshMetrics()">REFRESH</button>
+    </div>
+</div>
+
+<script>
+// ============================================================
+// THREE.JS PARTICLE BACKGROUND
+// ============================================================
+(function initThree() {
+    const canvas = document.createElement('canvas');
+    canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;';
+    document.getElementById('webgl-bg').appendChild(canvas);
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 5;
+    const geo = new THREE.BufferGeometry();
+    const count = 1500;
+    const pos = new Float32Array(count * 3);
+    for (let i = 0; i < count * 3; i++) pos[i] = (Math.random() - 0.5) * 30;
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.PointsMaterial({ color: 0x00f0ff, size: 0.04, transparent: true, opacity: 0.5 });
+    const points = new THREE.Points(geo, mat);
+    scene.add(points);
+    function animate() {
+        requestAnimationFrame(animate);
+        points.rotation.y += 0.0004;
+        points.rotation.x += 0.0002;
+        renderer.render(scene, camera);
+    }
+    animate();
+    window.addEventListener('resize', () => {
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+    });
+})();
+
+// ============================================================
+// WINDOW MANAGER
+// ============================================================
+const WM = {
+    toggle(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+        if (el.style.display !== 'none') this.bringToFront(el);
+    },
+    close(id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; },
+    bringToFront(el) {
+        document.querySelectorAll('.spatial-card').forEach(c => c.style.zIndex = 50);
+        el.style.zIndex = 60;
+    },
+    resetAll() {
+        const positions = {
+            'panel-chat': [80, 90], 'panel-learn': [580, 90], 'panel-council': [580, 90],
+            'panel-integrate': [100, 480], 'panel-metrics': [580, 480]
+        };
+        Object.entries(positions).forEach(([id, [l, t]]) => {
+            const el = document.getElementById(id);
+            if (el) { el.style.left = l + 'px'; el.style.top = t + 'px'; }
+        });
+        toast('HUD positions reset');
+    }
+};
+
+// Drag
+document.querySelectorAll('.card-header[data-panel]').forEach(header => {
+    let dragging = false, ox = 0, oy = 0;
+    header.addEventListener('mousedown', e => {
+        const panel = document.getElementById(header.dataset.panel);
+        if (!panel) return;
+        WM.bringToFront(panel);
+        dragging = true;
+        ox = e.clientX - panel.offsetLeft;
+        oy = e.clientY - panel.offsetTop;
+        e.preventDefault();
+    });
+    document.addEventListener('mousemove', e => {
+        if (!dragging) return;
+        const panel = document.getElementById(header.dataset.panel);
+        if (!panel) return;
+        panel.style.left = Math.max(0, e.clientX - ox) + 'px';
+        panel.style.top = Math.max(60, e.clientY - oy) + 'px';
+    });
+    document.addEventListener('mouseup', () => { dragging = false; });
+});
+
+// ============================================================
+// TOAST
+// ============================================================
+function toast(msg, dur = 2500) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('active');
+    setTimeout(() => t.classList.remove('active'), dur);
+}
+
+// ============================================================
+// LUMENIS WEBSOCKET
+// ============================================================
+let ws = null, sessionId = null, wsReady = false;
+const chatLog = document.getElementById('chat-log');
+
+function appendChat(role, text) {
+    const div = document.createElement('div');
+    div.className = role === 'user' ? 'msg-user' : role === 'system' ? 'msg-system' : 'msg-agent';
+    const label = role === 'user' ? '<span style="color:var(--cyan);font-size:9px">YOU </span>' :
+                  role === 'system' ? '<span style="color:var(--green);font-size:9px">SYS </span>' :
+                  '<span style="color:var(--magenta);font-size:9px">LUMENIS </span>';
+    div.innerHTML = label + text;
+    chatLog.appendChild(div);
+    chatLog.scrollTop = chatLog.scrollHeight;
+    return div;
+}
+
+function connectWS() {
+    const dot = document.getElementById('ws-dot');
+    const stat = document.getElementById('ws-status');
+    try {
+        ws = new WebSocket('ws://' + location.hostname + ':3003/ws');
+    } catch(e) {
+        stat.textContent = 'WS ERROR'; dot.className = 'status-dot error'; return;
+    }
+    ws.onopen = async () => {
+        dot.className = 'status-dot';
+        stat.textContent = 'LUMENIS ONLINE';
+        wsReady = true;
+        // Create session
+        ws.send(JSON.stringify({ action: 'new_session', title: 'HUD v8.0 Session' }));
+        appendChat('system', 'Neural link established. Lumenis v8.0 online.');
+        toast('LUMENIS CONNECTED');
+        refreshMetricsHTTP();
+    };
+    ws.onmessage = e => {
+        const d = JSON.parse(e.data);
+        handleWsMessage(d);
+    };
+    ws.onerror = () => { dot.className = 'status-dot error'; stat.textContent = 'WS ERROR'; };
+    ws.onclose = () => {
+        dot.className = 'status-dot error'; stat.textContent = 'RECONNECTING...'; wsReady = false;
+        setTimeout(connectWS, 3000);
+    };
+}
+
+let currentAgentDiv = null;
+let agentBuffer = '';
+
+function handleWsMessage(d) {
+    const t = d.type;
+    if (t === 'pulse') {
+        // Update top bar
+        if (d.data) {
+            const data = d.data;
+            document.getElementById('hud-pulses').textContent = (data.pulse_count||'').toLocaleString();
+            document.getElementById('hud-sessions').textContent = data.sessions || '--';
+            document.getElementById('hud-maton').textContent = '13';
+        }
+        return;
+    }
+    if (t === 'init') {
+        const data = d.data || {};
+        if (data.reactor) {
+            document.getElementById('hud-pulses').textContent = (data.reactor.pulse_count||'').toLocaleString();
+        }
+    }
+    if (t === 'session_created') { sessionId = d.session_id; return; }
+    if (t === 'processing_start') {
+        currentAgentDiv = appendChat('agent', '<em style="color:var(--yellow);font-size:9px">thinking...</em>');
+        agentBuffer = '';
+        document.getElementById('chat-dot').className = 'status-dot work';
+        return;
+    }
+    if (t === 'seat_activity') {
+        const s = d.seat, txt = d.text;
+        if (s && txt) {
+            const div = document.createElement('div');
+            div.className = 'msg-tool';
+            div.innerHTML = `<span style="color:var(--yellow)">[${s.toUpperCase()}]</span> ${txt}`;
+            chatLog.appendChild(div);
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
+        return;
+    }
+    if (t === 'response_chunk') {
+        agentBuffer += d.text || '';
+        if (currentAgentDiv) {
+            currentAgentDiv.innerHTML = '<span style="color:var(--magenta);font-size:9px">LUMENIS </span>' + agentBuffer;
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
+        return;
+    }
+    if (t === 'processing_done') {
+        currentAgentDiv = null;
+        document.getElementById('chat-dot').className = 'status-dot';
+        // Auto-learn: extract facts
+        if (agentBuffer.length > 50) autoLearn(agentBuffer);
+        return;
+    }
+    if (t === 'recall_result') {
+        renderFacts(d.facts || []);
+        return;
+    }
+    if (t === 'fact_stored') { toast('Fact stored: ' + d.fact_id); AppActions.recallFacts(); }
+}
+
+function sendToLumenis(msg) {
+    if (!wsReady || !ws) { toast('Not connected'); return; }
+    if (!sessionId) { toast('No session'); return; }
+    appendChat('user', msg);
+    ws.send(JSON.stringify({ action: 'chat', session_id: sessionId, message: msg }));
+}
+
+// ============================================================
+// APP ACTIONS
+// ============================================================
+const AppActions = {
+    quickChat(msg) { sendToLumenis(msg); },
+
+    storeFact() {
+        const k = document.getElementById('fact-key').value.trim();
+        const v = document.getElementById('fact-val').value.trim();
+        if (!k || !v) return toast('Enter key + value');
+        ws.send(JSON.stringify({ action: 'store_fact', key: k, value: v, session_id: sessionId }));
+    },
+
+    recallFacts() {
+        if (!wsReady) return;
+        ws.send(JSON.stringify({ action: 'recall', query: '' }));
+    },
+
+    refreshCouncil() {
+        fetch('http://' + location.hostname + ':3003/api/status')
+            .then(r => r.json())
+            .then(d => {
+                const seats = d.seats || [];
+                const container = document.getElementById('council-seats');
+                container.innerHTML = seats.map(s => `
+                    <div class="council-seat">
+                        <span class="w-2 h-2 rounded-full bg-cyan-400 inline-block" style="box-shadow:0 0 6px var(--cyan)"></span>
+                        <span class="text-cyan-300 w-20">${s.name || s.key}</span>
+                        <span class="text-slate-400 text-[9px] flex-1">${s.role || ''}</span>
+                        <span class="text-green-400 text-[9px]">READY</span>
+                    </div>`).join('');
+                const stats = d.reactor || {};
+                document.getElementById('reactor-stats').textContent =
+                    `Model: ${stats.model || '?'}\nPulses: ${(stats.pulse_count||0).toLocaleString()}\nUptime: ${Math.floor((stats.uptime_seconds||0)/3600)}h ${Math.floor(((stats.uptime_seconds||0)%3600)/60)}m\nTokens: ${stats.tokens_streamed||0}`;
+            }).catch(e => toast('Council fetch failed'));
+    },
+
+    refreshMetrics() { refreshMetricsHTTP(); },
+
+    triggerRaccoonAnchoringFeedback() {
+        document.querySelectorAll('.spatial-card:not([style*="none"])').forEach(c => {
+            c.classList.add('stabilized');
+            setTimeout(() => c.classList.remove('stabilized'), 1000);
+        });
+        toast('RACCOON ANCHORING MATRIX STABILIZED');
+        sendToLumenis('Raccoon anchoring matrix triggered - system stability check requested.');
+    },
+
+    startVoice() {
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            return toast('Voice not supported in this browser');
+        }
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const r = new SR();
+        r.lang = 'en-US'; r.interimResults = false;
+        const vstat = document.getElementById('voice-status');
+        vstat.classList.remove('hidden');
+        r.onresult = e => {
+            const t = e.results[0][0].transcript;
+            vstat.classList.add('hidden');
+            toast('Voice: ' + t);
+            sendToLumenis('[VOICE INPUT] ' + t);
+        };
+        r.onerror = () => { vstat.classList.add('hidden'); toast('Voice error'); };
+        r.onend = () => vstat.classList.add('hidden');
+        r.start();
+    }
+};
+
+// ============================================================
+// METRICS HTTP FETCH
+// ============================================================
+function refreshMetricsHTTP() {
+    fetch('http://' + location.hostname + ':3003/api/status')
+        .then(r => r.json())
+        .then(d => {
+            const r = d.reactor || {}, n = d.nodes || {}, c = d.compass || {};
+            document.getElementById('m-pulses').textContent = (r.pulse_count||0).toLocaleString();
+            document.getElementById('m-uptime').textContent = Math.floor((r.uptime_seconds||0)/3600) + 'h';
+            document.getElementById('m-tokens').textContent = (r.tokens_streamed||0).toLocaleString();
+            document.getElementById('m-sessions').textContent = c.sessions || '--';
+            document.getElementById('m-temp').textContent = r.temperature || '--';
+            document.getElementById('m-nodes').textContent = (r.node_lattice_size||0).toLocaleString();
+            // Maton services
+            const ms = d.maton || {};
+            const svcs = ms.services || [];
+            document.getElementById('maton-services').innerHTML = svcs.map(s =>
+                `<span class="text-[9px] bg-green-500/10 border border-green-500/30 px-1.5 py-0.5 rounded text-green-400">${s}</span>`
+            ).join('');
+            // Learning bars
+            const msgs = c.messages || 0;
+            const facts = c.facts || 0;
+            const sessions = c.sessions || 0;
+            document.getElementById('learn-stats').textContent = `${sessions} sessions · ${msgs} msgs · ${facts} facts`;
+            document.getElementById('learn-loop-bars').innerHTML = `
+                <div class="text-[9px] text-slate-400 mb-1">Messages: ${msgs}</div>
+                <div class="learning-bar"><div class="learning-bar-fill" style="width:${Math.min(100,msgs)}%"></div></div>
+                <div class="text-[9px] text-slate-400 mb-1">Facts stored: ${facts}</div>
+                <div class="learning-bar"><div class="learning-bar-fill" style="width:${Math.min(100,facts*10)}%"></div></div>
+            `;
+            // Council refresh
+            const seats = d.seats || [];
+            if (seats.length) {
+                document.getElementById('council-seats').innerHTML = seats.map(s => `
+                    <div class="council-seat">
+                        <span class="w-2 h-2 rounded-full inline-block" style="background:var(--cyan);box-shadow:0 0 6px var(--cyan)"></span>
+                        <span class="text-cyan-300 w-24">${s.name || s.key}</span>
+                        <span class="text-slate-400 text-[9px] flex-1">${s.role || ''}</span>
+                        <span class="text-green-400 text-[9px]">READY</span>
+                    </div>`).join('');
+            }
+            // Services online indicator
+            const svcOnline = d.online || 0;
+            const svcTotal = d.total || 13;
+            document.getElementById('services-status').innerHTML =
+                `<span class="text-[10px] text-green-400">${svcOnline}/${svcTotal} services online</span>`;
+        })
+        .catch(() => {});
+
+    fetch('http://' + location.hostname + ':8888/status')
+        .then(r => r.json())
+        .then(d => {
+            const online = d.online || 0;
+            const total = d.total || 13;
+            document.getElementById('services-status').innerHTML = `<span class="text-[10px] text-green-400">${online}/${total} services online</span>`;
+        }).catch(() => {});
+}
+
+// ============================================================
+// AUTO-LEARN: extract key insights from Lumenis responses
+// ============================================================
+function autoLearn(text) {
+    const keywords = ['recommend', 'should', 'important', 'critical', 'next step', 'frontier'];
+    const hasInsight = keywords.some(k => text.toLowerCase().includes(k));
+    if (hasInsight && sessionId) {
+        const key = 'insight.' + Date.now();
+        const val = text.substring(0, 200);
+        ws.send(JSON.stringify({ action: 'store_fact', key, value: val, session_id: sessionId }));
+        const indicator = document.createElement('div');
+        indicator.className = 'msg-system';
+        indicator.textContent = '[AUTO-LEARN] Insight extracted and stored to memory.';
+        chatLog.appendChild(indicator);
+        chatLog.scrollTop = chatLog.scrollHeight;
+    }
+}
+
+function renderFacts(facts) {
+    const container = document.getElementById('learn-facts');
+    if (!facts.length) { container.innerHTML = '<div class="text-slate-500 text-[9px]">No facts stored yet.</div>'; return; }
+    container.innerHTML = facts.map(f =>
+        `<div class="msg-tool"><span style="color:var(--green)">${f.key}</span>: ${String(f.value).substring(0,120)}</div>`
+    ).join('');
+}
+
+// ============================================================
+// SEND BUTTON & ENTER KEY
+// ============================================================
+document.getElementById('send-btn').onclick = () => {
+    const inp = document.getElementById('chat-input');
+    const msg = inp.value.trim();
+    if (!msg) return;
+    inp.value = '';
+    sendToLumenis(msg);
+};
+document.getElementById('chat-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('send-btn').click();
+});
+
+// ============================================================
+// BOOT
+// ============================================================
+connectWS();
+setInterval(refreshMetricsHTTP, 30000);
+
+// Show chat by default, open council + metrics on first load
+setTimeout(() => {
+    AppActions.refreshCouncil();
+    AppActions.recallFacts();
+}, 2000);
+</script>
+</body>
+</html>

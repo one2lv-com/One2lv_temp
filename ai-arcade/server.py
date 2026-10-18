@@ -1998,7 +1998,130 @@ TOOLS = [
         "description": "List all community-contributed tools registered on this MCP server.",
         "inputSchema": {"type": "object", "properties": {}, "required": []},
     },
+    {
+        "name": "nlp_intent",
+        "category": "Cognitive Development",
+        "description": "Parse natural language text into structured intent. Returns intent type, confidence score, and suggested action. Supports: system_status, memory_recall, arcade_game, task, voice_control, iot_query, chat.",
+        "inputSchema": {"type": "object", "properties": {"text": {"type": "string", "description": "Text to parse"}}, "required": ["text"]},
+    },
+    {
+        "name": "lumenis_chat",
+        "category": "Cognitive Development",
+        "description": "Send a message to the Lumenis Reactor Core AI (Council of Nine). Returns session ID for WebSocket streaming response.",
+        "inputSchema": {"type": "object", "properties": {"message": {"type": "string", "description": "Message to send"}, "session_id": {"type": "string", "description": "Optional existing session ID"}}, "required": ["message"]},
+    },
+    {
+        "name": "learning_status",
+        "category": "Cognitive Development",
+        "description": "Get the autonomous learning trajectory from Lumenis Compass DB — total facts, auto-learned insights, and recent memory.",
+        "inputSchema": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "iot_event",
+        "category": "System Administration",
+        "description": "Ingest an IoT sensor event into the One2lvOS event stream. Supports any sensor type (temperature, humidity, motion, etc.).",
+        "inputSchema": {"type": "object", "properties": {"sensor": {"type": "string", "description": "Sensor name/ID"}, "value": {"type": "string", "description": "Sensor reading"}, "unit": {"type": "string", "description": "Unit of measurement (optional)"}}, "required": ["sensor", "value"]},
+    },
+    {
+        "name": "voice_parse",
+        "category": "Cognitive Development",
+        "description": "Parse a voice transcript into One2lvOS commands. Identifies intent and suggests the appropriate MCP tool to call.",
+        "inputSchema": {"type": "object", "properties": {"transcript": {"type": "string", "description": "Voice transcript text"}}, "required": ["transcript"]},
+    },
 ]
+
+# ── Frontier Tools: Advanced AI / NLP / IoT / Autonomous Learning ─────────────
+
+def tool_nlp_intent(text: str) -> str:
+    """Parse natural language text into a structured intent (Frontier #3: Human-Centered)."""
+    if not text.strip():
+        return 'ERROR: no text provided'
+    import re, json
+    intents = {
+        'system_status':  ['status','health','online','how many','running','uptime'],
+        'memory_recall':  ['remember','recall','what did','history','facts','learned'],
+        'arcade_game':    ['play','game','chess','go','arcade','checkers'],
+        'chat':           ['hello','hi','tell me','what','who','explain','describe'],
+        'task':           ['create','build','make','add','update','delete','push'],
+        'voice_control':  ['open','close','show','hide','panel','hud','window'],
+        'iot_query':      ['sensor','temperature','humidity','motion','iot','device'],
+    }
+    text_lower = text.lower()
+    detected, score = 'chat', 0.5
+    for intent, kws in intents.items():
+        hits = sum(1 for k in kws if k in text_lower)
+        if hits > 0:
+            detected, score = intent, min(1.0, 0.5 + hits * 0.15)
+            break
+    return json.dumps({'text': text, 'intent': detected, 'confidence': score, 'action': f'route_to_{detected}'})
+
+
+def tool_lumenis_chat(message: str, session_id: str = '') -> str:
+    """Send a message to the Lumenis Reactor Core (Frontier #1: Advanced AI)."""
+    if not message.strip():
+        return 'ERROR: no message provided'
+    import urllib.request, json
+    try:
+        req = urllib.request.Request(
+            'http://localhost:3003/api/sessions',
+            data=json.dumps({'name': 'MCP Session'}).encode(),
+            headers={'Content-Type': 'application/json'}, method='POST'
+        )
+        with urllib.request.urlopen(req, timeout=5) as r:
+            sid = json.loads(r.read())['session_id']
+        return f'Lumenis session ready: {sid}. Connect via WebSocket ws://localhost:3003/ws and send: {{"action":"chat","session_id":"{sid}","message":"{message[:50]}"}}'
+    except Exception as e:
+        return f'Lumenis connection failed: {e}'
+
+
+def tool_learning_status() -> str:
+    """Get autonomous learning trajectory from Lumenis Compass DB (Frontier #4)."""
+    import urllib.request, json
+    try:
+        with urllib.request.urlopen('http://localhost:3003/api/learning', timeout=5) as r:
+            d = json.loads(r.read())
+        nl = chr(10)
+        return nl.join([
+            'LEARNING TRAJECTORY',
+            f'  Total facts    : {d["total_facts"]}',
+            f'  Auto-learned   : {d["auto_learned"]}',
+            f'  Learning ratio : {d["learning_ratio"]}',
+            '', 'RECENT INSIGHTS:',
+        ] + [f'  [{i["key"]}] {str(i["value"])[:80]}' for i in d.get('recent_insights',[])[:3]])
+    except Exception as e:
+        return f'Learning status unavailable: {e}'
+
+
+_iot_events: list = []
+
+def tool_iot_event(sensor: str, value: str, unit: str = '') -> str:
+    """Ingest an IoT sensor event into One2lvOS (Frontier #2: External Integration)."""
+    import time, json
+    if not sensor:
+        return 'ERROR: sensor name required'
+    event = {'sensor': sensor, 'value': value, 'unit': unit, 'ts': time.time()}
+    _iot_events.append(event)
+    if len(_iot_events) > 1000: _iot_events.pop(0)
+    nl = chr(10)
+    return f'IoT event ingested:{nl}{json.dumps(event, indent=2)}{nl}Total events: {len(_iot_events)}'
+
+
+def tool_voice_parse(transcript: str) -> str:
+    """Parse a voice transcript into One2lvOS commands (Frontier #3: Human-Centered)."""
+    if not transcript.strip():
+        return 'ERROR: no transcript provided'
+    import json
+    d = json.loads(tool_nlp_intent(transcript))
+    action_map = {
+        'system_status': 'os_status()', 'memory_recall': 'memory_recall(query="...")',
+        'arcade_game': 'create_game(game="chess")', 'task': 'code_execution(code="...")',
+        'iot_query': 'iot_event(sensor="...", value="...")', 'chat': 'lumenis_chat(message="...")',
+    }
+    d['suggested_tool'] = action_map.get(d['intent'], 'lumenis_chat()')
+    nl = chr(10)
+    return f'VOICE PARSE:{nl}  Transcript : {transcript}{nl}  Intent     : {d["intent"]}{nl}  Confidence : {d["confidence"]}{nl}  Suggested  : {d["suggested_tool"]}'
+
+
 
 TOOL_MAP = {
     "arcade_info": lambda a: tool_arcade_info(),
@@ -2011,6 +2134,7 @@ TOOL_MAP = {
     "get_leaderboard": lambda a: tool_leaderboard(),
     "game_info": lambda a: get_game_info(a["game_name"]),
     "library_list": lambda a: list_library(a.get("category", "all")),
+
     "delete_game": lambda a: _delete_game(a["game_id"]),
     # OS Skills
     "os_status":         lambda a: tool_os_status(),
@@ -2048,6 +2172,12 @@ TOOL_MAP = {
     "get_metrics":           lambda a: tool_get_metrics(a.get("tool_name", "")),
     "register_tool":         lambda a: tool_register_community_tool(a["name"], a["description"], a["endpoint"], a.get("author", ""), a.get("schema", "")),
     "list_community_tools":  lambda a: tool_list_community_tools(),
+    # Frontier Tools: AI / NLP / IoT / Learning (Frontiers #1-3)
+    "nlp_intent":           lambda a: tool_nlp_intent(a.get("text", "")),
+    "lumenis_chat":         lambda a: tool_lumenis_chat(a.get("message", ""), a.get("session_id", "")),
+    "learning_status":      lambda a: tool_learning_status(),
+    "iot_event":            lambda a: tool_iot_event(a.get("sensor", ""), a.get("value", ""), a.get("unit", "")),
+    "voice_parse":          lambda a: tool_voice_parse(a.get("transcript", "")),
 }
 
 

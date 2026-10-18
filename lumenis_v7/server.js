@@ -29,5 +29,5 @@ app.post("/api/telemetry", (req, res) => res.json({ ok: true, combo: ingestTelem
 
 init().then(() => {
   obs.autoConnectOBS();
-  app.listen(8080, () => console.log("🌷 Lumenis v7 ONLINE at http://localhost:8080"));
+  app.listen(process.env.PORT || 8005, () => console.log("🌷 Lumenis v7 ONLINE at http://localhost:8080"));
 });
