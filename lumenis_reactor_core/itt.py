@@ -226,7 +226,7 @@ class ITTCouncil:
     possible response for any given input. Fully powered by NVIDIA.
 
     - Primary Reactor (Nemotron-Super-49B): Most seats
-    - Secondary Reactor (Gemma-4-31B-IT): Forge & Oracle (code + reasoning)
+    - Reasoning Reactor (Nemotron Lightning 30B): Forge & Oracle — chain-of-thought enabled
     """
 
     # Routing: oracle → ReasoningReactor (Nemotron Lightning), forge → ReasoningReactor (DeepSeek)
@@ -456,12 +456,12 @@ class ITTCouncil:
         specialist_output = ""
 
         if "forge" in seats_needed or intent == "code":
-            await notify("forge", "Building [Gemma]...")
+            await notify("forge", "Building [Lightning]...")
             specialist_output = await self._call_seat("forge", user_message, memory_context)
             await notify("forge", "✓ Built")
 
         elif "oracle" in seats_needed or intent in ("research", "analysis"):
-            await notify("oracle", "Reasoning [Gemma]...")
+            await notify("oracle", "Reasoning [Lightning]...")
             specialist_output = await self._call_seat("oracle", user_message, memory_context)
             await notify("oracle", "✓ Answered")
 
