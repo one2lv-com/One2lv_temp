@@ -184,7 +184,7 @@ cd ~/one2lvos
 # Check individual services
 curl http://localhost/health
 curl http://localhost:8787/health
-curl http://localhost:3002/health
+curl http://<SERVER_IP>:3002/health
 
 # View service logs
 ./deploy.sh logs nginx

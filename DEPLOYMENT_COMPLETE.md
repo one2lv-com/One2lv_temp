@@ -335,7 +335,7 @@ curl http://localhost:8787/health
 # Expected: {"status":"ok","service":"node-ai-lobby"}
 
 # Python Core
-curl http://localhost:3002/health
+curl http://<SERVER_IP>:3002/health
 # Expected: {"status":"ok","service":"python-core"}
 ```
 

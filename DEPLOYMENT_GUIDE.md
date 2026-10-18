@@ -418,7 +418,7 @@ tail -f ∆Gemini_Root∆/logs/hud.log
 curl -I "https://9b5b1939-fd21-477d-95b8-a1aecc5f90b9-us-east-2.apps.astra.datastax.com"
 
 # Test NVIDIA API
-curl https://integrate.api.nvidia.com/v1/models \
+curl https://docs.api.nvidia.com/ \
   -H "Authorization: Bearer YOUR_KEY"
 ```
 

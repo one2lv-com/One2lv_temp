@@ -211,9 +211,9 @@ python3 setup_nemotron_collection.py
 - `SOVEREIGN_ARCHITECTURE.md` - System architecture
 
 ### API References
-- [NVIDIA NIM API](https://integrate.api.nvidia.com/v1/models)
+- [NVIDIA NIM API](https://docs.api.nvidia.com/)
 - [Astra DB Docs](https://docs.datastax.com/en/astra-serverless/docs/)
-- [Vector Search Guide](https://docs.datastax.com/en/astra-serverless/docs/vector-search/)
+- [Vector Search Guide](https://docs.datastax.com/en/astra-db-serverless/)
 
 ### Scripts
 - `setup_nemotron_collection.py` - Create collection

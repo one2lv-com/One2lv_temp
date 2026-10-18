@@ -135,7 +135,7 @@ nano .env  # Add your API keys
 # 6. Access system
 # Main UI: http://localhost/
 # Node API: http://localhost:8787
-# Python API: http://localhost:3002
+# Python API: http://<SERVER_IP>:3002
 ```
 
 ### For Production Server
@@ -242,7 +242,7 @@ MATON_API_KEY=...
 ```bash
 curl http://localhost/health        # Nginx
 curl http://localhost:8787/health   # Node
-curl http://localhost:3002/health   # Python
+curl http://<SERVER_IP>:3002/health   # Python
 ```
 
 ---

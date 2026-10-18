@@ -87,7 +87,7 @@ cd /home/vercel-sandbox/One2lvos
 python3 lumenis-main.py
 ```
 
-The reactor will start on `http://localhost:3002`
+The reactor will start on `http://<SERVER_IP>:3002`
 
 ### Integrated with One2lvos
 ```bash
@@ -244,12 +244,12 @@ The Flux Compass creates a local SQLite database at:
 
 Check reactor status:
 ```bash
-curl http://localhost:3002/api/status | jq
+curl http://<SERVER_IP>:3002/api/status | jq
 ```
 
 View active sessions:
 ```bash
-curl http://localhost:3002/api/sessions | jq
+curl http://<SERVER_IP>:3002/api/sessions | jq
 ```
 
 ## Troubleshooting
@@ -260,13 +260,13 @@ curl http://localhost:3002/api/sessions | jq
 3. Check port 3002 availability: `lsof -i :3002`
 
 ### WebSocket connection fails
-1. Ensure reactor is running: `curl http://localhost:3002/api/status`
+1. Ensure reactor is running: `curl http://<SERVER_IP>:3002/api/status`
 2. Check browser console for WebSocket errors
 3. Verify no firewall blocking WebSocket connections
 
 ### Memory issues
 1. Check SQLite database: `sqlite3 compass.db ".tables"`
-2. View database stats: `curl http://localhost:3002/api/status | jq .compass`
+2. View database stats: `curl http://<SERVER_IP>:3002/api/status | jq .compass`
 3. Clear old sessions if needed (via API or direct SQLite access)
 
 ## Next Steps
@@ -274,7 +274,7 @@ curl http://localhost:3002/api/sessions | jq
 1. **Get fresh Astra DB secure connect bundle** (current URL expired)
 2. **Add ANTHROPIC_API_KEY** to your environment
 3. **Test the reactor**: `python3 lumenis-main.py`
-4. **Explore the web UI**: Open `http://localhost:3002`
+4. **Explore the web UI**: Open `http://<SERVER_IP>:3002`
 5. **Try WebSocket chat**: Connect via browser or wscat
 
 ## Files Structure

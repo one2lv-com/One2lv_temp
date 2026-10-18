@@ -135,7 +135,7 @@ uvicorn lumenis-main:app --host 0.0.0.0 --port 3002 --reload
 
 ```bash
 # Check status
-curl http://localhost:3002/api/status
+curl http://<SERVER_IP>:3002/api/status
 
 # Expected output:
 # {
@@ -157,7 +157,7 @@ curl http://localhost:3002/api/status
 
 ### 5. Access Web UI
 
-Open in browser: [http://localhost:3002](http://localhost:3002)
+Open in browser: [http://<SERVER_IP>:3002](http://<SERVER_IP>:3002)
 
 ---
 
@@ -446,16 +446,16 @@ tail -f /home/vercel-sandbox/One2lvos/logs/lumenis-reactor.log
 
 ```bash
 # Full system status
-curl -s http://localhost:3002/api/status | jq
+curl -s http://<SERVER_IP>:3002/api/status | jq
 
 # Just reactor stats
-curl -s http://localhost:3002/api/status | jq .reactor
+curl -s http://<SERVER_IP>:3002/api/status | jq .reactor
 
 # Just compass (memory) stats
-curl -s http://localhost:3002/api/status | jq .compass
+curl -s http://<SERVER_IP>:3002/api/status | jq .compass
 
 # Council seats
-curl -s http://localhost:3002/api/status | jq .seats
+curl -s http://<SERVER_IP>:3002/api/status | jq .seats
 ```
 
 ### Inspect Database
@@ -478,13 +478,13 @@ SELECT key, value FROM facts ORDER BY created_at DESC LIMIT 20;
 
 ```bash
 # Using websocat (install: cargo install websocat)
-websocat ws://localhost:3002/ws
+websocat ws://<SERVER_IP>:3002/ws
 
 # Send a message
 {"action": "chat", "message": "Hello Lumenis Reactor!"}
 
 # Using wscat (install: npm i -g wscat)
-wscat -c ws://localhost:3002/ws
+wscat -c ws://<SERVER_IP>:3002/ws
 > {"action": "chat", "message": "Test message"}
 ```
 
@@ -559,7 +559,7 @@ pip install fastapi uvicorn anthropic aiofiles httpx
 - Verify CORS middleware in `lumenis-main.py`
 
 **Connection drops**
-- Check reactor is still running: `curl http://localhost:3002/api/status`
+- Check reactor is still running: `curl http://<SERVER_IP>:3002/api/status`
 - Look for errors in reactor logs
 - Verify network connectivity
 
@@ -680,7 +680,7 @@ docker run -d \
    ```
 
 4. **Test WebSocket**
-   Open [http://localhost:3002](http://localhost:3002)
+   Open [http://<SERVER_IP>:3002](http://<SERVER_IP>:3002)
 
 5. **Integrate with One2lvos**
    Add Lumenis panel to unified dashboard

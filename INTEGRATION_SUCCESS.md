@@ -121,10 +121,10 @@ uvicorn lumenis-main:app --host 0.0.0.0 --port 3002 --reload
 ### 4. Verify Running
 ```bash
 # Check status
-curl http://localhost:3002/api/status
+curl http://<SERVER_IP>:3002/api/status
 
 # Open web UI
-open http://localhost:3002
+open http://<SERVER_IP>:3002
 ```
 
 ---
@@ -138,9 +138,9 @@ open http://localhost:3002
 
 ### Quick Reference
 - **Port**: 3002
-- **WebSocket**: ws://localhost:3002/ws
-- **REST API**: http://localhost:3002/api/*
-- **Web UI**: http://localhost:3002
+- **WebSocket**: ws://<SERVER_IP>:3002/ws
+- **REST API**: http://<SERVER_IP>:3002/api/*
+- **Web UI**: http://<SERVER_IP>:3002
 
 ---
 
@@ -182,7 +182,7 @@ One2lvos Ecosystem
    ```
 
 5. ⏳ **Test WebSocket Chat**
-   → Open http://localhost:3002
+   → Open http://<SERVER_IP>:3002
 
 6. ⏳ **Integrate UI into One2lvos Dashboard**
    → Add Lumenis panel to unified dashboard

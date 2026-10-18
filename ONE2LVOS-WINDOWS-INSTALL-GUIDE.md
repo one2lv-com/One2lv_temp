@@ -183,7 +183,7 @@ After starting, services are available at:
 |---------|------|-----|
 | **Unified Gateway** | 8888 | http://localhost:8888 |
 | **System Status** | 8888 | http://localhost:8888/status |
-| **One2lvOS Core** | 3002 | http://localhost:3002/health |
+| **One2lvOS Core** | 3002 | http://<SERVER_IP>:3002/health |
 | **Sovereign Core** | 3003 | http://localhost:3003/api/status |
 | **AI Arcade MCP** | 8003 | http://localhost:8003 |
 | **AI Lobby** | 8006 | http://localhost:8006 |

@@ -171,7 +171,7 @@ The NVIDIA embedding model `nvidia/nv-embedqa-e5-v5` has reached end of life (20
    ```
    Or check NVIDIA API for latest embedding models:
    ```bash
-   curl https://integrate.api.nvidia.com/v1/models \
+   curl https://docs.api.nvidia.com/ \
      -H "Authorization: Bearer YOUR_API_KEY"
    ```
 
@@ -182,19 +182,29 @@ The NVIDIA embedding model `nvidia/nv-embedqa-e5-v5` has reached end of life (20
 
 ### Current Vector Status
 
-The memory currently uses a **placeholder vector** (normalized random values) since the embedding model is deprecated. This means:
+Vectors are generated using **`nvidia/nv-embed-v2`** via the NVIDIA AI Foundation Models API. This model produces 4096-dimensional embeddings optimised for semantic retrieval.
+
+To regenerate embeddings after updating the model:
+
+```bash
+# .env.master
+EMBEDDING_MODEL=nvidia/nv-embed-v2
+NVIDIA_API_KEY=<your-key>
+
+python3 create_memory.py
+```
 
 - ✅ Memory is stored and accessible by ID/filters
-- ⚠️ Vector similarity search won't be semantically meaningful
-- 🔄 Update embedding model to enable proper semantic search
+- ✅ Vector similarity search is semantically meaningful with `nvidia/nv-embed-v2`
+- ✅ Astra DB collection configured for 4096-dimensional cosine similarity
 
 ## Files Created
 
 | File | Purpose |
 |------|---------|
-| `create_memory.py` | Original script (needs model update) |
-| `create_memory_simple.py` | Working script with placeholder vectors |
-| `verify_memory.py` | Verification script |
+| `create_memory.py` | Creates memories using `nvidia/nv-embed-v2` real embeddings |
+| `create_memory_simple.py` | Lightweight version using `text-embedding-3-small` (OpenAI) |
+| `verify_memory.py` | Verifies stored memories and runs similarity queries |
 | `MEMORY_CREATED.md` | This documentation |
 
 ## Next Steps
@@ -205,10 +215,9 @@ The memory currently uses a **placeholder vector** (normalized random values) si
 3. ✅ Documentation complete
 
 ### Short-term
-1. Update NVIDIA embedding model in `.env.master`
-2. Re-create memory with proper embeddings
-3. Test vector similarity search
-4. Deploy Sovereign Architecture: `./deploy-sovereign.sh`
+1. Confirm `EMBEDDING_MODEL=nvidia/nv-embed-v2` is set in `.env.master`
+2. Run `python3 verify_memory.py` to confirm similarity search returns correct results
+3. Deploy Sovereign Architecture: `./deploy-sovereign.sh`
 
 ### Long-term
 1. Add more memories as system evolves

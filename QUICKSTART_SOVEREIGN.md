@@ -225,7 +225,7 @@ cat ∆Gemini_Root∆/core/.env
 
 **Test NVIDIA API:**
 ```bash
-curl https://integrate.api.nvidia.com/v1/models \
+curl https://docs.api.nvidia.com/ \
   -H "Authorization: Bearer YOUR_NVIDIA_KEY"
 ```
 

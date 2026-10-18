@@ -225,7 +225,7 @@ ls -la .env.master
 **Solution**: Verify each service's API keys are still valid
 ```bash
 # Test NVIDIA
-curl https://integrate.api.nvidia.com/v1/models \
+curl https://docs.api.nvidia.com/ \
   -H "Authorization: Bearer $(grep NVIDIA_API_KEY= .env.master | cut -d= -f2)"
 
 # Test Astra DB

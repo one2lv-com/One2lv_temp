@@ -300,8 +300,8 @@ snowflake/arctic-embed-l
 
 ## Documentation References
 
-- [NVIDIA NIM API](https://integrate.api.nvidia.com/v1/models)
-- [Astra DB Vector Search](https://docs.datastax.com/en/astra-serverless/docs/vector-search/)
+- [NVIDIA NIM API](https://docs.api.nvidia.com/)
+- [Astra DB Vector Search](https://docs.datastax.com/en/astra-db-serverless/)
 - [SOVEREIGN_ARCHITECTURE.md](SOVEREIGN_ARCHITECTURE.md) - System architecture
 - [ENV_SETUP.md](ENV_SETUP.md) - Environment configuration
 - [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) - Deployment instructions

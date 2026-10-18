@@ -198,7 +198,7 @@ curl http://localhost/health
 curl http://localhost:8787/health
 
 # Check Core API
-curl http://localhost:3002/health
+curl http://<SERVER_IP>:3002/health
 
 # Check all containers health status
 docker compose ps

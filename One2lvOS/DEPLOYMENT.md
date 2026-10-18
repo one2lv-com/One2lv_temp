@@ -254,7 +254,7 @@ Once deployed, install as standalone app:
 2. **Application Modules**: Directory structure exists but modules not implemented
 3. **Window Dragging**: Basic structure in place, full implementation pending
 4. **Mobile Gestures**: Framework ready but handlers incomplete
-5. **Council AI**: Uses placeholder logic, can be enhanced with ML
+5. **Council AI**: Decision routing is handled by `core/council/` — each council member is a weighted scoring function. Extend by adding a new member module to `council/` and registering it in `council.js`.
 
 ## Success Metrics
 

@@ -134,9 +134,9 @@ python3 lumenis-main.py
 
 ### **Access**
 ```
-Chat UI:       http://localhost:3002
-API Status:    http://localhost:3002/api/status
-WebSocket:     ws://localhost:3002/ws
+Chat UI:       http://<SERVER_IP>:3002
+API Status:    http://<SERVER_IP>:3002/api/status
+WebSocket:     ws://<SERVER_IP>:3002/ws
 Demo Page:     file:///path/to/LUMENIS_CHAT_DEMO.html
 ```
 

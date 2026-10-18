@@ -306,7 +306,7 @@ tail -f ∆Gemini_Root∆/logs/core.log
 ### Official Documentation
 - Astra DB Docs: https://docs.datastax.com/en/astra/
 - CLI Reference: https://docs.datastax.com/en/astra-cli/
-- Vector Search: https://docs.datastax.com/en/astra-serverless/docs/vector-search/
+- Vector Search: https://docs.datastax.com/en/astra-db-serverless/
 
 ### Support
 - Astra DB Console: https://astra.datastax.com

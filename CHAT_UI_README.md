@@ -150,10 +150,10 @@ python lumenis-main.py
 
 Open your browser to:
 ```
-http://localhost:3002
+http://<SERVER_IP>:3002
 ```
 
-The WebSocket will automatically connect to `ws://localhost:3002/ws`
+The WebSocket will automatically connect to `ws://<SERVER_IP>:3002/ws`
 
 ### Example Queries
 
@@ -255,7 +255,7 @@ Replace the raccoon emoji (🦝) in the `.raccoon-avatar` div:
 
 Check that the server is running:
 ```bash
-curl http://localhost:3002/api/status
+curl http://<SERVER_IP>:3002/api/status
 ```
 
 ### Seats Not Activating

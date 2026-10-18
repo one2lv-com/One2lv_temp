@@ -311,7 +311,7 @@ After deployment, verify:
 3. Check logs: `cat ∆Gemini_Root∆/logs/hud.log`
 
 ### API Connection Errors
-1. Test NVIDIA: `curl https://integrate.api.nvidia.com/v1/models`
+1. Test NVIDIA: `curl https://docs.api.nvidia.com/`
 2. Test Astra: `curl -I YOUR_ASTRA_ENDPOINT`
 3. Check credentials in `.env`
 

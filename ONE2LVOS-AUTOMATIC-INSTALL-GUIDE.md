@@ -498,7 +498,7 @@ Unified Gateway:     http://localhost:8888
 System Status:       http://localhost:8888/status
 AI Arcade:           http://localhost:8003
 AI Lobby:            http://localhost:8006
-One2lvOS Core:       http://localhost:3002/health
+One2lvOS Core:       http://<SERVER_IP>:3002/health
 Sovereign Core:      http://localhost:3003/api/status
 ```
 
