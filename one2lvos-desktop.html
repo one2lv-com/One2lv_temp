@@ -688,6 +688,155 @@
                         </div>
                     </div>
                 `
+            },
+
+            // ── Resource: Linux Emulator ─────────────────────────────────────
+            'linux-emulator': {
+                name: 'Linux Emulator',
+                icon: 'fab fa-linux',
+                color: 'text-green-500',
+                width: 920,
+                height: 660,
+                onOpen: () => setTimeout(() => linuxEmuProbe(), 400),
+                content: `
+                    <div class="h-full flex flex-col bg-gray-950 text-white" style="font-family:'Segoe UI',system-ui,sans-serif">
+                        <!-- Header -->
+                        <div class="flex items-center gap-3 px-4 py-2.5 bg-gray-900 border-b border-green-900/40 flex-shrink-0">
+                            <span class="text-green-400 text-xl"><i class="fab fa-linux"></i></span>
+                            <div class="flex-1">
+                                <div class="font-bold text-green-400 text-sm tracking-wide">Personal Linux System With Drive</div>
+                                <div class="text-gray-500 text-xs">In-browser x86 · Python · GCC · Google Drive import</div>
+                            </div>
+                            <span id="lemu-dot" class="w-2.5 h-2.5 rounded-full bg-gray-600 transition-colors duration-500 flex-shrink-0" title="Reachability status"></span>
+                            <span id="lemu-status" class="text-xs text-gray-500">Checking…</span>
+                            <button onclick="linuxEmuProbe()" class="bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs px-2.5 py-1 rounded-md transition-colors"><i class="fas fa-sync-alt mr-1"></i>Probe</button>
+                            <button onclick="window.open('https://thumbsdb.herokuapp.com/linux/','_blank')" class="bg-green-700 hover:bg-green-600 text-white text-xs px-2.5 py-1 rounded-md transition-colors"><i class="fas fa-external-link-alt mr-1"></i>Open Tab</button>
+                        </div>
+
+                        <!-- Capabilities strip -->
+                        <div class="flex flex-wrap gap-1.5 px-4 py-2 bg-gray-900/60 border-b border-green-900/20 flex-shrink-0">
+                            <span class="bg-green-900/40 text-green-400 text-xs px-2 py-0.5 rounded-full border border-green-800/40"><i class="fas fa-terminal mr-1"></i>Shell</span>
+                            <span class="bg-green-900/40 text-green-400 text-xs px-2 py-0.5 rounded-full border border-green-800/40"><i class="fab fa-python mr-1"></i>Python</span>
+                            <span class="bg-green-900/40 text-green-400 text-xs px-2 py-0.5 rounded-full border border-green-800/40"><i class="fas fa-code mr-1"></i>Perl / GCC</span>
+                            <span class="bg-green-900/40 text-green-400 text-xs px-2 py-0.5 rounded-full border border-green-800/40"><i class="fas fa-network-wired mr-1"></i>wget / ping</span>
+                            <span class="bg-green-900/40 text-green-400 text-xs px-2 py-0.5 rounded-full border border-green-800/40"><i class="fab fa-google-drive mr-1"></i>Drive Import</span>
+                            <span class="bg-green-900/40 text-green-400 text-xs px-2 py-0.5 rounded-full border border-green-800/40"><i class="fas fa-file-import mr-1"></i>Local Import</span>
+                            <span class="ml-auto text-gray-600 text-xs self-center">thumbsdb.herokuapp.com</span>
+                        </div>
+
+                        <!-- Embedded emulator -->
+                        <div class="flex-1 relative overflow-hidden">
+                            <iframe id="lemu-frame" src="https://thumbsdb.herokuapp.com/linux/"
+                                class="absolute inset-0 w-full h-full border-none"
+                                title="Linux Emulator"
+                                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads">
+                            </iframe>
+                        </div>
+
+                        <!-- Footer bar -->
+                        <div class="flex items-center gap-3 px-4 py-2 bg-gray-900 border-t border-green-900/30 flex-shrink-0 text-xs">
+                            <span class="text-gray-500"><i class="fas fa-link mr-1"></i>
+                                <span id="lemu-url-display" class="font-mono text-gray-400 select-all">https://thumbsdb.herokuapp.com/linux/</span>
+                            </span>
+                            <button onclick="lemuCopyUrl()" class="ml-auto bg-gray-700 hover:bg-gray-600 text-gray-300 px-2.5 py-1 rounded-md transition-colors"><i class="far fa-copy mr-1"></i>Copy URL</button>
+                            <button onclick="document.getElementById('lemu-frame').src=document.getElementById('lemu-frame').src" class="bg-gray-700 hover:bg-gray-600 text-gray-300 px-2.5 py-1 rounded-md transition-colors"><i class="fas fa-redo-alt mr-1"></i>Reload</button>
+                            <span id="lemu-api-badge" class="text-gray-600">· Lumenis resource.linux_emulator</span>
+                        </div>
+                    </div>
+                `
+            },
+
+            // ── Resource: Google API PHP Client ──────────────────────────────
+            'onworks-gdrive-php': {
+                name: 'Google API PHP Client',
+                icon: 'fab fa-php',
+                color: 'text-indigo-400',
+                width: 580,
+                height: 560,
+                onOpen: () => setTimeout(() => phpClientProbe(), 400),
+                content: `
+                    <div class="h-full flex flex-col bg-white" style="font-family:'Segoe UI',system-ui,sans-serif">
+                        <!-- Header -->
+                        <div class="flex items-center gap-3 px-5 py-3 text-white flex-shrink-0" style="background:linear-gradient(135deg,#4285f4,#6366f1)">
+                            <span class="text-3xl"><i class="fab fa-php"></i></span>
+                            <div class="flex-1">
+                                <div class="font-bold text-lg leading-tight">Google API PHP Client</div>
+                                <div class="text-blue-100 text-xs">OAuth2 · Drive · Gmail · Calendar · PHP integration</div>
+                            </div>
+                            <span id="php-dot" class="w-2.5 h-2.5 rounded-full bg-white/30 transition-colors duration-500 flex-shrink-0"></span>
+                            <span id="php-status" class="text-xs text-blue-100">Checking…</span>
+                        </div>
+
+                        <!-- Main content -->
+                        <div class="flex-1 overflow-auto p-5 space-y-4">
+
+                            <!-- Capabilities -->
+                            <div class="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                                <div class="text-xs font-semibold text-blue-700 uppercase tracking-wider mb-2"><i class="fas fa-puzzle-piece mr-1"></i>Capabilities</div>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <span class="bg-white text-blue-700 text-xs px-2.5 py-1 rounded-full border border-blue-200 shadow-sm"><i class="fas fa-key mr-1"></i>OAuth2</span>
+                                    <span class="bg-white text-blue-700 text-xs px-2.5 py-1 rounded-full border border-blue-200 shadow-sm"><i class="fab fa-google-drive mr-1"></i>Drive</span>
+                                    <span class="bg-white text-blue-700 text-xs px-2.5 py-1 rounded-full border border-blue-200 shadow-sm"><i class="fas fa-envelope mr-1"></i>Gmail</span>
+                                    <span class="bg-white text-blue-700 text-xs px-2.5 py-1 rounded-full border border-blue-200 shadow-sm"><i class="fas fa-calendar mr-1"></i>Calendar</span>
+                                    <span class="bg-white text-blue-700 text-xs px-2.5 py-1 rounded-full border border-blue-200 shadow-sm"><i class="fab fa-php mr-1"></i>PHP</span>
+                                </div>
+                            </div>
+
+                            <!-- Action buttons -->
+                            <div class="grid grid-cols-2 gap-3">
+                                <button onclick="phpInstall()" class="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-4 py-3 rounded-xl font-medium text-sm transition-all shadow-md">
+                                    <i class="fab fa-google text-base"></i>
+                                    <span>Install via Google</span>
+                                </button>
+                                <button onclick="phpDownload()" class="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-4 py-3 rounded-xl font-medium text-sm transition-all shadow-md">
+                                    <i class="fas fa-download text-base"></i>
+                                    <span>Direct Download</span>
+                                </button>
+                            </div>
+
+                            <!-- URL display -->
+                            <div class="bg-gray-50 rounded-lg p-3 border border-gray-200 space-y-2 text-xs">
+                                <div class="flex items-start gap-2">
+                                    <span class="text-gray-400 w-20 flex-shrink-0 pt-0.5">Install URL</span>
+                                    <span class="font-mono text-gray-600 break-all text-[10px] leading-relaxed" id="php-install-url"></span>
+                                    <button onclick="phpCopyInstall()" class="ml-auto flex-shrink-0 text-gray-400 hover:text-indigo-600 transition-colors"><i class="far fa-copy"></i></button>
+                                </div>
+                                <div class="flex items-start gap-2 border-t border-gray-100 pt-2">
+                                    <span class="text-gray-400 w-20 flex-shrink-0 pt-0.5">Download URL</span>
+                                    <span class="font-mono text-gray-600 break-all text-[10px] leading-relaxed" id="php-dl-url"></span>
+                                    <button onclick="phpCopyDownload()" class="ml-auto flex-shrink-0 text-gray-400 hover:text-indigo-600 transition-colors"><i class="far fa-copy"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- Config panel -->
+                            <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                <div class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2"><i class="fas fa-cog mr-1"></i>PHP Config</div>
+                                <div class="space-y-2">
+                                    <div class="flex items-center gap-2">
+                                        <label class="text-xs text-gray-500 w-24 flex-shrink-0">Project Path</label>
+                                        <input id="php-project-path" type="text" placeholder="/var/www/html" class="flex-1 text-xs border border-gray-200 rounded-md px-2.5 py-1.5 outline-none focus:border-indigo-400 bg-white font-mono">
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <label class="text-xs text-gray-500 w-24 flex-shrink-0">Client ID</label>
+                                        <input id="php-client-id" type="text" placeholder="your-client-id.apps.googleusercontent.com" class="flex-1 text-xs border border-gray-200 rounded-md px-2.5 py-1.5 outline-none focus:border-indigo-400 bg-white font-mono">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Status probe output -->
+                            <div id="php-probe-output" class="bg-gray-900 text-green-400 rounded-lg p-3 font-mono text-xs leading-relaxed hidden"></div>
+
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="flex items-center gap-2 px-4 py-2.5 bg-gray-50 border-t border-gray-200 flex-shrink-0 text-xs text-gray-400">
+                            <i class="fab fa-google text-blue-500"></i>
+                            <span>via OnWorks.net · Google API Catalog</span>
+                            <button onclick="phpClientProbe()" class="ml-auto bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2.5 py-1 rounded-md transition-colors font-medium"><i class="fas fa-satellite-dish mr-1"></i>Check Availability</button>
+                            <span class="text-gray-300">· Lumenis resource.onworks_gdrive_php</span>
+                        </div>
+                    </div>
+                `
             }
         };
 
@@ -1847,6 +1996,82 @@
         function lcClear() {
             const box = document.getElementById('lc-msgs');
             if (box) box.innerHTML = '';
+        }
+
+        // ── Linux Emulator helpers ───────────────────────────────────────────────────
+        async function linuxEmuProbe() {
+            const dot = document.getElementById('lemu-dot');
+            const status = document.getElementById('lemu-status');
+            if (!dot) return;
+            dot.style.background = '#d97706'; status.textContent = 'Probing…';
+            try {
+                const r = await fetch(`${LUMENIS_RC}/api/resources/linux_emulator/fetch`, {
+                    method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}'
+                });
+                const d = await r.json();
+                if (d.reachable) {
+                    dot.style.background = '#22c55e'; status.textContent = `Online · HTTP ${d.status}`;
+                } else {
+                    dot.style.background = '#ef4444'; status.textContent = d.error || 'Unreachable';
+                }
+            } catch(e) {
+                dot.style.background = '#ef4444'; status.textContent = 'Probe failed';
+            }
+        }
+
+        function lemuCopyUrl() {
+            navigator.clipboard.writeText('https://thumbsdb.herokuapp.com/linux/').then(() => {
+                const btn = event.target.closest('button');
+                const orig = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check mr-1 text-green-400"></i>Copied!';
+                setTimeout(() => btn.innerHTML = orig, 1500);
+            });
+        }
+
+        // ── Google API PHP Client helpers ─────────────────────────────────────────
+        const PHP_INSTALL_URL = 'https://apis.google.com/additnow/l?applicationid=796898949162&__ls=ogb&__lu=https%3A%2F%2Fwww.onworks.net%2Fthirdparty%2Fgdrive%2Fgoogle-api-php-client%2Fcore%2Fdownload.php';
+        const PHP_DL_URL      = 'https://www.onworks.net/thirdparty/gdrive/google-api-php-client/core/download.php';
+
+        async function phpClientProbe() {
+            const dot    = document.getElementById('php-dot');
+            const status = document.getElementById('php-status');
+            const out    = document.getElementById('php-probe-output');
+            if (!dot) return;
+            dot.style.background = 'rgba(255,255,255,0.5)'; status.textContent = 'Probing…';
+            if (out) { out.classList.remove('hidden'); out.textContent = 'Fetching resource info from Lumenis…'; }
+            try {
+                const r = await fetch(`${LUMENIS_RC}/api/resources/onworks_gdrive_php/info`);
+                const d = await r.json();
+                dot.style.background = '#22c55e'; status.textContent = 'Available';
+                if (out) out.textContent = JSON.stringify(d, null, 2);
+                // Populate URL fields
+                const instEl = document.getElementById('php-install-url');
+                const dlEl   = document.getElementById('php-dl-url');
+                if (instEl) instEl.textContent = d.install_url || PHP_INSTALL_URL;
+                if (dlEl)   dlEl.textContent   = d.download_url || PHP_DL_URL;
+            } catch(e) {
+                dot.style.background = '#ef4444'; status.textContent = 'Error';
+                if (out) out.textContent = 'Probe error: ' + e.message;
+            }
+        }
+
+        function phpInstall()     { window.open(PHP_INSTALL_URL, '_blank'); }
+        function phpDownload()    { window.open(PHP_DL_URL, '_blank'); }
+
+        function phpCopyInstall() {
+            navigator.clipboard.writeText(PHP_INSTALL_URL).then(() => {
+                const btn = event.target.closest('button');
+                const orig = btn.innerHTML; btn.innerHTML = '<i class="fas fa-check text-green-500"></i>';
+                setTimeout(() => btn.innerHTML = orig, 1500);
+            });
+        }
+
+        function phpCopyDownload() {
+            navigator.clipboard.writeText(PHP_DL_URL).then(() => {
+                const btn = event.target.closest('button');
+                const orig = btn.innerHTML; btn.innerHTML = '<i class="fas fa-check text-green-500"></i>';
+                setTimeout(() => btn.innerHTML = orig, 1500);
+            });
         }
 
         // Initialization
