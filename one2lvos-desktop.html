@@ -355,7 +355,7 @@
                             <h2 class="font-bold text-xl mb-6">Settings</h2>
                             <ul class="space-y-2">
                                 <li class="p-2 bg-blue-50 text-blue-600 rounded font-medium cursor-pointer"><i class="fas fa-desktop w-6 text-center"></i> Personalization</li>
-                                <li class="p-2 hover:bg-gray-100 rounded cursor-pointer text-gray-700 transition-colors"><i class="fas fa-wifi w-6 text-center"></i> Network</li>
+                                <li class="p-2 hover:bg-gray-100 rounded cursor-pointer text-gray-700 transition-colors" onclick="openApp('network-mgr')"><i class="fas fa-wifi w-6 text-center"></i> Network</li>
                                 <li class="p-2 hover:bg-gray-100 rounded cursor-pointer text-gray-700 transition-colors"><i class="fas fa-shield-alt w-6 text-center"></i> Security</li>
                             </ul>
                         </div>
@@ -553,24 +553,83 @@
                 name: 'Network Manager',
                 icon: 'fas fa-network-wired',
                 color: 'text-teal-400',
-                width: 720,
-                height: 560,
+                width: 980,
+                height: 700,
                 content: `
-                    <div class="h-full flex flex-col bg-white">
-                        <div class="bg-gradient-to-r from-teal-600 to-cyan-600 text-white p-4 shadow-lg flex-shrink-0">
-                            <h2 class="text-lg font-bold flex items-center gap-2"><i class="fas fa-network-wired"></i> One2lvOS Network Manager</h2>
-                            <p class="text-teal-200 text-xs mt-0.5">Static Connections · Mesh Routing · WebDAV/FTP</p>
+                    <div class="h-full flex flex-col" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)">
+                        <div id="net-app" class="flex-1 overflow-auto p-6">
+                            <!-- Header -->
+                            <div class="bg-white rounded-2xl shadow-2xl p-5 mb-5">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                                            <i class="fas fa-network-wired text-white text-2xl"></i>
+                                        </div>
+                                        <div>
+                                            <h1 class="text-2xl font-bold text-gray-800">Network Manager</h1>
+                                            <p class="text-gray-500 text-sm">Static Connections &amp; Mesh Routing · port 3003</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button onclick="netRefresh()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all"><i class="fas fa-sync-alt mr-1"></i>Refresh</button>
+                                        <button onclick="netShowAdd()" class="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-5 py-2 rounded-xl font-semibold hover:shadow-lg transition-all text-sm"><i class="fas fa-plus mr-2"></i>New Connection</button>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-4 gap-3 mt-5">
+                                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded-xl"><div class="text-blue-600 text-xs font-semibold">Total</div><div class="text-2xl font-bold text-blue-900" id="net-stat-total">0</div></div>
+                                    <div class="bg-gradient-to-br from-green-50 to-green-100 p-3 rounded-xl"><div class="text-green-600 text-xs font-semibold">Active</div><div class="text-2xl font-bold text-green-900" id="net-stat-active">0</div></div>
+                                    <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-3 rounded-xl"><div class="text-purple-600 text-xs font-semibold">Protocols</div><div class="text-2xl font-bold text-purple-900">2</div></div>
+                                    <div class="bg-gradient-to-br from-orange-50 to-orange-100 p-3 rounded-xl"><div class="text-orange-600 text-xs font-semibold">Mesh Nodes</div><div class="text-2xl font-bold text-orange-900">1</div></div>
+                                </div>
+                            </div>
+                            <!-- Connections grid -->
+                            <div class="grid grid-cols-3 gap-4" id="net-grid"></div>
+                            <div id="net-empty" class="bg-white rounded-2xl shadow-2xl p-10 text-center hidden">
+                                <i class="fas fa-plug text-5xl text-gray-300 mb-3"></i>
+                                <h3 class="text-xl font-bold text-gray-700 mb-2">No Connections</h3>
+                                <p class="text-gray-500 mb-5 text-sm">Create your first static connection to get started</p>
+                                <button onclick="netShowAdd()" class="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-5 py-2 rounded-xl font-semibold hover:shadow-lg transition-all text-sm"><i class="fas fa-plus mr-2"></i>Add Connection</button>
+                            </div>
                         </div>
-                        <iframe src="http://localhost:3003/network-manager.html" class="flex-1 w-full border-none" id="network-iframe"
-                            onerror="document.getElementById('network-fallback').style.display='flex'"></iframe>
-                        <div id="network-fallback" class="flex-1 hidden flex-col items-center justify-center text-gray-400 p-6 text-center bg-gray-50" style="display:none">
-                            <i class="fas fa-network-wired text-4xl mb-3 text-teal-400"></i>
-                            <div class="font-medium mb-1 text-gray-700">Network Service Offline</div>
-                            <div class="text-sm text-gray-500 mb-3">Start with: <code class="bg-gray-100 px-1.5 py-0.5 rounded font-mono">node server/network-api.js</code></div>
-                            <div class="text-xs text-gray-400">Default port: 3003</div>
+                        <!-- Add Connection panel (hidden by default) -->
+                        <div id="net-add-panel" class="hidden absolute inset-0 bg-black/50 flex items-center justify-center z-10">
+                            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-6 overflow-y-auto max-h-[90%]">
+                                <div class="p-5 border-b flex items-center justify-between">
+                                    <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-plug text-blue-500 mr-2"></i>New Connection</h2>
+                                    <button onclick="netHideAdd()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+                                </div>
+                                <form id="net-form" class="p-5 space-y-4" onsubmit="netSaveConn(event)">
+                                    <div><label class="block text-sm font-semibold text-gray-700 mb-1">Connection Name</label>
+                                    <input type="text" name="name" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" placeholder="My WebDAV Server"></div>
+                                    <div><label class="block text-sm font-semibold text-gray-700 mb-1">Protocol</label>
+                                    <select name="protocol" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" onchange="netUpdateProto(this)">
+                                        <option value="webdav">WebDAV</option><option value="ftp">FTP</option>
+                                    </select></div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div><label class="block text-sm font-semibold text-gray-700 mb-1">Host</label>
+                                        <input type="text" name="host" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" placeholder="example.com"></div>
+                                        <div><label class="block text-sm font-semibold text-gray-700 mb-1">Port</label>
+                                        <input type="number" name="port" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" placeholder="80"></div>
+                                    </div>
+                                    <div id="net-path-field"><label class="block text-sm font-semibold text-gray-700 mb-1">Path</label>
+                                    <input type="text" name="path" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" placeholder="/webdav" value="/"></div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div><label class="block text-sm font-semibold text-gray-700 mb-1">Username</label>
+                                        <input type="text" name="username" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" placeholder="admin"></div>
+                                        <div><label class="block text-sm font-semibold text-gray-700 mb-1">Password</label>
+                                        <input type="password" name="password" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" placeholder="••••••••"></div>
+                                    </div>
+                                    <div id="net-test-result" class="text-sm hidden"></div>
+                                    <div class="flex gap-3 pt-2">
+                                        <button type="button" onclick="netTestConn()" class="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-lg font-semibold hover:bg-gray-200 transition-all text-sm"><i class="fas fa-vial mr-2"></i>Test</button>
+                                        <button type="submit" class="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white py-2.5 rounded-lg font-semibold hover:shadow-lg transition-all text-sm"><i class="fas fa-save mr-2"></i>Save</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </div>
-                `
+                `,
+                onOpen: () => setTimeout(() => netRefresh(), 300)
             },
             'lumenis-v7': {
                 name: 'Lumenis v7 Cosmic',
@@ -1242,6 +1301,116 @@
             } catch(e) {
                 out.textContent = '[Reactor send error] ' + e.message;
             }
+        }
+
+        // ── Network Manager (embedded, talks to :3003) ──────────────────
+        const NET_API = 'http://localhost:3003/api/network';
+        let _netConns = [];
+
+        async function netRefresh() {
+            const grid = document.getElementById('net-grid');
+            const empty = document.getElementById('net-empty');
+            if (!grid) return;
+            try {
+                const r = await fetch(NET_API + '/connections', {signal: AbortSignal.timeout(5000)});
+                _netConns = await r.json();
+                document.getElementById('net-stat-total').textContent = _netConns.length;
+                document.getElementById('net-stat-active').textContent = _netConns.filter(c => c.status === 'connected').length;
+                if (_netConns.length === 0) {
+                    grid.innerHTML = '';
+                    empty.classList.remove('hidden');
+                } else {
+                    empty.classList.add('hidden');
+                    grid.innerHTML = _netConns.map(c => netCardHTML(c)).join('');
+                }
+            } catch(e) {
+                if (grid) grid.innerHTML = `<div class="col-span-3 bg-white/80 rounded-2xl p-8 text-center text-gray-500"><i class="fas fa-plug text-4xl mb-3 text-red-400 block"></i><div class="font-semibold mb-1">Network service offline</div><div class="text-sm">Start with: <code class="bg-gray-100 px-1 py-0.5 rounded">node server/network-api.js</code></div></div>`;
+            }
+        }
+
+        function netCardHTML(c) {
+            const dot = {connected:'#10b981',disconnected:'#6b7280',connecting:'#f59e0b',error:'#ef4444'}[c.status]||'#6b7280';
+            const icon = c.protocol === 'webdav' ? 'fa-cloud' : 'fa-server';
+            const btns = c.status === 'connected'
+                ? `<button onclick="netDisconnect('${c.id}')" class="flex-1 bg-red-50 text-red-600 py-1.5 rounded-lg text-xs font-semibold hover:bg-red-100 transition-all"><i class="fas fa-unlink mr-1"></i>Disconnect</button>`
+                : `<button onclick="netConnect('${c.id}')" class="flex-1 bg-green-50 text-green-600 py-1.5 rounded-lg text-xs font-semibold hover:bg-green-100 transition-all"><i class="fas fa-plug mr-1"></i>Connect</button>`;
+            return `<div class="bg-white rounded-xl shadow-lg p-4 hover:-translate-y-0.5 transition-transform">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center"><i class="fas ${icon} text-white"></i></div>
+                        <div><div class="font-bold text-gray-800 text-sm">${c.id}</div><div class="text-xs text-gray-500">${c.protocol.toUpperCase()}</div></div>
+                    </div>
+                    <span style="width:8px;height:8px;border-radius:50%;background:${dot};display:inline-block;margin-top:6px"></span>
+                </div>
+                <div class="text-xs text-gray-600 space-y-1 mb-3">
+                    <div><i class="fas fa-server w-4"></i>${c.host}:${c.port}</div>
+                    <div><i class="fas fa-folder w-4"></i>${c.path||'/'}</div>
+                </div>
+                <div class="flex gap-2">${btns}
+                    <button onclick="netRemove('${c.id}')" class="bg-gray-100 text-gray-500 py-1.5 px-2.5 rounded-lg text-xs hover:bg-gray-200 transition-all"><i class="fas fa-trash"></i></button>
+                </div></div>`;
+        }
+
+        function netShowAdd() {
+            const p = document.getElementById('net-add-panel');
+            if (p) { p.classList.remove('hidden'); p.classList.add('flex'); }
+        }
+        function netHideAdd() {
+            const p = document.getElementById('net-add-panel');
+            if (p) { p.classList.add('hidden'); p.classList.remove('flex'); }
+            const f = document.getElementById('net-form');
+            if (f) f.reset();
+            const r = document.getElementById('net-test-result');
+            if (r) r.classList.add('hidden');
+        }
+        function netUpdateProto(sel) {
+            const pf = document.getElementById('net-path-field');
+            const port = sel.closest('form').querySelector('[name="port"]');
+            if (sel.value === 'ftp') { if(pf) pf.style.display='none'; if(port) port.placeholder='21'; }
+            else { if(pf) pf.style.display=''; if(port) port.placeholder='80'; }
+        }
+
+        async function netSaveConn(e) {
+            e.preventDefault();
+            const f = new FormData(e.target);
+            const cfg = {
+                protocol: f.get('protocol'), host: f.get('host'),
+                port: parseInt(f.get('port')) || (f.get('protocol')==='ftp'?21:80),
+                path: f.get('path') || '/',
+                credentials: {username: f.get('username'), password: f.get('password')},
+                persistent: true, autoReconnect: true
+            };
+            try {
+                const r = await fetch(NET_API + '/connections', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(cfg)});
+                if (r.ok) { netHideAdd(); netRefresh(); }
+                else { alert('Failed to save connection'); }
+            } catch(err) { alert('Error: ' + err.message); }
+        }
+
+        async function netTestConn() {
+            const f = new FormData(document.getElementById('net-form'));
+            const res = document.getElementById('net-test-result');
+            if (res) { res.classList.remove('hidden'); res.textContent = 'Testing...'; res.className = 'text-sm text-gray-500'; }
+            try {
+                const r = await fetch(NET_API + '/test', {method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({protocol:f.get('protocol'),host:f.get('host'),port:parseInt(f.get('port'))||21,path:f.get('path')||'/',credentials:{username:f.get('username'),password:f.get('password')}})});
+                const d = await r.json();
+                if (res) { res.textContent = d.success ? '✓ Connection successful!' : '✗ ' + d.message; res.className = 'text-sm ' + (d.success ? 'text-green-600' : 'text-red-600'); }
+            } catch(err) { if(res){res.textContent='✗ '+err.message; res.className='text-sm text-red-600';} }
+        }
+
+        async function netConnect(id) {
+            await fetch(NET_API + '/connections/' + id + '/connect', {method:'POST'}).catch(()=>{});
+            netRefresh();
+        }
+        async function netDisconnect(id) {
+            await fetch(NET_API + '/connections/' + id + '/disconnect', {method:'POST'}).catch(()=>{});
+            netRefresh();
+        }
+        async function netRemove(id) {
+            if (!confirm('Remove this connection?')) return;
+            await fetch(NET_API + '/connections/' + id, {method:'DELETE'}).catch(()=>{});
+            netRefresh();
         }
 
         // ── MiniMax Hub status ───────────────────────────────────────────
