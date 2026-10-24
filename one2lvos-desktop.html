@@ -690,63 +690,88 @@
                 `
             },
 
-            // ── Resource: Linux Emulator ─────────────────────────────────────
+            // ── Resource: Linux Emulator + OnWorks Build Picker ────────────────
             'linux-emulator': {
                 name: 'Linux Emulator',
                 icon: 'fab fa-linux',
                 color: 'text-green-500',
-                width: 920,
-                height: 660,
-                onOpen: () => setTimeout(() => linuxEmuProbe(), 400),
+                width: 1060,
+                height: 700,
+                onOpen: () => setTimeout(() => onworksInit(), 300),
                 content: `
                     <div class="h-full flex flex-col bg-gray-950 text-white" style="font-family:'Segoe UI',system-ui,sans-serif">
-                        <!-- Header -->
+
+                        <!-- Header bar -->
                         <div class="flex items-center gap-3 px-4 py-2.5 bg-gray-900 border-b border-green-900/40 flex-shrink-0">
                             <span class="text-green-400 text-xl"><i class="fab fa-linux"></i></span>
-                            <div class="flex-1">
-                                <div class="font-bold text-green-400 text-sm tracking-wide">Personal Linux System With Drive</div>
-                                <div class="text-gray-500 text-xs">In-browser x86 · Python · GCC · Google Drive import</div>
+                            <div>
+                                <span class="font-bold text-green-400 text-sm tracking-wide">OnWorks Linux Emulator</span>
+                                <span id="ow-active-badge" class="ml-2 text-xs bg-green-900/50 text-green-400 border border-green-800/40 px-2 py-0.5 rounded-full">Ubuntu 22</span>
                             </div>
-                            <span id="lemu-dot" class="w-2.5 h-2.5 rounded-full bg-gray-600 transition-colors duration-500 flex-shrink-0" title="Reachability status"></span>
-                            <span id="lemu-status" class="text-xs text-gray-500">Checking…</span>
-                            <button onclick="linuxEmuProbe()" class="bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs px-2.5 py-1 rounded-md transition-colors"><i class="fas fa-sync-alt mr-1"></i>Probe</button>
-                            <button onclick="window.open('https://thumbsdb.herokuapp.com/linux/','_blank')" class="bg-green-700 hover:bg-green-600 text-white text-xs px-2.5 py-1 rounded-md transition-colors"><i class="fas fa-external-link-alt mr-1"></i>Open Tab</button>
+                            <span id="ow-category-badge" class="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded-full">ubuntu</span>
+                            <div class="ml-auto flex items-center gap-2">
+                                <span id="ow-status-dot" class="w-2 h-2 rounded-full bg-yellow-500"></span>
+                                <span id="ow-status-txt" class="text-xs text-gray-400">Loading…</span>
+                                <button onclick="onworksOpenTab()" class="bg-green-700 hover:bg-green-600 text-white text-xs px-2.5 py-1 rounded-md transition-colors"><i class="fas fa-external-link-alt mr-1"></i>Open Tab</button>
+                            </div>
                         </div>
 
-                        <!-- Capabilities strip -->
-                        <div class="flex flex-wrap gap-1.5 px-4 py-2 bg-gray-900/60 border-b border-green-900/20 flex-shrink-0">
-                            <span class="bg-green-900/40 text-green-400 text-xs px-2 py-0.5 rounded-full border border-green-800/40"><i class="fas fa-terminal mr-1"></i>Shell</span>
-                            <span class="bg-green-900/40 text-green-400 text-xs px-2 py-0.5 rounded-full border border-green-800/40"><i class="fab fa-python mr-1"></i>Python</span>
-                            <span class="bg-green-900/40 text-green-400 text-xs px-2 py-0.5 rounded-full border border-green-800/40"><i class="fas fa-code mr-1"></i>Perl / GCC</span>
-                            <span class="bg-green-900/40 text-green-400 text-xs px-2 py-0.5 rounded-full border border-green-800/40"><i class="fas fa-network-wired mr-1"></i>wget / ping</span>
-                            <span class="bg-green-900/40 text-green-400 text-xs px-2 py-0.5 rounded-full border border-green-800/40"><i class="fab fa-google-drive mr-1"></i>Drive Import</span>
-                            <span class="bg-green-900/40 text-green-400 text-xs px-2 py-0.5 rounded-full border border-green-800/40"><i class="fas fa-file-import mr-1"></i>Local Import</span>
-                            <span class="ml-auto text-gray-600 text-xs self-center">thumbsdb.herokuapp.com</span>
+                        <!-- Body: picker + frame -->
+                        <div class="flex flex-1 overflow-hidden">
+
+                            <!-- Left: Build picker -->
+                            <div class="w-52 flex-shrink-0 bg-gray-900 border-r border-gray-800 flex flex-col overflow-hidden">
+                                <!-- Category filter -->
+                                <div class="flex flex-wrap gap-1 p-2 border-b border-gray-800 flex-shrink-0">
+                                    <button onclick="onworksFilter('all')"     id="owf-all"     class="ow-filter-btn active-filter text-[10px] px-2 py-0.5 rounded-full border transition-colors">All</button>
+                                    <button onclick="onworksFilter('ubuntu')"  id="owf-ubuntu"  class="ow-filter-btn text-[10px] px-2 py-0.5 rounded-full border transition-colors">Ubuntu</button>
+                                    <button onclick="onworksFilter('debian')"  id="owf-debian"  class="ow-filter-btn text-[10px] px-2 py-0.5 rounded-full border transition-colors">Debian</button>
+                                    <button onclick="onworksFilter('rpm')"     id="owf-rpm"     class="ow-filter-btn text-[10px] px-2 py-0.5 rounded-full border transition-colors">RPM</button>
+                                    <button onclick="onworksFilter('special')" id="owf-special" class="ow-filter-btn text-[10px] px-2 py-0.5 rounded-full border transition-colors">Special</button>
+                                </div>
+                                <!-- Build list -->
+                                <div id="ow-build-list" class="flex-1 overflow-y-auto py-1">
+                                    <div class="text-center text-gray-500 text-xs py-6"><i class="fas fa-spinner fa-spin mr-1"></i>Loading…</div>
+                                </div>
+                            </div>
+
+                            <!-- Right: Active build iframe -->
+                            <div class="flex-1 flex flex-col overflow-hidden">
+                                <iframe id="ow-frame"
+                                    src="https://www.onworks.net/runos/create-os.html?os=ubuntu-22.04.3-desktop-amd64&home=init"
+                                    class="flex-1 w-full border-none"
+                                    title="OnWorks Linux Build"
+                                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals">
+                                </iframe>
+                            </div>
                         </div>
 
-                        <!-- Embedded emulator -->
-                        <div class="flex-1 relative overflow-hidden">
-                            <iframe id="lemu-frame" src="https://thumbsdb.herokuapp.com/linux/"
-                                class="absolute inset-0 w-full h-full border-none"
-                                title="Linux Emulator"
-                                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads">
-                            </iframe>
-                        </div>
-
-                        <!-- Footer bar -->
-                        <div class="flex items-center gap-3 px-4 py-2 bg-gray-900 border-t border-green-900/30 flex-shrink-0 text-xs">
-                            <span class="text-gray-500"><i class="fas fa-link mr-1"></i>
-                                <span id="lemu-url-display" class="font-mono text-gray-400 select-all">https://thumbsdb.herokuapp.com/linux/</span>
-                            </span>
-                            <button onclick="lemuCopyUrl()" class="ml-auto bg-gray-700 hover:bg-gray-600 text-gray-300 px-2.5 py-1 rounded-md transition-colors"><i class="far fa-copy mr-1"></i>Copy URL</button>
-                            <button onclick="document.getElementById('lemu-frame').src=document.getElementById('lemu-frame').src" class="bg-gray-700 hover:bg-gray-600 text-gray-300 px-2.5 py-1 rounded-md transition-colors"><i class="fas fa-redo-alt mr-1"></i>Reload</button>
-                            <span id="lemu-api-badge" class="text-gray-600">· Lumenis resource.linux_emulator</span>
+                        <!-- Footer -->
+                        <div class="flex items-center gap-3 px-4 py-1.5 bg-gray-900 border-t border-gray-800 flex-shrink-0 text-xs text-gray-500">
+                            <span><i class="fas fa-link mr-1"></i><span id="ow-url-display" class="font-mono select-all text-gray-400 text-[10px]"></span></span>
+                            <button onclick="owCopyUrl()" class="ml-auto bg-gray-700 hover:bg-gray-600 text-gray-300 px-2 py-0.5 rounded transition-colors"><i class="far fa-copy mr-1"></i>Copy</button>
+                            <button onclick="document.getElementById('ow-frame').src=document.getElementById('ow-frame').src" class="bg-gray-700 hover:bg-gray-600 text-gray-300 px-2 py-0.5 rounded transition-colors"><i class="fas fa-redo-alt mr-1"></i>Reload</button>
+                            <span class="text-gray-600">· onworks.net · Lumenis resource.onworks</span>
                         </div>
                     </div>
+
+                    <style>
+                        .ow-filter-btn { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.1); color: #9ca3af; }
+                        .ow-filter-btn:hover { background: rgba(255,255,255,.1); color: #d1d5db; }
+                        .ow-filter-btn.active-filter { background: rgba(74,222,128,.15); border-color: rgba(74,222,128,.4); color: #4ade80; }
+                        .ow-build-card { display:flex; align-items:center; gap:8px; padding:6px 10px; cursor:pointer; border-left:3px solid transparent; transition:all .15s; }
+                        .ow-build-card:hover { background:rgba(255,255,255,.05); }
+                        .ow-build-card.selected { border-left-color:#4ade80; background:rgba(74,222,128,.08); }
+                        .ow-cat-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+                        .ow-cat-ubuntu  { background:#e95420; }
+                        .ow-cat-debian  { background:#d70a53; }
+                        .ow-cat-rpm     { background:#294172; }
+                        .ow-cat-special { background:#7c3aed; }
+                    </style>
                 `
             },
 
-            // ── Resource: Google API PHP Client ──────────────────────────────
+                        // ── Resource: Google API PHP Client ──────────────────────────────
             'onworks-gdrive-php': {
                 name: 'Google API PHP Client',
                 icon: 'fab fa-php',
@@ -1998,37 +2023,116 @@
             if (box) box.innerHTML = '';
         }
 
-        // ── Linux Emulator helpers ───────────────────────────────────────────────────
-        async function linuxEmuProbe() {
-            const dot = document.getElementById('lemu-dot');
-            const status = document.getElementById('lemu-status');
-            if (!dot) return;
-            dot.style.background = '#d97706'; status.textContent = 'Probing…';
+        // ── OnWorks Build Picker helpers ─────────────────────────────────────────────
+        let _owBuilds = [];
+        let _owSelected = 'ubuntu22';
+        let _owFilter = 'all';
+
+        async function onworksInit() {
+            // Load selected build from Lumenis memory
             try {
-                const r = await fetch(`${LUMENIS_RC}/api/resources/linux_emulator/fetch`, {
-                    method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}'
-                });
-                const d = await r.json();
-                if (d.reachable) {
-                    dot.style.background = '#22c55e'; status.textContent = `Online · HTTP ${d.status}`;
-                } else {
-                    dot.style.background = '#ef4444'; status.textContent = d.error || 'Unreachable';
+                const sel = await fetch(`${LUMENIS_RC}/api/resources/onworks/selected`).then(r=>r.json());
+                if (sel.build) {
+                    _owSelected = sel.build.build_id || sel.build.id || 'ubuntu22';
+                    const url = sel.build.launch_url;
+                    const frame = document.getElementById('ow-frame');
+                    if (frame && url) frame.src = url;
+                    onworksUpdateHeader(sel.build);
                 }
+            } catch(e) {}
+
+            // Load full catalog
+            try {
+                const data = await fetch(`${LUMENIS_RC}/api/resources/onworks/builds`).then(r=>r.json());
+                _owBuilds = data.builds || [];
+                onworksRender(_owBuilds, _owSelected, _owFilter);
+                const dot = document.getElementById('ow-status-dot');
+                const txt = document.getElementById('ow-status-txt');
+                if (dot) dot.style.background = '#22c55e';
+                if (txt) txt.textContent = `${_owBuilds.length} builds`;
             } catch(e) {
-                dot.style.background = '#ef4444'; status.textContent = 'Probe failed';
+                const dot = document.getElementById('ow-status-dot');
+                if (dot) dot.style.background = '#ef4444';
+                const txt = document.getElementById('ow-status-txt');
+                if (txt) txt.textContent = 'Lumenis offline';
             }
         }
 
-        function lemuCopyUrl() {
-            navigator.clipboard.writeText('https://thumbsdb.herokuapp.com/linux/').then(() => {
+        function onworksRender(builds, selectedId, filter) {
+            const list = document.getElementById('ow-build-list');
+            if (!list) return;
+            const visible = filter === 'all' ? builds : builds.filter(b => b.category === filter);
+            list.innerHTML = visible.map(b => `
+                <div class="ow-build-card ${b.id === selectedId ? 'selected' : ''}" onclick="onworksSelect('${b.id}')">
+                    <span class="ow-cat-dot ow-cat-${b.category}"></span>
+                    <i class="${b.icon} text-gray-400 w-4 text-center text-xs"></i>
+                    <span class="text-xs text-gray-300 truncate flex-1">${b.name}</span>
+                </div>
+            `).join('');
+        }
+
+        async function onworksSelect(buildId) {
+            const b = _owBuilds.find(x => x.id === buildId);
+            if (!b) return;
+            _owSelected = buildId;
+
+            // Update iframe
+            const frame = document.getElementById('ow-frame');
+            if (frame) frame.src = b.launch_url;
+
+            // Update header
+            onworksUpdateHeader(b);
+
+            // Re-render list with new selection
+            onworksRender(_owBuilds, _owSelected, _owFilter);
+
+            // Persist to Lumenis
+            try {
+                await fetch(`${LUMENIS_RC}/api/resources/onworks/select`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({build_id: buildId})
+                });
+            } catch(e) {}
+        }
+
+        function onworksUpdateHeader(b) {
+            const badge = document.getElementById('ow-active-badge');
+            const catBadge = document.getElementById('ow-category-badge');
+            const urlDisplay = document.getElementById('ow-url-display');
+            if (badge) badge.textContent = b.name || b.build_id;
+            if (catBadge) catBadge.textContent = b.category || '';
+            if (urlDisplay) urlDisplay.textContent = b.launch_url || '';
+        }
+
+        function onworksFilter(cat) {
+            _owFilter = cat;
+            // Update filter button styles
+            ['all','ubuntu','debian','rpm','special'].forEach(c => {
+                const btn = document.getElementById(`owf-${c}`);
+                if (btn) btn.classList.toggle('active-filter', c === cat);
+            });
+            onworksRender(_owBuilds, _owSelected, cat);
+        }
+
+        function onworksOpenTab() {
+            const b = _owBuilds.find(x => x.id === _owSelected);
+            if (b) window.open(b.launch_url, '_blank');
+        }
+
+        function owCopyUrl() {
+            const url = document.getElementById('ow-url-display');
+            if (!url) return;
+            navigator.clipboard.writeText(url.textContent).then(() => {
                 const btn = event.target.closest('button');
+                if (!btn) return;
                 const orig = btn.innerHTML;
                 btn.innerHTML = '<i class="fas fa-check mr-1 text-green-400"></i>Copied!';
-                setTimeout(() => btn.innerHTML = orig, 1500);
+                setTimeout(() => btn.innerHTML = orig, 1400);
             });
         }
 
-        // ── Google API PHP Client helpers ─────────────────────────────────────────
+                // ── Google API PHP Client helpers ─────────────────────────────────────────
         const PHP_INSTALL_URL = 'https://apis.google.com/additnow/l?applicationid=796898949162&__ls=ogb&__lu=https%3A%2F%2Fwww.onworks.net%2Fthirdparty%2Fgdrive%2Fgoogle-api-php-client%2Fcore%2Fdownload.php';
         const PHP_DL_URL      = 'https://www.onworks.net/thirdparty/gdrive/google-api-php-client/core/download.php';
 

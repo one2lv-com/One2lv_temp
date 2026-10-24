@@ -1895,3 +1895,147 @@ TOOL_REGISTRY.extend([
         "description": "Get download and install URLs for the Google API PHP client from OnWorks.",
     },
 ])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ONWORKS BUILD CATALOG — 29 Linux/OS builds available on OnWorks.net
+# Each launches at: https://www.onworks.net/runos/create-os.html?os={os_id}&home=init
+# ─────────────────────────────────────────────────────────────────────────────
+
+ONWORKS_BUILDS: list = [
+    # ── Ubuntu-based ──────────────────────────────────────────────────────────
+    {"id": "ubuntu22",     "name": "Ubuntu 22",          "category": "ubuntu",  "os_id": "ubuntu-22.04.3-desktop-amd64",            "icon": "fab fa-ubuntu"},
+    {"id": "ubuntu19",     "name": "Ubuntu 19",          "category": "ubuntu",  "os_id": "ubuntu-19.10-desktop-amd64",              "icon": "fab fa-ubuntu"},
+    {"id": "ubuntu16",     "name": "Ubuntu 16",          "category": "ubuntu",  "os_id": "ubuntu-16.04.6-desktop-i386",             "icon": "fab fa-ubuntu"},
+    {"id": "elementary",   "name": "Elementary OS",      "category": "ubuntu",  "os_id": "elementaryos-5.0-stable",                 "icon": "fas fa-circle"},
+    {"id": "kodi",         "name": "Kodi Media Center",  "category": "ubuntu",  "os_id": "kodiubuntu-16.04.6-desktop-i386",         "icon": "fas fa-play-circle"},
+    {"id": "uberstudent",  "name": "UberStudent",        "category": "ubuntu",  "os_id": "uberstudent-4.3-xfce-i386",               "icon": "fas fa-graduation-cap"},
+    {"id": "mageia",       "name": "Mageia",             "category": "ubuntu",  "os_id": "Mageia-6-i586-DVD",                       "icon": "fas fa-star"},
+    {"id": "wine",         "name": "Wine (Windows)",     "category": "ubuntu",  "os_id": "winegui_2_ubuntu-22-amd64",               "icon": "fas fa-wine-glass"},
+    # ── Debian-based ──────────────────────────────────────────────────────────
+    {"id": "debian",       "name": "Debian",             "category": "debian",  "os_id": "debian-9.8.0-i386-DVD-1",                 "icon": "fas fa-compact-disc"},
+    {"id": "mint",         "name": "Linux Mint",         "category": "debian",  "os_id": "linuxmint-19.1-cinnamon-32bit",           "icon": "fas fa-leaf"},
+    {"id": "kali",         "name": "Kali Linux",         "category": "debian",  "os_id": "kali-linux-2019.1a-i386",                 "icon": "fas fa-dragon"},
+    {"id": "clearos",      "name": "ClearOS",            "category": "debian",  "os_id": "ClearOS-DVD-x86_64",                      "icon": "fas fa-shield-alt"},
+    {"id": "zorin",        "name": "Zorin OS",           "category": "debian",  "os_id": "zorin-os-i386",                           "icon": "fas fa-layer-group"},
+    {"id": "chaletos",     "name": "ChaletOS",           "category": "debian",  "os_id": "chaletos-i686",                           "icon": "fas fa-home"},
+    {"id": "mxlinux",      "name": "MX Linux",           "category": "debian",  "os_id": "MX-18.2_386",                             "icon": "fas fa-times-circle"},
+    # ── RPM-based ─────────────────────────────────────────────────────────────
+    {"id": "fedora38",     "name": "Fedora 38",          "category": "rpm",     "os_id": "Fedora-Workstation-Live-x86_64-38-1.6",   "icon": "fab fa-fedora"},
+    {"id": "fedora29",     "name": "Fedora 29",          "category": "rpm",     "os_id": "Fedora-Workstation-Live-x86_64-29-1.2",   "icon": "fab fa-fedora"},
+    {"id": "centos",       "name": "CentOS 7",           "category": "rpm",     "os_id": "CentOS-7-x86_64-DVD-1810_WorkStation",    "icon": "fas fa-server"},
+    {"id": "oracle",       "name": "Oracle Linux",       "category": "rpm",     "os_id": "OracleLinux-R7-U6-Server-x86_64-dvd",    "icon": "fas fa-database"},
+    {"id": "opensuse",     "name": "OpenSUSE",           "category": "rpm",     "os_id": "openSUSE-Leap-15.0-DVD-x86_64",           "icon": "fas fa-cog"},
+    {"id": "opensuseedu",  "name": "OpenSUSE Edu",       "category": "rpm",     "os_id": "openSUSE-Edu",                            "icon": "fas fa-book"},
+    {"id": "mandriva",     "name": "Mandriva",           "category": "rpm",     "os_id": "openmandriva-i386",                       "icon": "fas fa-star-of-life"},
+    {"id": "rhel",         "name": "RHEL",               "category": "rpm",     "os_id": "rhel-server-7.5-x86_64-dvd",             "icon": "fas fa-hat-wizard"},
+    # ── Special ───────────────────────────────────────────────────────────────
+    {"id": "parrot",       "name": "Parrot Security",    "category": "special", "os_id": "Parrot-security-4.5.1_amd64",             "icon": "fas fa-crow"},
+    {"id": "manjaro",      "name": "Manjaro",            "category": "special", "os_id": "manjaro-xfce-17.1.7-stable-x86_64",       "icon": "fas fa-mountain"},
+    {"id": "pearos",       "name": "Pear OS",            "category": "special", "os_id": "pearos8-64",                              "icon": "fas fa-apple-alt"},
+    {"id": "pearlos",      "name": "Pearl OS",           "category": "special", "os_id": "PearlDesktop-7.1_amd64",                  "icon": "fas fa-gem"},
+    {"id": "reactos",      "name": "ReactOS",            "category": "special", "os_id": "ReactOS-0.4.11",                          "icon": "fas fa-recycle"},
+    {"id": "windows10",    "name": "Windows 10 (theme)", "category": "special", "os_id": "win10_emulator",                          "icon": "fab fa-windows"},
+]
+
+_ONWORKS_BASE = "https://www.onworks.net/runos/create-os.html?os={os_id}&home=init"
+for _ob in ONWORKS_BUILDS:
+    _ob["launch_url"] = _ONWORKS_BASE.format(os_id=_ob["os_id"])
+
+
+# ── OnWorks API endpoints ─────────────────────────────────────────────────────
+
+@app.get("/api/resources/onworks/builds")
+async def onworks_builds_list(category: str = None):
+    """Return all OnWorks builds, optionally filtered by category."""
+    builds = ONWORKS_BUILDS if not category else [b for b in ONWORKS_BUILDS if b["category"] == category]
+    cats = sorted(set(b["category"] for b in ONWORKS_BUILDS))
+    return JSONResponse({"builds": builds, "count": len(builds), "categories": cats})
+
+
+@app.get("/api/resources/onworks/builds/{build_id}")
+async def onworks_build_get(build_id: str):
+    """Return a single OnWorks build by ID."""
+    b = next((b for b in ONWORKS_BUILDS if b["id"] == build_id), None)
+    if not b:
+        return JSONResponse(
+            {"error": f"Build '{build_id}' not found.",
+             "available": [b["id"] for b in ONWORKS_BUILDS]},
+            status_code=404,
+        )
+    return JSONResponse(b)
+
+
+@app.post("/api/resources/onworks/select")
+async def onworks_build_select(body: dict):
+    """Persist the selected OnWorks build as a compass.db fact."""
+    build_id = body.get("build_id", "").strip()
+    b = next((b for b in ONWORKS_BUILDS if b["id"] == build_id), None)
+    if not b:
+        return JSONResponse({"error": f"Unknown build '{build_id}'"}, status_code=400)
+    compass.store_fact(
+        key="onworks.selected_build",
+        value=json.dumps({
+            "build_id":   build_id,
+            "name":       b["name"],
+            "category":   b["category"],
+            "os_id":      b["os_id"],
+            "launch_url": b["launch_url"],
+            "selected_at": time.time(),
+        }),
+    )
+    return JSONResponse({
+        "selected":   build_id,
+        "name":       b["name"],
+        "launch_url": b["launch_url"],
+        "persisted":  True,
+    })
+
+
+@app.get("/api/resources/onworks/selected")
+async def onworks_build_selected():
+    """Return the currently selected OnWorks build (defaults to Ubuntu 22)."""
+    facts = compass.recall_facts("onworks.selected_build")
+    if facts:
+        try:
+            return JSONResponse({"build": json.loads(facts[0]["value"]), "default": False})
+        except Exception:
+            pass
+    default = next(b for b in ONWORKS_BUILDS if b["id"] == "ubuntu22")
+    return JSONResponse({"build": default, "default": True})
+
+
+# ── TOOL_REGISTRY entries ─────────────────────────────────────────────────────
+
+TOOL_REGISTRY.extend([
+    {
+        "id":          "resource.onworks.builds",
+        "label":       "OnWorks Build Catalog",
+        "method":      "GET",
+        "path":        "/api/resources/onworks/builds",
+        "category":    "Resources",
+        "icon":        "🐧",
+        "params":      ["category"],
+        "description": "List all 29 OnWorks Linux/OS builds. Filter by category: ubuntu|debian|rpm|special.",
+    },
+    {
+        "id":          "resource.onworks.select",
+        "label":       "Select OnWorks Build",
+        "method":      "POST",
+        "path":        "/api/resources/onworks/select",
+        "category":    "Resources",
+        "icon":        "✅",
+        "params":      ["build_id"],
+        "description": "Set the active OnWorks build and persist it to compass.db memory.",
+    },
+    {
+        "id":          "resource.onworks.selected",
+        "label":       "Active OnWorks Build",
+        "method":      "GET",
+        "path":        "/api/resources/onworks/selected",
+        "category":    "Resources",
+        "icon":        "🖥️",
+        "params":      [],
+        "description": "Get the currently selected OnWorks build (from compass.db, defaults to Ubuntu 22).",
+    },
+])
