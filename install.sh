@@ -1,258 +1,206 @@
 #!/bin/bash
-# One2lvOS Installation Script
-# Installs dependencies and configures environment
+# ONE2LVOS — Full Subsystem Installer
+# Written by Lumenis Reactor Core, hardened by Architect
+# Usage: bash install.sh [--no-node] [--no-python] [--skip-venv]
 
-set -e
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT_DIR"
 
-echo "=================================================="
-echo "  One2lvOS Installation Script"
-echo "  Version: 1.0.2"
-echo "=================================================="
+GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[1;33m'
+CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
+
+OK()   { echo -e "  ${GREEN}✓ $*${NC}"; }
+FAIL() { echo -e "  ${RED}✗ $*${NC}"; }
+INFO() { echo -e "  ${CYAN}→ $*${NC}"; }
+WARN() { echo -e "  ${YELLOW}⚠ $*${NC}"; }
+
+# ── Track install status ───────────────────────────────────────────────────────
+declare -A STATUS
+
+echo ""
+echo "╔══════════════════════════════════════════════════════════╗"
+echo "║        ONE2LVOS — FULL SUBSYSTEM INSTALLER               ║"
+echo "╚══════════════════════════════════════════════════════════╝"
 echo ""
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+# ── [1] Pre-flight: check/install system deps ──────────────────────────────────
+echo -e "${CYAN}[1/7] Pre-flight checks...${NC}"
 
-# Functions
-print_step() {
-    echo -e "${CYAN}==>${NC} $1"
-}
-
-print_success() {
-    echo -e "${GREEN}✓${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}✗${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}⚠${NC} $1"
-}
-
-# Check if running with sufficient permissions
-check_permissions() {
-    print_step "Checking permissions..."
-    if [ "$EUID" -eq 0 ]; then
-        print_warning "Running as root. This is okay but not required for user-space installation."
-    fi
-    print_success "Permissions check complete"
-}
-
-# Detect OS and package manager
-detect_os() {
-    print_step "Detecting operating system..."
-
-    if [ -f /etc/os-release ]; then
-        . /etc/os-release
-        OS=$ID
-        VERSION=$VERSION_ID
-        echo "  OS: $NAME"
-        echo "  Version: $VERSION_ID"
-
-        # Determine package manager
-        if command -v apt &> /dev/null; then
-            PKG_MANAGER="apt"
-            PKG_INSTALL="apt install -y"
-            PKG_UPDATE="apt update"
-        elif command -v yum &> /dev/null; then
-            PKG_MANAGER="yum"
-            PKG_INSTALL="yum install -y"
-            PKG_UPDATE="yum check-update"
-        elif command -v dnf &> /dev/null; then
-            PKG_MANAGER="dnf"
-            PKG_INSTALL="dnf install -y"
-            PKG_UPDATE="dnf check-update"
-        else
-            print_error "No supported package manager found (apt, yum, or dnf)"
-            exit 1
-        fi
-
-        print_success "Package manager: $PKG_MANAGER"
+install_if_missing() {
+  local cmd=$1 pkg=${2:-$1}
+  if command -v "$cmd" &>/dev/null; then
+    OK "$cmd found ($(command -v $cmd))"
+  else
+    WARN "$cmd not found — attempting install"
+    if command -v apt-get &>/dev/null; then
+      sudo apt-get update -qq && sudo apt-get install -y "$pkg" && OK "$pkg installed" || FAIL "Could not install $pkg"
+    elif command -v brew &>/dev/null; then
+      brew install "$pkg" && OK "$pkg installed" || FAIL "Could not install $pkg"
     else
-        print_error "Cannot detect OS. /etc/os-release not found."
-        exit 1
+      FAIL "$cmd missing and no package manager found — install manually"
     fi
+  fi
 }
 
-# Check Python installation
-check_python() {
-    print_step "Checking Python installation..."
+install_if_missing python3
+install_if_missing pip3 python3-pip
+install_if_missing node nodejs
+install_if_missing npm
+echo ""
 
-    if command -v python3 &> /dev/null; then
-        PYTHON_VERSION=$(python3 --version | cut -d ' ' -f 2)
-        echo "  Python version: $PYTHON_VERSION"
+# ── [2] Load .env ──────────────────────────────────────────────────────────────
+echo -e "${CYAN}[2/7] Loading environment...${NC}"
+if [ -f "$ROOT_DIR/.env" ]; then
+  set -a; source "$ROOT_DIR/.env"; set +a
+  OK ".env loaded"
+else
+  WARN ".env not found — services may fail without API keys"
+fi
+mkdir -p "$ROOT_DIR/logs"
+OK "logs/ directory ready"
+echo ""
 
-        # Check if version is 3.11 or higher
-        MAJOR=$(echo $PYTHON_VERSION | cut -d '.' -f 1)
-        MINOR=$(echo $PYTHON_VERSION | cut -d '.' -f 2)
+# ── [3] Python venv + root requirements ───────────────────────────────────────
+echo -e "${CYAN}[3/7] Python environment...${NC}"
 
-        if [ "$MAJOR" -ge 3 ] && [ "$MINOR" -ge 11 ]; then
-            print_success "Python 3.11+ detected"
-        else
-            print_warning "Python 3.11+ recommended (found $PYTHON_VERSION)"
-        fi
+if [[ "$*" != *"--skip-venv"* ]]; then
+  if [ ! -d "$ROOT_DIR/venv" ]; then
+    INFO "Creating venv..."
+    python3 -m venv "$ROOT_DIR/venv" && OK "venv created" || FAIL "venv creation failed"
+  else
+    OK "venv already exists"
+  fi
+  source "$ROOT_DIR/venv/bin/activate"
+  PIP="$ROOT_DIR/venv/bin/pip"
+else
+  PIP="pip3"
+fi
+
+if [ -f "$ROOT_DIR/requirements.txt" ]; then
+  INFO "Installing root requirements.txt..."
+  $PIP install -q -r "$ROOT_DIR/requirements.txt" && OK "root requirements installed" || FAIL "root requirements failed"
+  STATUS["reactor"]="installed"
+else
+  WARN "requirements.txt not found in root"
+fi
+echo ""
+
+# ── [4] Python subsystems ──────────────────────────────────────────────────────
+echo -e "${CYAN}[4/7] Python subsystems...${NC}"
+
+install_py_sub() {
+  local name=$1 dir=$2 req=$3
+  if [ -d "$ROOT_DIR/$dir" ]; then
+    if [ -f "$ROOT_DIR/$dir/$req" ]; then
+      INFO "Installing $name ($dir/$req)..."
+      $PIP install -q -r "$ROOT_DIR/$dir/$req" && OK "$name requirements installed" || FAIL "$name requirements failed"
     else
-        print_error "Python 3 not found. Please install Python 3.11 or higher."
-        exit 1
+      WARN "$name: $req not found — skipping pip install"
     fi
-
-    # Check pip
-    if command -v pip3 &> /dev/null; then
-        print_success "pip3 available"
-    else
-        print_error "pip3 not found. Please install python3-pip."
-        exit 1
-    fi
+    STATUS["$name"]="installed"
+  else
+    WARN "$name: directory $dir not found"
+    STATUS["$name"]="missing"
+  fi
 }
 
-# Check Node.js installation
-check_nodejs() {
-    print_step "Checking Node.js installation..."
+install_py_sub "ARIA Agent"            "aria"                    "requirements.txt"
+install_py_sub "Sovereign Agentic Core" "sovereign-agentic-core" "requirements.txt"
+install_py_sub "Aetherix Browser OS"    "Aetherix"               "requirements.txt"
 
-    if command -v node &> /dev/null; then
-        NODE_VERSION=$(node --version | cut -d 'v' -f 2)
-        echo "  Node.js version: v$NODE_VERSION"
+# control-plane-compilers (pip install -e)
+if [ -f "$ROOT_DIR/control-plane-compilers/setup.py" ]; then
+  INFO "Installing control-plane-compilers (editable)..."
+  $PIP install -q -e "$ROOT_DIR/control-plane-compilers/" && OK "control-plane-compilers installed" || FAIL "control-plane-compilers failed"
+  STATUS["control-plane-compilers"]="installed"
+else
+  WARN "control-plane-compilers/setup.py not found"
+  STATUS["control-plane-compilers"]="missing"
+fi
 
-        # Check if version is 20 or higher
-        MAJOR=$(echo $NODE_VERSION | cut -d '.' -f 1)
+# compass.db — ensure SQLite DB exists
+if [ ! -f "$ROOT_DIR/compass.db" ]; then
+  WARN "compass.db missing — creating empty DB"
+  python3 -c "import sqlite3; sqlite3.connect('$ROOT_DIR/compass.db').close()"
+  OK "compass.db created"
+else
+  OK "compass.db present"
+fi
+echo ""
 
-        if [ "$MAJOR" -ge 20 ]; then
-            print_success "Node.js 20+ detected"
-        else
-            print_warning "Node.js 20+ recommended (found v$NODE_VERSION)"
-        fi
-    else
-        print_warning "Node.js not found. Some features may not work."
-    fi
+# ── [5] Node subsystems ────────────────────────────────────────────────────────
+echo -e "${CYAN}[5/7] Node.js subsystems...${NC}"
 
-    # Check npm
-    if command -v npm &> /dev/null; then
-        NPM_VERSION=$(npm --version)
-        echo "  npm version: $NPM_VERSION"
-        print_success "npm available"
-    else
-        print_warning "npm not found"
-    fi
+install_node_sub() {
+  local name=$1 dir=$2
+  if [ -d "$ROOT_DIR/$dir" ] && [ -f "$ROOT_DIR/$dir/package.json" ]; then
+    INFO "npm install — $name ($dir)..."
+    (cd "$ROOT_DIR/$dir" && npm install --silent 2>/dev/null) \
+      && OK "$name dependencies installed" \
+      || FAIL "$name npm install failed"
+    STATUS["$name"]="installed"
+  elif [ -d "$ROOT_DIR/$dir" ]; then
+    WARN "$name: no package.json in $dir"
+    STATUS["$name"]="no-package"
+  else
+    WARN "$name: directory $dir not found"
+    STATUS["$name"]="missing"
+  fi
 }
 
-# Install Python dependencies
-install_python_deps() {
-    print_step "Installing Python dependencies..."
+install_node_sub "Minimax AI"        "minimax"
+install_node_sub "Lumenis v7"        "lumenis_v7"
+install_node_sub "Lumenis Control"   "lumenis-control"
+install_node_sub "Minmax Phase 9"    "minmax"
+install_node_sub "One2lvOS Desktop"  "One2lvOS"
+echo ""
 
-    if [ -f requirements.txt ]; then
-        pip3 install --user -r requirements.txt
-        print_success "Python dependencies installed"
-    else
-        print_error "requirements.txt not found"
-        exit 1
-    fi
+# ── [6] Make scripts executable ───────────────────────────────────────────────
+echo -e "${CYAN}[6/7] Permissions...${NC}"
+for script in start-all.sh stop-all.sh start-up.sh install.sh; do
+  [ -f "$ROOT_DIR/$script" ] && chmod +x "$ROOT_DIR/$script" && OK "$script → executable"
+done
+echo ""
+
+# ── [7] Verify Lumenis reactor ────────────────────────────────────────────────
+echo -e "${CYAN}[7/7] Verify reactor import...${NC}"
+python3 -c "from lumenis_reactor_core import LumenisReactor; print('  lumenis_reactor_core OK')" 2>/dev/null \
+  && OK "lumenis_reactor_core importable" \
+  || WARN "lumenis_reactor_core not importable — run: source venv/bin/activate"
+echo ""
+
+# ── Summary ────────────────────────────────────────────────────────────────────
+echo "╔══════════════════════════════════════════════════════════╗"
+echo "║               ONE2LVOS — INSTALL COMPLETE                ║"
+echo "╠══════════════════════════════════════════════════════════╣"
+echo "║  Subsystem                     Status                    ║"
+echo "╠══════════════════════════════════════════════════════════╣"
+
+print_status() {
+  local name=$1 s=${STATUS[$2]:-"?"}
+  local icon color
+  case $s in
+    installed)   icon="✓"; color="$GREEN";;
+    missing)     icon="✗"; color="$RED";;
+    no-package)  icon="⚠"; color="$YELLOW";;
+    *)           icon="?"; color="$NC";;
+  esac
+  printf "║  %-30s %b%-20s%b║\n" "$name" "$color" "$icon $s" "$NC"
 }
 
-# Install Node.js dependencies (optional)
-install_nodejs_deps() {
-    if [ -f package.json ] && command -v npm &> /dev/null; then
-        print_step "Installing Node.js dependencies..."
-        npm install
-        print_success "Node.js dependencies installed"
-    else
-        print_warning "Skipping Node.js dependencies (package.json not found or npm not available)"
-    fi
-}
+print_status "Lumenis Reactor Core"        "reactor"
+print_status "ARIA Agent"                  "ARIA Agent"
+print_status "Sovereign Agentic Core"      "Sovereign Agentic Core"
+print_status "Aetherix Browser OS"         "Aetherix Browser OS"
+print_status "control-plane-compilers"     "control-plane-compilers"
+print_status "Minimax AI"                  "Minimax AI"
+print_status "Lumenis v7"                  "Lumenis v7"
+print_status "Lumenis Control"             "Lumenis Control"
+print_status "Minmax Phase 9"              "Minmax Phase 9"
+print_status "One2lvOS Desktop"            "One2lvOS Desktop"
 
-# Setup environment file
-setup_environment() {
-    print_step "Setting up environment configuration..."
-
-    if [ ! -f .env ]; then
-        print_warning ".env file not found"
-        echo "  Please create .env file with your configuration."
-        echo "  See .env.example or ASTRA_DB_SETUP.md for details."
-    else
-        print_success ".env file exists"
-    fi
-}
-
-# Create necessary directories
-create_directories() {
-    print_step "Creating necessary directories..."
-
-    mkdir -p /tmp/one2lv-unified/snapshots
-    mkdir -p /tmp/one2lv-unified/logs
-    mkdir -p system/etc/apt
-
-    print_success "Directories created"
-}
-
-# Verify installation
-verify_installation() {
-    print_step "Verifying installation..."
-
-    # Check if astrapy is installed
-    if python3 -c "import astrapy" 2>/dev/null; then
-        print_success "astrapy installed"
-    else
-        print_error "astrapy not installed"
-    fi
-
-    # Check if OpenAI is installed
-    if python3 -c "import openai" 2>/dev/null; then
-        print_success "openai installed"
-    else
-        print_warning "openai not installed (optional)"
-    fi
-
-    # Check if PIL/Pillow is installed
-    if python3 -c "from PIL import Image" 2>/dev/null; then
-        print_success "Pillow installed"
-    else
-        print_error "Pillow not installed"
-    fi
-}
-
-# Main installation flow
-main() {
-    echo ""
-    check_permissions
-    echo ""
-    detect_os
-    echo ""
-    check_python
-    echo ""
-    check_nodejs
-    echo ""
-    create_directories
-    echo ""
-    install_python_deps
-    echo ""
-    install_nodejs_deps
-    echo ""
-    setup_environment
-    echo ""
-    verify_installation
-    echo ""
-
-    echo "=================================================="
-    echo -e "${GREEN}  Installation Complete!${NC}"
-    echo "=================================================="
-    echo ""
-    echo "Next steps:"
-    echo "  1. Configure .env file with your credentials"
-    echo "  2. Run: python3 unified_os.py"
-    echo "  3. In another terminal: cd One2lvOS && python3 -m http.server 8000"
-    echo "  4. Open: http://localhost:8000"
-    echo ""
-    echo "Documentation:"
-    echo "  - ASTRA_DB_SETUP.md - Astra DB configuration"
-    echo "  - REPOSITORY_SETUP.md - Package repository info"
-    echo "  - README.md - General overview"
-    echo ""
-    print_success "One2lvOS is ready to launch! 🌌🧲"
-}
-
-# Run main installation
-main
+echo "╠══════════════════════════════════════════════════════════╣"
+echo "║  Next: bash start-all.sh                                 ║"
+echo "║  Chat: http://localhost:8000/lumenis-chat                ║"
+echo "╚══════════════════════════════════════════════════════════╝"
+echo ""
