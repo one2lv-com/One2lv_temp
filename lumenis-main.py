@@ -259,14 +259,29 @@ async def websocket_endpoint(ws: WebSocket):
         }
     )
 
+    # Keepalive: ping client every 25s so browser doesn't time out during long LLM calls
+    async def _keepalive():
+        while True:
+            await asyncio.sleep(25)
+            try:
+                await ws.send_json({"type": "ping"})
+            except Exception:
+                break
+
+    keepalive_task = asyncio.create_task(_keepalive())
+
     try:
         while True:
             raw = await ws.receive_text()
             msg = json.loads(raw)
             action = msg.get("action")
 
-            if action == "chat":
-                await handle_chat(ws, msg)
+            if action == "ping":
+                await ws.send_json({"type": "pong"})
+
+            elif action == "chat":
+                # Run as background task so the receive loop stays responsive
+                asyncio.create_task(handle_chat(ws, msg))
 
             elif action == "new_session":
                 sid = compass.create_session(msg.get("title", "New Session"))
@@ -285,9 +300,14 @@ async def websocket_endpoint(ws: WebSocket):
                 await ws.send_json({"type": "fact_stored", "fact_id": fid})
 
     except WebSocketDisconnect:
-        _ws_clients.discard(ws)
+        pass
     except Exception as e:
-        await ws.send_json({"type": "error", "message": str(e)})
+        try:
+            await ws.send_json({"type": "error", "message": str(e)})
+        except Exception:
+            pass
+    finally:
+        keepalive_task.cancel()
         _ws_clients.discard(ws)
 
 
@@ -331,13 +351,24 @@ async def handle_chat(ws: WebSocket, msg: dict):
 
     node = await node_pool.run("council.process", council_task())
 
-    # Wait for the task to finish (it streams results via callback, but we
-    # need the final decision object for persistence)
+    # Wait for the task to finish with a 300s timeout
+    deadline = 300 / 0.05  # 300 seconds
+    ticks = 0
     while node.state.value in ("idle", "active"):
         await asyncio.sleep(0.05)
+        ticks += 1
+        if ticks > deadline:
+            try:
+                await ws.send_json({"type": "error", "message": "Council timed out after 300s"})
+            except Exception:
+                pass
+            return
 
     if node.state.value == "error":
-        await ws.send_json({"type": "error", "message": node.error})
+        try:
+            await ws.send_json({"type": "error", "message": node.error})
+        except Exception:
+            pass
         return
 
     decision = node.result

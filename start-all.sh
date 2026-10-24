@@ -92,6 +92,78 @@ else
 fi
 echo ""
 
+# ── [6] Aetherix Browser OS (port 8086) ──────────────────────────────────────
+echo -e "${CYAN}[6/9] Starting Aetherix Browser OS (port 8086)...${NC}"
+AETHERIX_DIR="/home/vercel-sandbox/Aetherix"
+if [ -f "$AETHERIX_DIR/server.py" ]; then
+    cd "$AETHERIX_DIR"
+    nohup python3 server.py > "$ROOT_DIR/logs/aetherix.log" 2>&1 &
+    echo -e "  PID: $!"
+    sleep 3
+    if curl -s http://localhost:8086/ >/dev/null 2>&1 || curl -s http://localhost:3000/ >/dev/null 2>&1; then
+        echo -e "  ${GREEN}✓ Aetherix online${NC}"
+    else
+        echo -e "  ${YELLOW}⚠ Aetherix starting (check logs/aetherix.log)${NC}"
+    fi
+    cd "$ROOT_DIR"
+else
+    echo -e "  ${YELLOW}⚠ Aetherix not found at $AETHERIX_DIR${NC}"
+fi
+echo ""
+
+# ── [7] ARIA Agent (port 8088) ────────────────────────────────────────────────
+echo -e "${CYAN}[7/9] Starting ARIA Agent (port 8088)...${NC}"
+ARIA_DIR="/home/vercel-sandbox/aria"
+if [ -f "$ARIA_DIR/main.py" ]; then
+    cd "$ARIA_DIR"
+    pip3 install -q -r requirements.txt 2>/dev/null
+    nohup python3 main.py > "$ROOT_DIR/logs/aria.log" 2>&1 &
+    echo -e "  PID: $!"
+    sleep 3
+    if curl -s http://localhost:8088/ >/dev/null 2>&1; then
+        echo -e "  ${GREEN}✓ ARIA online${NC}"
+    else
+        echo -e "  ${YELLOW}⚠ ARIA starting (check logs/aria.log)${NC}"
+    fi
+    cd "$ROOT_DIR"
+else
+    echo -e "  ${YELLOW}⚠ ARIA not found at $ARIA_DIR${NC}"
+fi
+echo ""
+
+# ── [8] Control Plane Compilers (port 8084) ───────────────────────────────────
+echo -e "${CYAN}[8/9] Starting Control Plane Compilers (port 8084)...${NC}"
+CPC_DIR="/home/vercel-sandbox/control-plane-compilers"
+if [ -f "$CPC_DIR/setup.py" ]; then
+    cd "$CPC_DIR"
+    pip3 install -q -e . 2>/dev/null
+    echo -e "  ${GREEN}✓ Control Plane Compilers installed (importable as library)${NC}"
+    cd "$ROOT_DIR"
+else
+    echo -e "  ${YELLOW}⚠ Control Plane Compilers not found${NC}"
+fi
+echo ""
+
+# ── [9] Sovereign Agentic Core (port 8081) ────────────────────────────────────
+echo -e "${CYAN}[9/9] Starting Sovereign Agentic Core (port 8081)...${NC}"
+SAC_DIR="/home/vercel-sandbox/sovereign-agentic-core"
+if [ -f "$SAC_DIR/main.py" ]; then
+    cd "$SAC_DIR"
+    nohup python3 -m uvicorn main:app --host 0.0.0.0 --port 8081 \
+        > "$ROOT_DIR/logs/sovereign-core.log" 2>&1 &
+    echo -e "  PID: $!"
+    sleep 4
+    if curl -s http://localhost:8081/ >/dev/null 2>&1; then
+        echo -e "  ${GREEN}✓ Sovereign Agentic Core online${NC}"
+    else
+        echo -e "  ${YELLOW}⚠ Sovereign Core starting (check logs/sovereign-core.log)${NC}"
+    fi
+    cd "$ROOT_DIR"
+else
+    echo -e "  ${YELLOW}⚠ Sovereign Agentic Core not found${NC}"
+fi
+echo ""
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 echo "╔══════════════════════════════════════════════════════════════════╗"
 echo "║                ONE2LVOS — SYSTEM STATUS                         ║"
@@ -108,9 +180,12 @@ check_port() {
 
 check_port "Lumenis Reactor Core"    8000 "/api/status"
 check_port "  Chat UI"               8000 "/lumenis-chat"
-check_port "  Tool Registry (21)"    8000 "/api/tools/registry"
+check_port "  Tool Registry"         8000 "/api/tools/registry"
 check_port "AI Lobby"                8006 "/"
 check_port "Minimax AI"              8080 "/"
+check_port "Sovereign Agentic Core"  8081 "/"
+check_port "Aetherix Browser OS"     8086 "/"
+check_port "ARIA Agent"              8088 "/"
 
 echo "╠══════════════════════════════════════════════════════════════════╣"
 echo "║  Logs:  tail -f logs/reactor.log  |  tail -f logs/lobby.log    ║"

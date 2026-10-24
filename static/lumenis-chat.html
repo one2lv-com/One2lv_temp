@@ -419,13 +419,32 @@ function setSeat(name,state,note=''){const key=name.toLowerCase().replace(/[^a-z
 // ── CHAT WS ──
 function connect(){
   ws=new WebSocket(WS_CHAT);
-  ws.onopen=()=>{setConn('on');setTB('Connected','var(--success)');};
-  ws.onclose=()=>{setConn('');setTB('Disconnected — retry in 3s','var(--danger)');setTimeout(connect,3000);};
-  ws.onerror=()=>{setConn('');};
+  ws.onopen=()=>{
+    setConn('on');setTB('Connected','var(--success)');
+    if(window._wsPingTimer)clearInterval(window._wsPingTimer);
+    window._wsPingTimer=setInterval(()=>{
+      if(ws&&ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({action:'ping'}));
+    },20000);
+  };
+  ws.onclose=(e)=>{
+    clearInterval(window._wsPingTimer);
+    setConn('');
+    const reason=e.code===1000?'Closed':'Disconnected ('+e.code+')';
+    setTB(reason+' — reconnecting in 3s','var(--danger)');
+    setTimeout(connect,3000);
+  };
+  ws.onerror=()=>{
+    clearInterval(window._wsPingTimer);
+    setConn('');
+    setTB('Connection error — reconnecting...','var(--danger)');
+    setTimeout(connect,3000);
+  };
   ws.onmessage=e=>handleChatEvent(JSON.parse(e.data));
 }
 function handleChatEvent(msg){
   const t=msg.type;
+  if(t==='ping'){ws.send(JSON.stringify({action:'ping'}));return;}
+  if(t==='pong'){return;}
   if(t==='init'){
     const r=msg.data.reactor,c=msg.data.compass;
     document.getElementById('hdr-model').textContent=(r.model||'').split('/').pop();
