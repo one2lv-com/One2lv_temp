@@ -93,6 +93,14 @@
         </div>
 
         <div class="flex items-center gap-2 h-full text-white">
+            <!-- State PNG buttons -->
+            <button onclick="saveStatePNG()" title="Save desktop state as PNG" class="w-10 h-10 rounded-lg hover:bg-white/10 flex items-center justify-center transition-all group active:scale-95">
+                <i class="fas fa-camera text-sm text-blue-300 group-hover:text-blue-200 drop-shadow-sm transition-colors"></i>
+            </button>
+            <button onclick="loadStatePNG()" title="Load desktop state from PNG" class="w-10 h-10 rounded-lg hover:bg-white/10 flex items-center justify-center transition-all group active:scale-95">
+                <i class="fas fa-folder-open text-sm text-green-300 group-hover:text-green-200 drop-shadow-sm transition-colors"></i>
+            </button>
+            <div class="w-px h-6 bg-white/20"></div>
             <div class="flex items-center gap-3 hover:bg-white/10 px-3 py-1.5 rounded-lg cursor-pointer transition-colors h-10">
                 <i class="fas fa-chevron-up text-[10px] text-gray-300"></i>
                 <i class="fas fa-wifi text-sm text-gray-100"></i>
@@ -1431,6 +1439,261 @@
                 fr.style.display = 'none';
                 fb.style.display = 'flex';
             }
+        }
+
+        // ── PNG State Save / Load ────────────────────────────────────────
+
+        // CRC32 lookup table (required for PNG chunk integrity)
+        const _crc32Table = (() => {
+            const t = new Uint32Array(256);
+            for (let i = 0; i < 256; i++) {
+                let c = i;
+                for (let j = 0; j < 8; j++) c = (c & 1) ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+                t[i] = c;
+            }
+            return t;
+        })();
+        function _crc32(data) {
+            let crc = 0xFFFFFFFF;
+            for (const b of data) crc = _crc32Table[(crc ^ b) & 0xFF] ^ (crc >>> 8);
+            return (crc ^ 0xFFFFFFFF) >>> 0;
+        }
+
+        // Collect the current desktop state
+        function captureDesktopState() {
+            const state = {
+                version: '2.0',
+                timestamp: Date.now(),
+                wallpaper: document.body.style.backgroundImage || '',
+                windows: []
+            };
+            Object.keys(openApps).forEach(appId => {
+                const win = document.getElementById(`window-${appId}`);
+                if (!win) return;
+                state.windows.push({
+                    id: appId,
+                    x: parseInt(win.style.left) || 0,
+                    y: parseInt(win.style.top) || 0,
+                    w: parseInt(win.style.width) || (apps[appId] ? apps[appId].width : 600),
+                    h: parseInt(win.style.height) || (apps[appId] ? apps[appId].height : 400),
+                    minimized: win.classList.contains('opacity-0'),
+                    maximized: win.classList.contains('maximized'),
+                    zIndex: parseInt(win.style.zIndex) || 10
+                });
+            });
+            return state;
+        }
+
+        // Inject a tEXt metadata chunk into an existing PNG byte array
+        function _injectPNGtEXt(pngBytes, keyword, text) {
+            const enc = new TextEncoder();
+            const kw = enc.encode(keyword);
+            const tx = enc.encode(text);
+            const chunkData = new Uint8Array(kw.length + 1 + tx.length);
+            chunkData.set(kw);
+            chunkData[kw.length] = 0; // null separator
+            chunkData.set(tx, kw.length + 1);
+
+            const typeBytes = new Uint8Array([0x74, 0x45, 0x58, 0x74]); // "tEXt"
+            const crcInput = new Uint8Array(4 + chunkData.length);
+            crcInput.set(typeBytes);
+            crcInput.set(chunkData, 4);
+            const crc = _crc32(crcInput);
+
+            const chunk = new Uint8Array(4 + 4 + chunkData.length + 4);
+            const dv = new DataView(chunk.buffer);
+            dv.setUint32(0, chunkData.length, false);
+            chunk.set(typeBytes, 4);
+            chunk.set(chunkData, 8);
+            dv.setUint32(8 + chunkData.length, crc, false);
+
+            // Insert after IHDR (PNG sig 8 bytes + IHDR chunk 25 bytes = offset 33)
+            const insertAt = 33;
+            const out = new Uint8Array(pngBytes.length + chunk.length);
+            out.set(pngBytes.slice(0, insertAt));
+            out.set(chunk, insertAt);
+            out.set(pngBytes.slice(insertAt), insertAt + chunk.length);
+            return out;
+        }
+
+        // Extract a tEXt chunk value by keyword from PNG bytes
+        function _extractPNGtEXt(bytes, keyword) {
+            const dec = new TextDecoder();
+            let offset = 8; // skip 8-byte PNG signature
+            while (offset < bytes.length - 12) {
+                const dv = new DataView(bytes.buffer, bytes.byteOffset);
+                const len = dv.getUint32(offset, false);
+                const type = dec.decode(bytes.slice(offset + 4, offset + 8));
+                if (type === 'tEXt') {
+                    const data = bytes.slice(offset + 8, offset + 8 + len);
+                    const nullIdx = data.indexOf(0);
+                    if (nullIdx !== -1 && dec.decode(data.slice(0, nullIdx)) === keyword) {
+                        return dec.decode(data.slice(nullIdx + 1));
+                    }
+                }
+                if (type === 'IEND') break;
+                offset += 12 + len;
+            }
+            return null;
+        }
+
+        // Save current desktop state as a PNG with embedded JSON metadata
+        function saveStatePNG() {
+            const state = captureDesktopState();
+            const stateJSON = JSON.stringify(state);
+
+            // Draw a mini-map of the desktop as the PNG visual
+            const canvas = document.createElement('canvas');
+            canvas.width = 640; canvas.height = 360;
+            const ctx = canvas.getContext('2d');
+
+            // Background gradient
+            const grad = ctx.createLinearGradient(0, 0, 640, 360);
+            grad.addColorStop(0, '#1e1b4b'); grad.addColorStop(1, '#312e81');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 640, 360);
+
+            // Draw window thumbnails scaled to canvas
+            const scaleX = 640 / window.innerWidth;
+            const scaleY = 360 / Math.max(window.innerHeight - 56, 1);
+            const palette = ['#3b82f6','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#14b8a6'];
+            state.windows.forEach((w, i) => {
+                if (w.minimized) return;
+                const col = palette[i % palette.length];
+                ctx.fillStyle = col + '55';
+                ctx.strokeStyle = col + 'cc';
+                ctx.lineWidth = 1.5;
+                const rx = Math.max(0, w.x * scaleX), ry = Math.max(0, w.y * scaleY);
+                const rw = Math.min(w.w * scaleX, 640 - rx), rh = Math.min(w.h * scaleY, 360 - ry);
+                ctx.fillRect(rx, ry, rw, rh);
+                ctx.strokeRect(rx, ry, rw, rh);
+                // App name label
+                ctx.fillStyle = '#ffffff99';
+                ctx.font = '10px monospace';
+                ctx.fillText(w.id, rx + 4, ry + 14);
+            });
+
+            // Header overlay
+            ctx.fillStyle = 'rgba(0,0,0,0.45)';
+            ctx.fillRect(0, 0, 640, 72);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 18px Inter, sans-serif';
+            ctx.fillText('One2lvOS Desktop State', 14, 26);
+            ctx.font = '11px monospace';
+            ctx.fillStyle = '#a5b4fc';
+            ctx.fillText(new Date(state.timestamp).toLocaleString(), 14, 45);
+            ctx.fillStyle = '#86efac';
+            ctx.fillText(`${state.windows.length} window(s) open`, 14, 62);
+
+            // Footer badge
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(0, 330, 640, 30);
+            ctx.fillStyle = '#64748b';
+            ctx.font = '10px monospace';
+            ctx.fillText('one2lvos-state v2.0 · embedded metadata PNG', 14, 349);
+
+            // Get raw PNG bytes, inject tEXt chunk with state JSON
+            const dataURL = canvas.toDataURL('image/png');
+            const raw = Uint8Array.from(atob(dataURL.split(',')[1]), c => c.charCodeAt(0));
+            const pngWithState = _injectPNGtEXt(raw, 'one2lvos-state', stateJSON);
+
+            // Download
+            const blob = new Blob([pngWithState], {type: 'image/png'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `one2lvos-state-${state.timestamp}.png`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            _showNotif(`State saved — ${state.windows.length} window(s)`, 'fas fa-camera text-blue-400');
+
+            // Also notify Lumenis
+            _notifyLumenisSaveState(state);
+        }
+
+        // Load state PNG — open file picker, extract JSON, restore desktop
+        function loadStatePNG() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/png';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const buf = await file.arrayBuffer();
+                const bytes = new Uint8Array(buf);
+                const stateJSON = _extractPNGtEXt(bytes, 'one2lvos-state');
+                if (!stateJSON) {
+                    _showNotif('No One2lvOS state found in this PNG', 'fas fa-exclamation-triangle text-red-400');
+                    return;
+                }
+                try {
+                    const state = JSON.parse(stateJSON);
+                    _restoreDesktopState(state);
+                    _showNotif(`State loaded — ${state.windows.length} window(s) restored`, 'fas fa-folder-open text-green-400');
+                } catch(err) {
+                    _showNotif('Failed to parse state: ' + err.message, 'fas fa-exclamation-triangle text-red-400');
+                }
+            };
+            input.click();
+        }
+
+        // Restore desktop from a saved state object
+        function _restoreDesktopState(state) {
+            // Close all open windows
+            [...Object.keys(openApps)].forEach(id => closeApp(id));
+            // Restore wallpaper
+            if (state.wallpaper) document.body.style.backgroundImage = state.wallpaper;
+            // Reopen windows in z-order
+            const sorted = [...state.windows].sort((a, b) => a.zIndex - b.zIndex);
+            sorted.forEach((w, i) => {
+                setTimeout(() => {
+                    if (!apps[w.id]) return;
+                    openApp(w.id);
+                    requestAnimationFrame(() => {
+                        const win = document.getElementById(`window-${w.id}`);
+                        if (!win) return;
+                        win.style.left = w.x + 'px';
+                        win.style.top = Math.max(0, w.y) + 'px';
+                        win.style.width = w.w + 'px';
+                        win.style.height = w.h + 'px';
+                        win.style.zIndex = w.zIndex;
+                        if (w.minimized) win.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                        if (w.maximized) maximizeApp(w.id);
+                    });
+                }, i * 80);
+            });
+        }
+
+        // Toast notification helper
+        function _showNotif(msg, iconClass = 'fas fa-info-circle text-blue-400') {
+            const el = document.createElement('div');
+            el.className = 'fixed bottom-20 right-4 bg-white/90 backdrop-blur-xl border border-white/50 shadow-xl rounded-xl px-4 py-3 flex items-center gap-3 z-[9999] transition-all duration-300';
+            el.innerHTML = `<i class="${iconClass}"></i><span class="text-sm font-medium text-gray-800">${msg}</span>`;
+            document.body.appendChild(el);
+            setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(20px)'; setTimeout(() => el.remove(), 300); }, 3500);
+        }
+
+        // Tell Lumenis about the saved state
+        async function _notifyLumenisSaveState(state) {
+            const summary = `Desktop state snapshot saved as PNG. ${state.windows.length} open window(s): ${state.windows.map(w=>w.id).join(', ')}. Timestamp: ${new Date(state.timestamp).toISOString()}. Please store this as a memory fact: the user saved their One2lvOS desktop state.`;
+            try {
+                // Store as a fact in compass.db via the API
+                await fetch(LUMENIS_RC + '/api/facts', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({content: summary, tags: ['desktop-state','png-save']}),
+                    signal: AbortSignal.timeout(5000)
+                });
+            } catch(_) {}
+            // Also send a chat message
+            try {
+                const ws = new WebSocket('ws://localhost:8000/ws');
+                ws.onopen = () => {
+                    ws.send(JSON.stringify({action:'chat', message: summary}));
+                    setTimeout(() => ws.close(), 5000);
+                };
+            } catch(_) {}
         }
 
         // Initialization
