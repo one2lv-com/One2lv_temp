@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import './App.css'
 
-// API Keys
+// API Keys — NVIDIA key injected at Vite build time via .env
 const KEYS = {
   moltbook: '',
-  nvapi1: '',
-  nvapi2: '',
-  twitch: '',
+  nvapi1: import.meta.env.VITE_NVIDIA_API_KEY || '',
+  nvapi2: import.meta.env.VITE_NVIDIA_API_KEY || '',
+  twitch: import.meta.env.VITE_TWITCH_OAUTH_TOKEN || '',
   gemini: ''
 }
+
+const NVIDIA_BASE = import.meta.env.VITE_NVIDIA_BASE_URL || 'https://integrate.api.nvidia.com/v1'
 
 // Applets
 type Applet = 'menu' | 'terminal' | 'moltbook' | 'nvidiachat' | 'twitch' | 'gemini' | 'system' | 'about'
@@ -174,11 +176,15 @@ function App() {
   }
 
   const callNvidiaAPI = async (model: string, message: string) => {
+    if (!message.trim()) return
     setNvidiaResponse('Thinking...')
     try {
-      const apiKey = model === 'kimi' ? KEYS.nvapi1 : KEYS.nvapi2
-      const modelName = model === 'kimi' ? 'moonshotai/kimi-k2-instruct-0905' : 'stepfun-ai/step-3.5-flash'
-      const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+      const apiKey = KEYS.nvapi1
+      const modelName =
+        model === 'minimax' ? 'minimax/minimax-01' :
+        model === 'kimi'    ? 'moonshotai/kimi-k2-instruct-0905' :
+                              'stepfun-ai/step-3.5-flash'
+      const res = await fetch(`${NVIDIA_BASE}/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -266,16 +272,17 @@ function App() {
             </div>
             <div className="chat-container">
               <div className="model-select">
+                <button className="model-btn active" onClick={() => callNvidiaAPI('minimax', geminiInput)}>MiniMax-01</button>
                 <button className="model-btn" onClick={() => callNvidiaAPI('kimi', geminiInput)}>Kimi-K2</button>
                 <button className="model-btn" onClick={() => callNvidiaAPI('step', geminiInput)}>Step-3.5</button>
               </div>
               <input
                 type="text"
                 className="chat-input"
-                placeholder="Ask the AI..."
+                placeholder="Ask MiniMax via NVIDIA NIM..."
                 value={geminiInput}
                 onChange={(e) => setGeminiInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && callNvidiaAPI('kimi', geminiInput)}
+                onKeyDown={(e) => e.key === 'Enter' && callNvidiaAPI('minimax', geminiInput)}
               />
               <div className="chat-response">
                 <pre>{nvidiaResponse || 'Select a model and enter a message'}</pre>

@@ -320,12 +320,30 @@ if exist "lumenis-os\package.json" (
     cd ..
 )
 
-:: Install minmax
-if exist "minmax\opt\one2lv\package.json" (
-    echo    ^> Installing minmax packages...
-    cd minmax\opt\one2lv
+:: Install minimax (agent-hub, one2lv-agent-hub, witness proxy, core)
+if exist "minimax\agent-hub\package.json" (
+    echo    ^> Installing minimax\agent-hub packages...
+    cd minimax\agent-hub
+    npm install --legacy-peer-deps --silent >> "%LOG_FILE%" 2>&1
+    cd ..\..
+)
+if exist "minimax\one2lv-agent-hub\package.json" (
+    echo    ^> Installing minimax\one2lv-agent-hub packages...
+    cd minimax\one2lv-agent-hub
+    npm install --legacy-peer-deps --silent >> "%LOG_FILE%" 2>&1
+    cd ..\..
+)
+if exist "minimax\one2lv-witness-v8\proxy\package.json" (
+    echo    ^> Installing minimax\witness-proxy packages...
+    cd minimax\one2lv-witness-v8\proxy
     npm install --legacy-peer-deps --silent >> "%LOG_FILE%" 2>&1
     cd ..\..\..
+)
+if exist "minimax\package.json" (
+    echo    ^> Installing minimax core packages...
+    cd minimax
+    npm install --legacy-peer-deps --silent >> "%LOG_FILE%" 2>&1
+    cd ..
 )
 
 :: Install lumenis-v7
@@ -355,6 +373,52 @@ if exist "lumenis-os\artifacts\api-server\build.mjs" (
     ) else (
         echo    ^> Build failed (non-fatal)
     )
+)
+
+:: Create .env for minimax Vite apps (NVIDIA NIM key + MiniMax model)
+echo    ^> Writing minimax .env files...
+if exist "minimax\agent-hub" (
+    (
+        echo VITE_NVIDIA_API_KEY=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
+        echo VITE_NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
+        echo VITE_MINIMAX_MODEL=minimax/minimax-01
+    ) > minimax\agent-hub\.env
+)
+if exist "minimax\one2lv-agent-hub" (
+    (
+        echo VITE_NVIDIA_API_KEY=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
+        echo VITE_NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
+        echo VITE_MINIMAX_MODEL=minimax/minimax-01
+    ) > minimax\one2lv-agent-hub\.env
+)
+if exist "minimax\one2lv-witness-v8\proxy" (
+    (
+        echo NVIDIA_API_KEY=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
+        echo NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
+        echo NVIDIA_MODEL=minimax/minimax-01
+        echo PORT=3001
+        echo NODE_ENV=production
+    ) > minimax\one2lv-witness-v8\proxy\.env
+)
+
+:: Build minimax Vite apps (bakes NVIDIA key into bundle)
+if exist "minimax\agent-hub\package.json" (
+    echo    ^> Building minimax\agent-hub...
+    cd minimax\agent-hub
+    npm run build >> "%LOG_FILE%" 2>&1
+    if exist "minimax\agent-hub\dist\index.html" (
+        echo    ^> minimax\agent-hub built [OK]
+    ) else (
+        echo    ^> Warning: minimax\agent-hub build failed (non-fatal)
+    )
+    cd ..\..
+)
+if exist "minimax\one2lv-agent-hub\package.json" (
+    echo    ^> Building minimax\one2lv-agent-hub...
+    cd minimax\one2lv-agent-hub
+    npm run build >> "%LOG_FILE%" 2>&1
+    echo    ^> minimax\one2lv-agent-hub built [OK]
+    cd ..\..
 )
 
 echo [BUILD] TypeScript build complete >> "%LOG_FILE%"
@@ -396,6 +460,8 @@ echo         ^("One2lvOS Core", "python", ["-m", "flask", "run", "--host", "0.0.
 echo         ^("Sovereign Agentic Core", "python", ["-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "3003", "--app-dir", "sovereign-agentic-core"], 3003^),
 echo         ^("AI Lobby", "python", ["-m", "uvicorn", "ai_lobby:app", "--host", "0.0.0.0", "--port", "8006"], 8006^),
 echo         ^("Unified Gateway", "python", ["-m", "uvicorn", "unified_gateway:app", "--host", "0.0.0.0", "--port", "8888"], 8888^),
+echo         ^("Minimax Core API", "node", ["minimax/index.js"], 8080^),
+echo         ^("Minimax Witness Proxy", "node", ["minimax/one2lv-witness-v8/proxy/server.js"], 3001^),
 echo     ]
 echo.
 echo     processes = []
@@ -479,7 +545,7 @@ echo title Stopping One2lvOS
 echo echo Stopping all One2lvOS services...
 echo taskkill /F /IM python.exe /FI "WINDOWTITLE eq *One2lvOS*" ^>nul 2^>^&1
 echo taskkill /F /IM node.exe /FI "WINDOWTITLE eq *One2lvOS*" ^>nul 2^>^&1
-echo for %%%%p in ^(3002 3003 8003 8005 8006 8080 8888 9001 9002 9003^) do ^(
+echo for %%%%p in ^(3001 3002 3003 8003 8005 8006 8080 8081 8888 9001 9002 9003^) do ^(
 echo     for /f "tokens=5" %%%%a in ^('netstat -ano ^| findstr :%%%%p ^| findstr LISTENING 2^>nul'^) do taskkill /F /PID %%%%a ^>nul 2^>^&1
 echo ^)
 echo echo Services stopped.

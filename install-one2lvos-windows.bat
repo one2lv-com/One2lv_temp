@@ -220,12 +220,30 @@ if exist "lumenis-os\artifacts\api-server\package.json" (
     cd ..\..\..
 )
 
-:: Install minmax dependencies
-if exist "minmax\opt\one2lv\package.json" (
-    echo    ^> Installing minmax packages...
-    cd minmax\opt\one2lv
+:: Install minimax dependencies (agent-hub, one2lv-agent-hub, witness proxy, core)
+if exist "minimax\agent-hub\package.json" (
+    echo    ^> Installing minimax\agent-hub packages...
+    cd minimax\agent-hub
+    npm install --legacy-peer-deps >nul 2>&1
+    cd ..\..
+)
+if exist "minimax\one2lv-agent-hub\package.json" (
+    echo    ^> Installing minimax\one2lv-agent-hub packages...
+    cd minimax\one2lv-agent-hub
+    npm install --legacy-peer-deps >nul 2>&1
+    cd ..\..
+)
+if exist "minimax\one2lv-witness-v8\proxy\package.json" (
+    echo    ^> Installing minimax\witness-proxy packages...
+    cd minimax\one2lv-witness-v8\proxy
     npm install --legacy-peer-deps >nul 2>&1
     cd ..\..\..
+)
+if exist "minimax\package.json" (
+    echo    ^> Installing minimax core packages...
+    cd minimax
+    npm install --legacy-peer-deps >nul 2>&1
+    cd ..
 )
 
 :: Install lumenis-v7 dependencies
@@ -252,6 +270,56 @@ if exist "lumenis-os\artifacts\api-server\build.mjs" (
         echo    ^> Warning: lumenis-os build failed (non-fatal)
     )
     cd ..\..\..
+)
+
+:: Create .env for minimax Vite apps (NVIDIA NIM key + MiniMax model)
+echo    ^> Writing minimax .env files...
+if exist "minimax\agent-hub" (
+    (
+        echo VITE_NVIDIA_API_KEY=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
+        echo VITE_NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
+        echo VITE_MINIMAX_MODEL=minimax/minimax-01
+    ) > minimax\agent-hub\.env
+)
+if exist "minimax\one2lv-agent-hub" (
+    (
+        echo VITE_NVIDIA_API_KEY=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
+        echo VITE_NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
+        echo VITE_MINIMAX_MODEL=minimax/minimax-01
+    ) > minimax\one2lv-agent-hub\.env
+)
+if exist "minimax\one2lv-witness-v8\proxy" (
+    (
+        echo NVIDIA_API_KEY=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
+        echo NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
+        echo NVIDIA_MODEL=minimax/minimax-01
+        echo PORT=3001
+        echo NODE_ENV=production
+    ) > minimax\one2lv-witness-v8\proxy\.env
+)
+
+:: Build minimax Vite apps (bakes NVIDIA key into bundle)
+if exist "minimax\agent-hub\package.json" (
+    echo    ^> Building minimax\agent-hub...
+    cd minimax\agent-hub
+    npm run build >nul 2>&1
+    if %errorLevel% == 0 (
+        echo    ^> minimax\agent-hub built [OK]
+    ) else (
+        echo    ^> Warning: minimax\agent-hub build failed (non-fatal)
+    )
+    cd ..\..
+)
+if exist "minimax\one2lv-agent-hub\package.json" (
+    echo    ^> Building minimax\one2lv-agent-hub...
+    cd minimax\one2lv-agent-hub
+    npm run build >nul 2>&1
+    if %errorLevel% == 0 (
+        echo    ^> minimax\one2lv-agent-hub built [OK]
+    ) else (
+        echo    ^> Warning: minimax\one2lv-agent-hub build failed (non-fatal)
+    )
+    cd ..\..
 )
 
 echo    ^> Build complete [OK]
@@ -290,7 +358,7 @@ echo     start /min "Lumenis-v7" cmd /c "cd steamos_lumenis\lumenis-v7-cjs && se
 echo )
 echo timeout /t 2 /nobreak ^>nul
 echo.
-echo echo [5/10] SteamOS Dashboard [port 8080]...
+echo echo [5/10] SteamOS Dashboard [port 8081]...
 echo if exist "steamos_lumenis\one2lvos_dashboard\server.py" (
 echo     start /min "SteamOS-Dash" cmd /c "python steamos_lumenis\one2lvos_dashboard\server.py"
 echo )
@@ -320,7 +388,19 @@ echo timeout /t 2 /nobreak ^>nul
 echo.
 echo echo [10/10] Unified Gateway [port 8888]...
 echo start /min "Gateway" cmd /c "python -m uvicorn unified_gateway:app --host 0.0.0.0 --port 8888"
-echo timeout /t 3 /nobreak ^>nul
+echo timeout /t 2 /nobreak ^>nul
+echo.
+echo echo [11/12] Minimax Core API [port 8080]...
+echo if exist "minimax\package.json" (
+echo     start /min "Minimax-Core" cmd /c "cd minimax && set NODE_PORT=8080 && node index.js"
+echo )
+echo timeout /t 2 /nobreak ^>nul
+echo.
+echo echo [12/12] Minimax Witness Proxy [port 3001]...
+echo if exist "minimax\one2lv-witness-v8\proxy\server.js" (
+echo     start /min "Minimax-Witness" cmd /c "cd minimax\one2lv-witness-v8\proxy && node server.js"
+echo )
+echo timeout /t 2 /nobreak ^>nul
 echo.
 echo echo ========================================================================
 echo echo    ONE2LVOS SYSTEM IS NOW RUNNING!
@@ -329,9 +409,11 @@ echo echo.
 echo echo    Unified Gateway:  http://localhost:8888
 echo echo    AI Arcade MCP:    http://localhost:8003
 echo echo    AI Lobby:         http://localhost:8006
-echo echo    SteamOS Dash:     http://localhost:8080
+echo echo    SteamOS Dash:     http://localhost:8081
 echo echo    LumenisOS:        http://localhost:9002
 echo echo    Aetherix:         http://localhost:9003
+echo echo    Minimax Core:     http://localhost:8080
+echo echo    Minimax Witness:  http://localhost:3001
 echo echo.
 echo echo    View system status: http://localhost:8888/status
 echo echo.
@@ -368,9 +450,10 @@ echo taskkill /F /FI "WINDOWTITLE eq SteamOS*" ^>nul 2^>^&1
 echo taskkill /F /FI "WINDOWTITLE eq AI-Lobby*" ^>nul 2^>^&1
 echo taskkill /F /FI "WINDOWTITLE eq Aetherix*" ^>nul 2^>^&1
 echo taskkill /F /FI "WINDOWTITLE eq Gateway*" ^>nul 2^>^&1
+echo taskkill /F /FI "WINDOWTITLE eq Minimax*" ^>nul 2^>^&1
 echo.
 echo :: Kill by port as fallback
-echo for %%%%p in ^(3002 3003 8003 8005 8006 8080 8888 9001 9002 9003^) do ^(
+echo for %%%%p in ^(3001 3002 3003 8003 8005 8006 8080 8081 8888 9001 9002 9003^) do ^(
 echo     netstat -ano ^| findstr :%%%%p ^| findstr LISTENING ^> nul
 echo     if not errorlevel 1 ^(
 echo         for /f "tokens=5" %%%%a in ^('netstat -ano ^| findstr :%%%%p ^| findstr LISTENING'^) do taskkill /F /PID %%%%a ^>nul 2^>^&1

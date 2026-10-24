@@ -27,13 +27,13 @@ cd /d "%~dp0"
 REM Create required directories
 echo Creating directories...
 if not exist "config" mkdir config
+if not exist "services" mkdir services
 if not exist "services\protocols" mkdir services\protocols
-if not exist "server" mkdir server
 
-REM Check if dependencies are installed
+REM Check if root node_modules exist (contains express, cors, etc.)
 if not exist "node_modules" (
-    echo Dependencies not found. Installing...
-    call npm install express cors
+    echo Dependencies not found. Installing from package.json...
+    call npm install --legacy-peer-deps
     echo.
 )
 
@@ -41,6 +41,14 @@ REM Create config file if it doesn't exist
 if not exist "config\connections.json" (
     echo Creating default configuration...
     echo {"connections":[]} > config\connections.json
+)
+
+REM Verify network-api exists
+if not exist "server\network-api.js" (
+    echo Error: server\network-api.js not found
+    echo Make sure you are running this from the One2lvOS directory
+    pause
+    exit /b 1
 )
 
 REM Set default port if not set

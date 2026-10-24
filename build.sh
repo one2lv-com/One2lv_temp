@@ -109,10 +109,28 @@ cmd_deps() {
     pip_install "$ROOT/steamos_lumenis/one2lvos_dashboard/requirements.txt"
   fi
 
-  # ── minmax (Node.js) ─────────────────────────────────────────────────────
-  if [ -f "$ROOT/minmax/opt/one2lv/package.json" ]; then
-    info "minmax"
-    (cd "$ROOT/minmax/opt/one2lv" && npm install --silent 2>/dev/null) || true
+  # ── minimax agent-hub (Vite/React — MiniMax via NVIDIA NIM) ─────────────
+  if [ -f "$ROOT/minimax/agent-hub/package.json" ]; then
+    info "minimax/agent-hub"
+    (cd "$ROOT/minimax/agent-hub" && npm install --silent 2>/dev/null) || true
+  fi
+
+  # ── minimax one2lv-agent-hub (Vite/React) ────────────────────────────────
+  if [ -f "$ROOT/minimax/one2lv-agent-hub/package.json" ]; then
+    info "minimax/one2lv-agent-hub"
+    (cd "$ROOT/minimax/one2lv-agent-hub" && npm install --silent 2>/dev/null) || true
+  fi
+
+  # ── minimax witness proxy ────────────────────────────────────────────────
+  if [ -f "$ROOT/minimax/one2lv-witness-v8/proxy/package.json" ]; then
+    info "minimax/witness-proxy"
+    (cd "$ROOT/minimax/one2lv-witness-v8/proxy" && npm install --silent 2>/dev/null) || true
+  fi
+
+  # ── minimax core server ──────────────────────────────────────────────────
+  if [ -f "$ROOT/minimax/package.json" ]; then
+    info "minimax (core)"
+    (cd "$ROOT/minimax" && npm install --silent 2>/dev/null) || true
   fi
 
   # ── lumenis-v7-cjs (Node.js) ─────────────────────────────────────────────
@@ -145,6 +163,22 @@ cmd_build() {
     (cd "$ROOT/lumenis-os/artifacts/api-server" && node ./build.mjs) \
       && ok "lumenis-os api-server built → dist/index.mjs" \
       || fail "lumenis-os api-server build failed"
+  fi
+
+  # ── minimax agent-hub (Vite — bakes NVIDIA key + minimax/minimax-01) ─────
+  if [ -f "$ROOT/minimax/agent-hub/package.json" ]; then
+    info "minimax/agent-hub (vite build)"
+    (cd "$ROOT/minimax/agent-hub" && npm run build 2>/dev/null) \
+      && ok "minimax/agent-hub built → dist/" \
+      || warn "minimax/agent-hub build failed (non-fatal)"
+  fi
+
+  # ── minimax one2lv-agent-hub (Vite) ──────────────────────────────────────
+  if [ -f "$ROOT/minimax/one2lv-agent-hub/package.json" ]; then
+    info "minimax/one2lv-agent-hub (vite build)"
+    (cd "$ROOT/minimax/one2lv-agent-hub" && npm run build 2>/dev/null) \
+      && ok "minimax/one2lv-agent-hub built → dist/" \
+      || warn "minimax/one2lv-agent-hub build failed (non-fatal)"
   fi
 
   ok "Build complete"
@@ -251,6 +285,26 @@ cmd_start() {
   echo $! > "$LOG_DIR/gateway.pid"
   wait_up "Unified Gateway" "http://localhost:8888/status" 15 || true
 
+  # ── 11. Minimax Core API (port 8080) ─────────────────────────────────────
+  if [ -f "$ROOT/minimax/package.json" ] && command -v node >/dev/null 2>&1; then
+    info "Minimax Core API  [port 8080]"
+    kill_port 8080
+    NODE_PORT=8080 nohup node "$ROOT/minimax/index.js" \
+      > "$LOG_DIR/minimax.log" 2>&1 &
+    echo $! > "$LOG_DIR/minimax.pid"
+    wait_up "Minimax Core" "http://localhost:8080/health" 10 || true
+  fi
+
+  # ── 12. Minimax Witness Proxy (port 3001) ────────────────────────────────
+  if [ -f "$ROOT/minimax/one2lv-witness-v8/proxy/package.json" ] && command -v node >/dev/null 2>&1; then
+    info "Minimax Witness Proxy  [port 3001]"
+    kill_port 3001
+    nohup node "$ROOT/minimax/one2lv-witness-v8/proxy/server.js" \
+      > "$LOG_DIR/witness-proxy.log" 2>&1 &
+    echo $! > "$LOG_DIR/witness-proxy.pid"
+    wait_up "Witness Proxy" "http://localhost:3001/api/health" 10 || true
+  fi
+
   echo ""
   cmd_status
 }
@@ -261,7 +315,7 @@ cmd_start() {
 cmd_stop() {
   banner "Stopping All Services"
   for svc in ai-arcade os-core sac lumenis-v7 steamos-dash ai-lobby \
-              lumenis-ui lumenis-os aetherix gateway; do
+              lumenis-ui lumenis-os aetherix gateway minimax witness-proxy; do
     PID_FILE="$LOG_DIR/${svc}.pid"
     if [ -f "$PID_FILE" ]; then
       PID=$(cat "$PID_FILE")
@@ -274,7 +328,7 @@ cmd_stop() {
     fi
   done
   # Also release ports by name as fallback
-  for port in 3002 3003 8003 8005 8006 8080 8888 9001 9002 9003; do
+  for port in 3001 3002 3003 8003 8005 8006 8080 8888 9001 9002 9003; do
     fuser -k "${port}/tcp" 2>/dev/null || true
   done
   ok "All services stopped"
@@ -308,6 +362,8 @@ cmd_status() {
   check_svc "LumenisOS API"          9002  "http://localhost:9002/api/healthz"
   check_svc "Aetherix Terminal"      9003  "http://localhost:9003/health"
   check_svc "Unified Gateway"        8888  "http://localhost:8888/status"
+  check_svc "Minimax Core API"       8080  "http://localhost:8080/health"
+  check_svc "Minimax Witness Proxy"  3001  "http://localhost:3001/api/health"
   echo ""
 
   # Agent count from lobby

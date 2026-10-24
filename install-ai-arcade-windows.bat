@@ -143,7 +143,7 @@ echo echo    AI ARCADE MCP SERVER
 echo echo ========================================================================
 echo echo.
 echo echo    Starting server on port 8003...
-echo echo    Dashboard will be available at: http://localhost:8080
+echo echo    Dashboard will be available at: http://localhost:8081
 echo echo.
 echo echo    Press Ctrl+C to stop the server
 echo echo.
@@ -165,14 +165,14 @@ echo echo ======================================================================
 echo echo    AI ARCADE DASHBOARD
 echo echo ========================================================================
 echo echo.
-echo echo    Starting dashboard server on port 8080...
+echo echo    Starting dashboard server on port 8081...
 echo echo    Opening dashboard in browser...
 echo echo.
 echo echo ========================================================================
 echo echo.
 echo cd /d "%%~dp0"
-echo start http://localhost:8080/one2lv-dashboard.html
-echo python -m http.server 8080
+echo start http://localhost:8081/one2lv-dashboard.html
+echo python -m http.server 8081
 echo pause
 ) > start-dashboard.bat
 echo    ^> Created start-dashboard.bat
@@ -190,19 +190,19 @@ echo echo.
 echo echo    [1/2] Starting MCP Server on port 8003...
 echo start /min cmd /c "cd /d "%%~dp0" ^&^& python server.py --host 0.0.0.0 --port 8003"
 echo timeout /t 3 /nobreak ^>nul
-echo echo    [2/2] Starting Dashboard on port 8080...
-echo start /min cmd /c "cd /d "%%~dp0" ^&^& python -m http.server 8080"
+echo echo    [2/2] Starting Dashboard on port 8081...
+echo start /min cmd /c "cd /d "%%~dp0" ^&^& python -m http.server 8081"
 echo timeout /t 2 /nobreak ^>nul
 echo echo.
 echo echo    Opening dashboard...
 echo timeout /t 2 /nobreak ^>nul
-echo start http://localhost:8080/one2lv-dashboard.html
+echo start http://localhost:8081/one2lv-dashboard.html
 echo echo.
 echo echo ========================================================================
 echo echo    AI ARCADE IS NOW RUNNING!
 echo echo ========================================================================
 echo echo.
-echo echo    Dashboard:  http://localhost:8080/one2lv-dashboard.html
+echo echo    Dashboard:  http://localhost:8081/one2lv-dashboard.html
 echo echo    MCP Server: http://localhost:8003
 echo echo.
 echo echo    Press any key to stop all services...
@@ -222,7 +222,7 @@ echo color 0C
 echo echo Stopping all AI Arcade services...
 echo taskkill /F /FI "WINDOWTITLE eq AI Arcade*" ^>nul 2^>^&1
 echo taskkill /F /IM python.exe /FI "WINDOWTITLE eq *8003*" ^>nul 2^>^&1
-echo taskkill /F /IM python.exe /FI "WINDOWTITLE eq *8080*" ^>nul 2^>^&1
+echo taskkill /F /IM python.exe /FI "WINDOWTITLE eq *8081*" ^>nul 2^>^&1
 echo echo Services stopped.
 echo timeout /t 2 /nobreak ^>nul
 ) > stop-ai-arcade.bat
@@ -281,7 +281,7 @@ echo    ACCESSING THE ARCADE
 echo ========================================================================
 echo.
 echo After starting:
-echo    Dashboard:  http://localhost:8080/one2lv-dashboard.html
+echo    Dashboard:  http://localhost:8081/one2lv-dashboard.html
 echo    MCP Server: http://localhost:8003
 echo    API:        http://localhost:8003/mcp
 echo.
@@ -305,7 +305,7 @@ echo ========================================================================
 echo    TROUBLESHOOTING
 echo ========================================================================
 echo.
-echo Port 8003 or 8080 already in use:
+echo Port 8003 or 8081 already in use:
 echo    - Stop other services using these ports
 echo    - Or edit the batch files to use different ports
 echo.
@@ -386,7 +386,7 @@ echo       OR
 echo.
 echo    2. Run: start-ai-arcade.bat
 echo.
-echo    Then open: http://localhost:8080/one2lv-dashboard.html
+echo    Then open: http://localhost:8081/one2lv-dashboard.html
 echo.
 echo ========================================================================
 echo    FILES CREATED
@@ -411,7 +411,7 @@ echo.
 echo    - 21 Playable Games
 echo    - 100+ Game Library with AI Strategy Notes
 echo    - MCP Server (port 8003)
-echo    - Dashboard (port 8080)
+echo    - Dashboard (port 8081)
 echo    - Multi-agent Support
 echo    - Tournament System
 echo    - Leaderboard Tracking
