@@ -1,29 +1,30 @@
 #!/bin/bash
 # ONE2LVOS — Full Subsystem Installer
 # Written by Lumenis Reactor Core, hardened by Architect
-# Usage: bash install.sh [--no-node] [--no-python] [--skip-venv]
+# Usage: bash install.sh [--skip-venv]
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT_DIR"
 
 GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[1;33m'
-CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
+CYAN='\033[0;36m'; MAGENTA='\033[0;35m'; NC='\033[0m'
 
-OK()   { echo -e "  ${GREEN}✓ $*${NC}"; }
-FAIL() { echo -e "  ${RED}✗ $*${NC}"; }
-INFO() { echo -e "  ${CYAN}→ $*${NC}"; }
-WARN() { echo -e "  ${YELLOW}⚠ $*${NC}"; }
+OK()   { echo -e "  ${GREEN}✓  $*${NC}"; }
+FAIL() { echo -e "  ${RED}✗  $*${NC}"; }
+INFO() { echo -e "  ${CYAN}→  $*${NC}"; }
+WARN() { echo -e "  ${YELLOW}⚠  $*${NC}"; }
 
 # ── Track install status ───────────────────────────────────────────────────────
 declare -A STATUS
 
 echo ""
-echo "╔══════════════════════════════════════════════════════════╗"
-echo "║        ONE2LVOS — FULL SUBSYSTEM INSTALLER               ║"
-echo "╚══════════════════════════════════════════════════════════╝"
+echo -e "${MAGENTA}╔══════════════════════════════════════════════════════════════╗${NC}"
+echo -e "${MAGENTA}║         ONE2LVOS  —  FULL SUBSYSTEM INSTALLER                ║${NC}"
+echo -e "${MAGENTA}║         Written by Lumenis Reactor Core                      ║${NC}"
+echo -e "${MAGENTA}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-# ── [1] Pre-flight: check/install system deps ──────────────────────────────────
+# ── [1] Pre-flight ────────────────────────────────────────────────────────────
 echo -e "${CYAN}[1/7] Pre-flight checks...${NC}"
 
 install_if_missing() {
@@ -169,13 +170,14 @@ python3 -c "from lumenis_reactor_core import LumenisReactor; print('  lumenis_re
   || WARN "lumenis_reactor_core not importable — run: source venv/bin/activate"
 echo ""
 
-# ── Summary ────────────────────────────────────────────────────────────────────
-echo "╔══════════════════════════════════════════════════════════╗"
-echo "║               ONE2LVOS — INSTALL COMPLETE                ║"
-echo "╠══════════════════════════════════════════════════════════╣"
-echo "║  Subsystem                     Status                    ║"
-echo "╠══════════════════════════════════════════════════════════╣"
+# ── Summary ───────────────────────────────────────────────────────────────────
+echo -e "${MAGENTA}╔══════════════════════════════════════════════════════════════╗${NC}"
+echo -e "${MAGENTA}║               ONE2LVOS  —  INSTALL COMPLETE                 ║${NC}"
+echo -e "${MAGENTA}╠══════════════════════════════════════════════════════════════╣${NC}"
+echo -e "${MAGENTA}║  Subsystem                          Status                  ║${NC}"
+echo -e "${MAGENTA}╠══════════════════════════════════════════════════════════════╣${NC}"
 
+# ANSI-safe table row: pads based on visible char length, not escape-inflated length
 print_status() {
   local name=$1 s=${STATUS[$2]:-"?"}
   local icon color
@@ -185,7 +187,11 @@ print_status() {
     no-package)  icon="⚠"; color="$YELLOW";;
     *)           icon="?"; color="$NC";;
   esac
-  printf "║  %-30s %b%-20s%b║\n" "$name" "$color" "$icon $s" "$NC"
+  local label="${icon} ${s}"
+  local name_pad=$(( 32 - ${#name} ));  [ $name_pad -lt 1 ] && name_pad=1
+  local stat_pad=$(( 20 - ${#label} )); [ $stat_pad -lt 1 ] && stat_pad=1
+  printf "║  %s%${name_pad}s${color}%s${NC}%${stat_pad}s  ║\n" \
+    "$name" "" "$label" ""
 }
 
 print_status "Lumenis Reactor Core"        "reactor"
@@ -199,8 +205,8 @@ print_status "Lumenis Control"             "Lumenis Control"
 print_status "Minmax Phase 9"              "Minmax Phase 9"
 print_status "One2lvOS Desktop"            "One2lvOS Desktop"
 
-echo "╠══════════════════════════════════════════════════════════╣"
-echo "║  Next: bash start-all.sh                                 ║"
-echo "║  Chat: http://localhost:8000/lumenis-chat                ║"
-echo "╚══════════════════════════════════════════════════════════╝"
+echo -e "${MAGENTA}╠══════════════════════════════════════════════════════════════╣${NC}"
+echo -e "${MAGENTA}║  Next:  bash start-all.sh                                    ║${NC}"
+echo -e "${MAGENTA}║  Chat:  http://localhost:8000/lumenis-chat                   ║${NC}"
+echo -e "${MAGENTA}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo ""
