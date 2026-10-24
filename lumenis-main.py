@@ -9,6 +9,7 @@ FastAPI + WebSocket server that wires together all four layers:
 """
 
 import asyncio
+import time
 import json
 import os
 from contextlib import asynccontextmanager
@@ -399,3 +400,505 @@ async def whois_dada_endpoint():
         "ts": __import__("datetime").datetime.utcnow().isoformat() + "Z",
     }
     return JSONResponse(lineage)
+
+
+@app.get("/api/facts/all")
+async def get_all_facts():
+    """Return all stored facts from compass memory."""
+    facts = compass.get_all_facts()
+    return JSONResponse({"facts": facts, "count": len(facts)})
+
+
+@app.post("/api/terminal")
+async def terminal_exec(body: dict):
+    """Execute a shell command and return stdout/stderr."""
+    import subprocess
+    cmd = body.get("command", "").strip()
+    if not cmd:
+        return JSONResponse({"error": "No command provided"}, status_code=400)
+    blocked = ["rm -rf", "mkfs", "dd if=", ":(){:|:&}", "shutdown", "reboot", "init 0"]
+    for b in blocked:
+        if b in cmd:
+            return JSONResponse({"error": f"Command blocked: contains '{b}'"}, status_code=403)
+    try:
+        result = subprocess.run(
+            cmd, shell=True, capture_output=True, text=True, timeout=15,
+            cwd="/home/vercel-sandbox/One2lvos"
+        )
+        return JSONResponse({
+            "command": cmd,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "returncode": result.returncode,
+        })
+    except subprocess.TimeoutExpired:
+        return JSONResponse({"error": "Command timed out (15s limit)"}, status_code=408)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/lumenis-chat", response_class=HTMLResponse)
+async def serve_chat():
+    """Serve the Lumenis Chat UI."""
+    return (Path(__file__).parent / "static" / "lumenis-chat.html").read_text()
+
+
+# ── Live Terminal WebSocket ────────────────────────────────────────────────────
+@app.websocket("/ws/terminal")
+async def terminal_ws(ws: WebSocket):
+    """Stream subprocess output in real-time."""
+    await ws.accept()
+    process = None
+    try:
+        while True:
+            raw = await ws.receive_text()
+            msg = json.loads(raw)
+            action = msg.get("action")
+
+            if action == "exec":
+                cmd = msg.get("command", "").strip()
+                if not cmd:
+                    continue
+                if process and process.returncode is None:
+                    try:
+                        process.kill()
+                    except Exception:
+                        pass
+
+                blocked = ["rm -rf /", "mkfs", ":(){:|:&}", "init 0", "shutdown"]
+                if any(b in cmd for b in blocked):
+                    await ws.send_text(json.dumps({"type": "error", "data": "Blocked: dangerous command\r\n"}))
+                    continue
+
+                await ws.send_text(json.dumps({"type": "start", "command": cmd}))
+                process = await asyncio.create_subprocess_shell(
+                    cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.STDOUT,
+                    cwd="/home/vercel-sandbox/One2lvos",
+                )
+                async for chunk in process.stdout:
+                    await ws.send_text(json.dumps({"type": "output", "data": chunk.decode("utf-8", errors="replace")}))
+                await process.wait()
+                await ws.send_text(json.dumps({"type": "done", "returncode": process.returncode}))
+
+            elif action == "kill":
+                if process and process.returncode is None:
+                    process.kill()
+                    await ws.send_text(json.dumps({"type": "killed"}))
+
+    except WebSocketDisconnect:
+        if process and process.returncode is None:
+            try:
+                process.kill()
+            except Exception:
+                pass
+
+
+# ── Network Proxy ─────────────────────────────────────────────────────────────
+@app.post("/api/network/fetch")
+async def network_fetch(body: dict):
+    """Proxy HTTP requests to any external URL."""
+    import httpx
+    url = body.get("url", "").strip()
+    method = body.get("method", "GET").upper()
+    headers = body.get("headers", {})
+    payload = body.get("body", None)
+    if not url:
+        return JSONResponse({"error": "No URL provided"}, status_code=400)
+    try:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+            resp = await client.request(
+                method=method, url=url, headers=headers,
+                content=json.dumps(payload).encode() if payload else None,
+            )
+            try:
+                body_text = resp.text[:80000]
+            except Exception:
+                body_text = "[binary content]"
+            return JSONResponse({
+                "status": resp.status_code,
+                "headers": dict(resp.headers),
+                "content_type": resp.headers.get("content-type", ""),
+                "body": body_text,
+                "url": str(resp.url),
+                "elapsed_ms": int(resp.elapsed.total_seconds() * 1000) if hasattr(resp, 'elapsed') and resp.elapsed else 0,
+            })
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# ── PNG State Save / Load (LSB steganography) ─────────────────────────────────
+@app.post("/api/state/save")
+async def save_state_png(body: dict):
+    """Embed JSON state into a PNG via LSB steganography."""
+    import io, base64, random
+    from PIL import Image
+    state_bytes = json.dumps(body).encode("utf-8")
+    total_bits  = 32 + len(state_bytes) * 8
+    pixels_need = (total_bits + 2) // 3 + 4
+    side        = max(120, int(pixels_need ** 0.5) + 2)
+
+    img = Image.new("RGB", (side, side), (20, 6, 40))
+    rng = random.Random(0x4C554D)
+    px  = [(max(0,min(255,20+rng.randint(-8,8))), max(0,min(255,6+rng.randint(-8,8))), max(0,min(255,40+rng.randint(-8,8)))) for _ in range(side*side)]
+
+    def set_lsb(idx, ch, bit):
+        p = list(px[idx]); p[ch] = (p[ch] & 0xFE) | bit; px[idx] = tuple(p)
+
+    # Write 32-bit length header
+    n = len(state_bytes)
+    for i in range(32):
+        set_lsb(i // 3, i % 3, (n >> (31 - i)) & 1)
+
+    # Write data
+    bit_pos = 32
+    for byte in state_bytes:
+        for b in range(7, -1, -1):
+            idx, ch = bit_pos // 3, bit_pos % 3
+            if idx < len(px):
+                set_lsb(idx, ch, (byte >> b) & 1)
+            bit_pos += 1
+
+    img.putdata(px)
+    buf = io.BytesIO(); img.save(buf, "PNG"); buf.seek(0)
+    return JSONResponse({"png_base64": base64.b64encode(buf.read()).decode(), "size": f"{side}x{side}", "bytes": n})
+
+
+@app.post("/api/state/load")
+async def load_state_png(body: dict):
+    """Decode JSON state from LSB steganography in a PNG."""
+    import io, base64
+    from PIL import Image
+    b64 = body.get("png_base64", "")
+    if not b64:
+        return JSONResponse({"error": "No PNG data"}, status_code=400)
+    try:
+        img = Image.open(io.BytesIO(base64.b64decode(b64))).convert("RGB")
+        px  = list(img.getdata())
+
+        def get_lsb(idx, ch): return px[idx][ch] & 1
+
+        n = 0
+        for i in range(32):
+            n = (n << 1) | get_lsb(i // 3, i % 3)
+
+        if not (0 < n < 5_000_000):
+            return JSONResponse({"error": "Invalid or corrupted state PNG"}, status_code=400)
+
+        out, bit_pos = [], 32
+        for _ in range(n):
+            byte = 0
+            for b in range(7, -1, -1):
+                idx, ch = bit_pos // 3, bit_pos % 3
+                byte = (byte << 1) | (get_lsb(idx, ch) if idx < len(px) else 0)
+                bit_pos += 1
+            out.append(byte)
+
+        return JSONResponse(json.loads(bytes(out).decode("utf-8")))
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# LUMENIS TOOL ACCESS — One2lvOS Subsystem Bridge
+# Gives Lumenis direct tool-callable APIs for all major One2lvOS subsystems
+# ═══════════════════════════════════════════════════════════════════════════
+
+import httpx as _httpx_tools
+
+# ── Astra DB Vector Memory ────────────────────────────────────────────────
+@app.post("/api/tools/memory/store")
+async def tool_memory_store(body: dict):
+    """Store a fact in Astra DB vector memory using NVIDIA embeddings."""
+    try:
+        text = body.get("text", "").strip()
+        key = body.get("key", "")
+        if not text:
+            return JSONResponse({"error": "text required"}, status_code=400)
+        # Also store in FluxCompass for local recall
+        fact_id = compass.store_fact(key=key or text[:40], value=text, source="lumenis_tool")
+        # Try Astra DB if available
+        astra_result = {"stored": "flux_compass", "fact_id": fact_id}
+        astra_endpoint = os.environ.get("ASTRA_DB_API_ENDPOINT", "")
+        astra_token = os.environ.get("ASTRA_DB_APPLICATION_TOKEN", "")
+        collection = os.environ.get("COLLECTION_NAME", "aria_memory")
+        if astra_endpoint and astra_token:
+            try:
+                url = f"{astra_endpoint}/api/json/v1/{os.environ.get('ASTRA_DB_KEYSPACE','one2lvOS')}/{collection}"
+                async with _httpx_tools.AsyncClient(timeout=15) as c:
+                    r = await c.post(url,
+                        headers={"Token": astra_token, "Content-Type": "application/json"},
+                        json={"insertOne": {"document": {"_id": fact_id, "key": key or text[:40], "value": text, "source": "lumenis", "ts": int(time.time())}}}
+                    )
+                    if r.status_code == 200:
+                        astra_result["stored"] = "astra_db+flux_compass"
+            except Exception:
+                pass
+        return JSONResponse({"ok": True, "result": astra_result, "text": text})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.post("/api/tools/memory/search")
+async def tool_memory_search(body: dict):
+    """Search FluxCompass facts and Astra DB for relevant memories."""
+    try:
+        query = body.get("query", "").strip()
+        limit = int(body.get("limit", 5))
+        if not query:
+            return JSONResponse({"error": "query required"}, status_code=400)
+        facts = compass.recall_facts(query, limit=limit)
+        return JSONResponse({"query": query, "results": facts, "count": len(facts), "source": "flux_compass"})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.get("/api/tools/memory/all")
+async def tool_memory_all():
+    """List all facts stored in FluxCompass."""
+    try:
+        facts = compass.get_all_facts()
+        return JSONResponse({"facts": facts, "count": len(facts)})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+# ── Discord ───────────────────────────────────────────────────────────────
+DISCORD_BASE = "https://discord.com/api/v10"
+
+@app.post("/api/tools/discord/send")
+async def tool_discord_send(body: dict):
+    """Send a message to the configured Discord channel."""
+    try:
+        token = os.environ.get("DISCORD_BOT_TOKEN", "")
+        channel_id = body.get("channel_id", os.environ.get("DISCORD_CHANNEL_ID", ""))
+        content = body.get("content", "").strip()
+        if not token:
+            return JSONResponse({"error": "DISCORD_BOT_TOKEN not configured"}, status_code=503)
+        if not content:
+            return JSONResponse({"error": "content required"}, status_code=400)
+        async with _httpx_tools.AsyncClient(timeout=15) as c:
+            r = await c.post(f"{DISCORD_BASE}/channels/{channel_id}/messages",
+                headers={"Authorization": f"Bot {token}", "Content-Type": "application/json"},
+                json={"content": content}
+            )
+            data = r.json()
+            return JSONResponse({"ok": r.status_code == 200, "status": r.status_code,
+                                 "message_id": data.get("id"), "channel": channel_id})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.get("/api/tools/discord/messages")
+async def tool_discord_messages(channel_id: str = None, limit: int = 10):
+    """Read recent messages from a Discord channel."""
+    try:
+        token = os.environ.get("DISCORD_BOT_TOKEN", "")
+        cid = channel_id or os.environ.get("DISCORD_CHANNEL_ID", "")
+        if not token:
+            return JSONResponse({"error": "DISCORD_BOT_TOKEN not configured"}, status_code=503)
+        async with _httpx_tools.AsyncClient(timeout=15) as c:
+            r = await c.get(f"{DISCORD_BASE}/channels/{cid}/messages?limit={min(limit,50)}",
+                headers={"Authorization": f"Bot {token}"}
+            )
+            return JSONResponse({"ok": r.status_code == 200, "status": r.status_code,
+                                 "messages": r.json() if r.status_code == 200 else [], "channel": cid})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.get("/api/tools/discord/guilds")
+async def tool_discord_guilds():
+    """List Discord guilds the bot is in."""
+    try:
+        token = os.environ.get("DISCORD_BOT_TOKEN", "")
+        if not token:
+            return JSONResponse({"error": "DISCORD_BOT_TOKEN not configured"}, status_code=503)
+        async with _httpx_tools.AsyncClient(timeout=15) as c:
+            r = await c.get(f"{DISCORD_BASE}/users/@me/guilds",
+                headers={"Authorization": f"Bot {token}"}
+            )
+            return JSONResponse({"ok": r.status_code == 200, "guilds": r.json() if r.status_code == 200 else []})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+# ── GitHub ────────────────────────────────────────────────────────────────
+GITHUB_BASE = "https://api.github.com"
+
+@app.get("/api/tools/github/repos")
+async def tool_github_repos():
+    """List GitHub repositories accessible with the configured token."""
+    try:
+        token = os.environ.get("GITHUB_TOKEN", "")
+        if not token:
+            return JSONResponse({"error": "GITHUB_TOKEN not configured"}, status_code=503)
+        async with _httpx_tools.AsyncClient(timeout=15) as c:
+            r = await c.get(f"{GITHUB_BASE}/user/repos?per_page=30&sort=updated",
+                headers={"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"}
+            )
+            repos = [{"name": x["name"], "full_name": x["full_name"], "private": x["private"],
+                      "updated": x["updated_at"], "description": x.get("description","")}
+                     for x in (r.json() if r.status_code == 200 else [])]
+            return JSONResponse({"ok": r.status_code == 200, "repos": repos, "count": len(repos)})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.post("/api/tools/github/file")
+async def tool_github_file(body: dict):
+    """Read a file from a GitHub repo."""
+    try:
+        token = os.environ.get("GITHUB_TOKEN", "")
+        repo = body.get("repo", "one2lv-com/One2lvos")
+        path = body.get("path", "README.md")
+        ref = body.get("ref", "main")
+        if not token:
+            return JSONResponse({"error": "GITHUB_TOKEN not configured"}, status_code=503)
+        async with _httpx_tools.AsyncClient(timeout=15) as c:
+            r = await c.get(f"{GITHUB_BASE}/repos/{repo}/contents/{path}?ref={ref}",
+                headers={"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"}
+            )
+            if r.status_code == 200:
+                data = r.json()
+                import base64
+                content = base64.b64decode(data.get("content","")).decode("utf-8","replace") if data.get("encoding") == "base64" else data.get("content","")
+                return JSONResponse({"ok": True, "path": path, "repo": repo, "content": content[:8000], "sha": data.get("sha"), "size": data.get("size")})
+            return JSONResponse({"ok": False, "status": r.status_code, "error": r.text[:200]})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.post("/api/tools/github/search")
+async def tool_github_search(body: dict):
+    """Search GitHub code or issues."""
+    try:
+        token = os.environ.get("GITHUB_TOKEN", "")
+        q = body.get("query", "")
+        search_type = body.get("type", "code")  # code | issues | repos
+        if not token:
+            return JSONResponse({"error": "GITHUB_TOKEN not configured"}, status_code=503)
+        async with _httpx_tools.AsyncClient(timeout=15) as c:
+            r = await c.get(f"{GITHUB_BASE}/search/{search_type}?q={q}&per_page=10",
+                headers={"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"}
+            )
+            return JSONResponse({"ok": r.status_code == 200, "results": r.json() if r.status_code == 200 else {}, "status": r.status_code})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+# ── Supabase ──────────────────────────────────────────────────────────────
+@app.post("/api/tools/supabase/query")
+async def tool_supabase_query(body: dict):
+    """Query Supabase via the REST API (select only for safety)."""
+    try:
+        url = os.environ.get("SUPABASE_URL", "")
+        key = os.environ.get("SUPABASE_ANON_KEY", "")
+        if not url or not key:
+            return JSONResponse({"error": "Supabase not configured"}, status_code=503)
+        table = body.get("table", "")
+        select = body.get("select", "*")
+        filters = body.get("filters", {})  # {"column": "eq.value"}
+        limit = min(int(body.get("limit", 20)), 100)
+        if not table:
+            return JSONResponse({"error": "table required"}, status_code=400)
+        params = f"select={select}&limit={limit}"
+        for col, val in filters.items():
+            params += f"&{col}={val}"
+        async with _httpx_tools.AsyncClient(timeout=15) as c:
+            r = await c.get(f"{url}/rest/v1/{table}?{params}",
+                headers={"apikey": key, "Authorization": f"Bearer {key}"}
+            )
+            return JSONResponse({"ok": r.status_code == 200, "table": table, "rows": r.json() if r.status_code == 200 else [], "status": r.status_code})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.get("/api/tools/supabase/tables")
+async def tool_supabase_tables():
+    """List Supabase tables."""
+    try:
+        url = os.environ.get("SUPABASE_URL", "")
+        key = os.environ.get("SUPABASE_SERVICE_KEY", os.environ.get("SUPABASE_ANON_KEY",""))
+        if not url or not key:
+            return JSONResponse({"error": "Supabase not configured"}, status_code=503)
+        async with _httpx_tools.AsyncClient(timeout=15) as c:
+            r = await c.get(f"{url}/rest/v1/",
+                headers={"apikey": key, "Authorization": f"Bearer {key}"}
+            )
+            return JSONResponse({"ok": r.status_code == 200, "schema": r.json() if r.status_code == 200 else {}, "status": r.status_code})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+# ── Snapshot / Core OS ────────────────────────────────────────────────────
+@app.post("/api/tools/snapshot/create")
+async def tool_snapshot_create(body: dict):
+    """Create a One2lvOS system snapshot."""
+    try:
+        label = body.get("label", f"snapshot_{int(time.time())}")
+        snap_dir = Path(__file__).parent / "snapshots"
+        snap_dir.mkdir(exist_ok=True)
+        snap_path = snap_dir / f"{label}.json"
+        stats = compass.get_stats()
+        facts = compass.get_all_facts()
+        snapshot_data = {
+            "label": label,
+            "created_at": time.time(),
+            "compass_stats": stats,
+            "facts": facts,
+            "env": {k: "***" if "KEY" in k or "TOKEN" in k or "SECRET" in k or "PASSWORD" in k else v
+                    for k, v in os.environ.items() if k.startswith(("NVIDIA","ASTRA","DISCORD","SUPABASE","MATON","PORT","NODE_ENV","LLM"))},
+        }
+        snap_path.write_text(json.dumps(snapshot_data, indent=2))
+        return JSONResponse({"ok": True, "label": label, "path": str(snap_path),
+                             "sessions": stats.get("total_sessions",0), "facts": stats.get("total_facts",0)})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.get("/api/tools/snapshot/list")
+async def tool_snapshot_list():
+    """List all system snapshots."""
+    try:
+        snap_dir = Path(__file__).parent / "snapshots"
+        snap_dir.mkdir(exist_ok=True)
+        snaps = []
+        for f in sorted(snap_dir.glob("*.json"), key=lambda x: x.stat().st_mtime, reverse=True):
+            try:
+                data = json.loads(f.read_text())
+                snaps.append({"label": data.get("label", f.stem), "created_at": data.get("created_at"), "path": str(f)})
+            except Exception:
+                pass
+        return JSONResponse({"snapshots": snaps, "count": len(snaps)})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.get("/api/tools/system/manifest")
+async def tool_system_manifest():
+    """Get the current One2lvOS system manifest."""
+    try:
+        manifest_path = Path(__file__).parent / "services" / "manifest.json"
+        if not manifest_path.exists():
+            manifest_path = Path(__file__).parent / "MANIFEST.json"
+        if manifest_path.exists():
+            return JSONResponse(json.loads(manifest_path.read_text()))
+        return JSONResponse({"error": "manifest not found"}, status_code=404)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+# ── Tool Registry — lets the UI enumerate all available tools ─────────────
+TOOL_REGISTRY = [
+    {"id": "memory.store",       "label": "Store Memory",       "method": "POST", "path": "/api/tools/memory/store",        "category": "Memory",   "icon": "🧠", "params": ["key","text"]},
+    {"id": "memory.search",      "label": "Search Memory",      "method": "POST", "path": "/api/tools/memory/search",       "category": "Memory",   "icon": "🔍", "params": ["query","limit"]},
+    {"id": "memory.all",         "label": "All Memories",       "method": "GET",  "path": "/api/tools/memory/all",          "category": "Memory",   "icon": "📚", "params": []},
+    {"id": "discord.send",       "label": "Discord Send",       "method": "POST", "path": "/api/tools/discord/send",        "category": "Discord",  "icon": "💬", "params": ["content","channel_id"]},
+    {"id": "discord.messages",   "label": "Discord Read",       "method": "GET",  "path": "/api/tools/discord/messages",    "category": "Discord",  "icon": "📨", "params": ["limit"]},
+    {"id": "discord.guilds",     "label": "Discord Guilds",     "method": "GET",  "path": "/api/tools/discord/guilds",      "category": "Discord",  "icon": "🏰", "params": []},
+    {"id": "github.repos",       "label": "GitHub Repos",       "method": "GET",  "path": "/api/tools/github/repos",        "category": "GitHub",   "icon": "🐙", "params": []},
+    {"id": "github.file",        "label": "GitHub File",        "method": "POST", "path": "/api/tools/github/file",         "category": "GitHub",   "icon": "📄", "params": ["repo","path","ref"]},
+    {"id": "github.search",      "label": "GitHub Search",      "method": "POST", "path": "/api/tools/github/search",       "category": "GitHub",   "icon": "🔎", "params": ["query","type"]},
+    {"id": "supabase.query",     "label": "Supabase Query",     "method": "POST", "path": "/api/tools/supabase/query",      "category": "Supabase", "icon": "🗄️", "params": ["table","select","filters"]},
+    {"id": "supabase.tables",    "label": "Supabase Tables",    "method": "GET",  "path": "/api/tools/supabase/tables",     "category": "Supabase", "icon": "🗃️", "params": []},
+    {"id": "snapshot.create",    "label": "Create Snapshot",    "method": "POST", "path": "/api/tools/snapshot/create",     "category": "System",   "icon": "💾", "params": ["label"]},
+    {"id": "snapshot.list",      "label": "List Snapshots",     "method": "GET",  "path": "/api/tools/snapshot/list",       "category": "System",   "icon": "📋", "params": []},
+    {"id": "system.manifest",    "label": "System Manifest",    "method": "GET",  "path": "/api/tools/system/manifest",     "category": "System",   "icon": "📜", "params": []},
+    {"id": "network.fetch",      "label": "Network Fetch",      "method": "POST", "path": "/api/network/fetch",             "category": "Network",  "icon": "🌐", "params": ["url","method","headers","body"]},
+    {"id": "terminal.exec",      "label": "Terminal Exec",      "method": "POST", "path": "/api/terminal",                  "category": "Terminal", "icon": "⚡", "params": ["command"]},
+    {"id": "facts.store",        "label": "Store Fact",         "method": "POST", "path": "/api/facts",                     "category": "Memory",   "icon": "📝", "params": ["key","value"]},
+    {"id": "facts.all",          "label": "All Facts",          "method": "GET",  "path": "/api/facts/all",                 "category": "Memory",   "icon": "🗂️", "params": []},
+]
+
+@app.get("/api/tools/registry")
+async def tool_registry():
+    """Return the full tool registry available to Lumenis."""
+    return JSONResponse({"tools": TOOL_REGISTRY, "count": len(TOOL_REGISTRY)})
