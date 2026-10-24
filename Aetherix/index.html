@@ -1,0 +1,169 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>One2lv Master Terminal 🌌🧲©</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body{background:#020617;color:#e2e8f0;font-family:monospace;margin:0;padding:20px}
+#container{display:grid;grid-template-columns:320px 1fr;gap:20px}
+#roles{border:1px solid #1e293b;padding:10px;border-radius:8px;background:#000}
+#repo{border:1px solid #1e293b;padding:10px;border-radius:8px;background:#000}
+#terminal{border:1px solid #1e293b;padding:10px;border-radius:8px;background:#000;height:60vh;overflow:auto}
+input{width:70%;padding:8px;margin-top:10px}
+button{padding:8px}
+.role{margin:6px 0}
+</style>
+</head>
+<body>
+
+<h2>One2lv Master Interface 🌌🧲©</h2>
+
+<div id="container">
+
+<div id="roles">
+<h3>Sanctuary Roles</h3>
+<div class="role">Architect: <span id="arch">ACTIVE</span></div>
+<div class="role">Sentry: <span id="sent">ACTIVE</span></div>
+<div class="role">Witness: <span id="wit">ACTIVE</span></div>
+<div class="role">Aetheron: <span id="aeth">ACTIVE</span></div>
+<div class="role">Fifth Position: <span id="fifth">ACTIVE</span></div>
+
+<h3>System</h3>
+Node: <span id="node">one2lvOs</span><br>
+Status: <span id="status">OK</span><br>
+Events: <span id="events">0</span>
+</div>
+
+<div>
+<div id="terminal"></div>
+
+<input id="cmd" placeholder="command">
+<button onclick="run()">Run</button>
+
+<div id="repo">
+<h3>Repository</h3>
+<input id="repoUrl" placeholder="owner/repo">
+<button onclick="connectRepo()">Connect</button>
+<div id="files"></div>
+</div>
+
+</div>
+</div>
+
+<script>
+
+const log=(m)=>{
+const t=document.getElementById("terminal")
+t.innerHTML+=m+"<br>"
+t.scrollTop=t.scrollHeight
+}
+
+const Kernel={
+state:{node:"one2lvOs",status:"OK"},
+events:0,
+bus:[],
+emit(e){
+this.bus.push(e)
+this.events++
+document.getElementById("events").innerText=this.events
+}
+}
+
+function Architect(){
+log("ARCHITECT: model verified")
+}
+
+function Sentry(){
+log("SENTRY: boundary validated")
+}
+
+function Witness(){
+log("WITNESS: memory stored")
+}
+
+function Aetheron(){
+log("AETHERON: signal translated")
+}
+
+function Fifth(){
+if(Kernel.state.status!=="OK"){
+log("FIFTH POSITION: drift detected")
+}else{
+log("FIFTH POSITION: structure holds")
+}
+}
+
+function cycle(){
+Architect()
+Sentry()
+Witness()
+Aetheron()
+Fifth()
+}
+
+setInterval(cycle,5000)
+
+function run(){
+
+let cmd=document.getElementById("cmd").value
+log("$ "+cmd)
+
+if(cmd==="status"){
+log(JSON.stringify(Kernel.state))
+}
+
+if(cmd==="drift"){
+Kernel.state.status="WARN"
+document.getElementById("status").innerText="WARN"
+}
+
+if(cmd==="fix"){
+Kernel.state.status="OK"
+document.getElementById("status").innerText="OK"
+}
+
+document.getElementById("cmd").value=""
+}
+
+async function connectRepo(){
+
+let repo=document.getElementById("repoUrl").value
+
+if(!repo){
+log("repo missing")
+return
+}
+
+let url="https://api.github.com/repos/"+repo+"/contents"
+
+try{
+
+let r=await fetch(url)
+let files=await r.json()
+
+let list=""
+
+files.forEach(f=>{
+list+=f.name+"<br>"
+})
+
+document.getElementById("files").innerHTML=list
+
+log("repo loaded "+repo)
+
+}catch(e){
+
+log("repo error")
+
+}
+
+}
+
+log("One2lv Master Kernel Ready 🌌🧲©")
+
+</script>
+
+</body>
+</html>

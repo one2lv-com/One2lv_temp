@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ONE2LVOS - LUMENIS Cosmic Runtime</title>
+
+<style>
+:root {
+  --cyan: #2dd4bf;
+  --cyan-glow: #2dd4bf80;
+  --dark: #0a0a14;
+  --card-bg: #111827cc;
+  --border: #2dd4bf40;
+  --purple: #8b5cf6;
+  --yellow: #fbbf24;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Courier New', monospace;
+  color: #d1f7ff;
+  overflow: hidden;
+  background: var(--dark);
+}
+
+#canvas-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.overlay > * {
+  pointer-events: auto;
+}
+
+/* HEADER */
+header {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  text-align: center;
+  background: var(--card-bg);
+  padding: 15px 30px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+}
+
+header h1 {
+  font-size: 1.8em;
+  text-shadow: 0 0 20px var(--cyan-glow);
+  margin-bottom: 5px;
+}
+
+header .status {
+  font-size: 0.9em;
+  color: #94a3b8;
+}
+
+header a {
+  pointer-events: auto;
+}
+
+header a:hover {
+  opacity: 1 !important;
+  text-shadow: 0 0 10px var(--cyan-glow);
+}
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 10px var(--cyan);
+  animation: blink 2s infinite;
+  margin-right: 5px;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* CORE PULSE */
+#core-pulse {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--cyan) 0%, transparent 70%);
+  box-shadow:
+    0 0 60px var(--cyan-glow),
+    0 0 120px var(--cyan-glow),
+    inset 0 0 40px var(--cyan-glow);
+  animation: pulse 4s ease-in-out infinite;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.2;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.2; }
+  50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.3; }
+}
+
+/* RACCOON AGENT */
+#raccoon-agent {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 60px;
+  z-index: 5;
+  animation: float 6s ease-in-out infinite;
+  cursor: pointer;
+  filter: drop-shadow(0 0 20px rgba(45, 212, 191, 0.5));
+  transition: transform 0.3s;
+}
+
+#raccoon-agent:hover {
+  transform: translate(-50%, -50%) scale(1.3);
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(-50%, -50%) translateY(0px) rotate(0deg); }
+  50% { transform: translate(-50%, -50%) translateY(-20px) rotate(5deg); }
+}
+
+/* PANELS */
+.panel-grid {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  right: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px;
+  z-index: 10;
+  max-height: 250px;
+}
+
+.panel {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 15px;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s;
+  animation: fadeIn 0.6s ease-out;
+}
+
+.panel:hover {
+  border-color: var(--cyan);
+  box-shadow: 0 8px 32px var(--cyan-glow);
+  transform: translateY(-5px);
+}
+
+.panel h3 {
+  font-size: 1em;
+  margin-bottom: 8px;
+  color: var(--cyan);
+  text-shadow: 0 0 10px var(--cyan-glow);
+}
+
+.panel-content {
+  font-size: 0.85em;
+  line-height: 1.5;
+  color: #94a3b8;
+}
+
+.agent-status {
+  display: flex;
+  justify-content: space-between;
+  margin: 5px 0;
+}
+
+.agent-name {
+  color: var(--cyan);
+}
+
+.agent-action {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* AGENT BADGE */
+.agent-badge {
+  position: fixed;
+  top: 120px;
+  right: 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 15px;
+  backdrop-filter: blur(10px);
+  z-index: 10;
+  min-width: 200px;
+}
+
+.agent-badge h3 {
+  font-size: 0.9em;
+  color: var(--cyan);
+  margin-bottom: 10px;
+  text-shadow: 0 0 10px var(--cyan-glow);
+}
+
+.agent-item {
+  display: flex;
+  justify-content: space-between;
+  margin: 8px 0;
+  font-size: 0.85em;
+  padding: 5px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 5px;
+  transition: background 0.3s;
+}
+
+.agent-item.active {
+  background: rgba(45, 212, 191, 0.1);
+  border-left: 2px solid var(--cyan);
+}
+
+.agent-item .name {
+  color: var(--cyan);
+  font-weight: bold;
+}
+
+.agent-item .status {
+  color: #94a3b8;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  header h1 { font-size: 1.3em; }
+  .panel-grid { grid-template-columns: 1fr; max-height: 300px; overflow-y: auto; }
+  .agent-badge { top: 100px; right: 10px; min-width: 150px; }
+  #raccoon-agent { font-size: 40px; }
+  #core-pulse { width: 100px; height: 100px; }
+}
+
+/* LOG OUTPUT */
+#log-output {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 300px;
+  max-height: 200px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  backdrop-filter: blur(10px);
+  z-index: 10;
+  overflow-y: auto;
+  font-size: 0.75em;
+  display: none;
+}
+
+#log-output.visible {
+  display: block;
+}
+
+.log-entry {
+  margin: 3px 0;
+  color: #94a3b8;
+  border-left: 2px solid var(--cyan);
+  padding-left: 8px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- Canvas for Three.js -->
+<div id="canvas-container"></div>
+
+<!-- Core Pulse -->
+<div id="core-pulse"></div>
+
+<!-- Raccoon Agent -->
+<div id="raccoon-agent" title="Lumenis Raccoon Agent">🦝</div>
+
+<!-- Overlay UI -->
+<div class="overlay">
+
+  <!-- Header -->
+  <header>
+    <h1>🌌 LUMENIS ONE2LVOS</h1>
+    <div style="margin: 10px 0; display: flex; gap: 15px; justify-content: center; font-size: 0.8em;">
+      <a href="index.html" style="color: var(--cyan); text-decoration: none; opacity: 1;">MAIN CONTROL</a>
+      <span style="color: #94a3b8;">|</span>
+      <a href="sovereign-lattice.html" style="color: var(--cyan); text-decoration: none; opacity: 0.7; transition: opacity 0.3s;">LATTICE VIEW</a>
+    </div>
+    <div class="status">
+      <span class="status-dot"></span>
+      <span id="runtime-status">EVOLVING</span>
+    </div>
+    <div class="status" style="font-size: 0.75em;">
+      <span id="manifold-status">MANIFOLD: CONNECTING</span>
+    </div>
+  </header>
+
+  <!-- Agent Badge -->
+  <div class="agent-badge">
+    <h3>🦝 AGENTS</h3>
+    <div id="agent-list"></div>
+  </div>
+
+  <!-- Panels -->
+  <div class="panel-grid">
+
+    <div class="panel">
+      <h3>🧠 RUNTIME STATE</h3>
+      <div class="panel-content" id="state-panel">
+        Loading...
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>⚡ AGENT ACTIVITY</h3>
+      <div class="panel-content" id="agent-panel">
+        Initializing agents...
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>💾 MEMORY</h3>
+      <div class="panel-content" id="memory-panel">
+        Loading memory...
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Log Output -->
+  <div id="log-output"></div>
+
+</div>
+
+<!-- Three.js -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+
+<!-- Socket.io -->
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+// ==================== THREE.JS STARFIELD ====================
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+// Create starfield
+const starGeometry = new THREE.BufferGeometry();
+const starCount = 5000;
+const positions = new Float32Array(starCount * 3);
+
+for (let i = 0; i < starCount * 3; i++) {
+  positions[i] = (Math.random() - 0.5) * 2000;
+}
+
+starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+const starMaterial = new THREE.PointsMaterial({
+  color: 0x2dd4bf,
+  size: 2,
+  transparent: true,
+  opacity: 0.8
+});
+
+const stars = new THREE.Points(starGeometry, starMaterial);
+scene.add(stars);
+
+camera.position.z = 500;
+
+// Animation loop
+function animate() {
+  requestAnimationFrame(animate);
+
+  stars.rotation.x += 0.0001;
+  stars.rotation.y += 0.0002;
+
+  renderer.render(scene, camera);
+}
+
+animate();
+
+// Resize handler
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ==================== WEBSOCKET CONNECTION ====================
+
+const socket = io();
+let manifoldSocket = null;
+let manifoldReconnectAttempts = 0;
+let manifoldHeartbeatTimer = null;
+let runtimeStateCache = {};
+let manifoldStateCache = { link: 'CONNECTING' };
+const maxReconnectDelay = 16000;
+
+function manifoldUrl() {
+  const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+  const hostname = window.location.hostname || 'localhost';
+  return `${protocol}${hostname}:3002/ws/vanguard`;
+}
+
+function setManifoldStatus(text) {
+  document.getElementById('manifold-status').textContent = text;
+  manifoldStateCache.link = text.replace('MANIFOLD: ', '');
+  renderStatePanel();
+}
+
+function startManifoldHeartbeat() {
+  stopManifoldHeartbeat();
+  manifoldHeartbeatTimer = setInterval(() => {
+    if (manifoldSocket && manifoldSocket.readyState === WebSocket.OPEN) {
+      manifoldSocket.send(JSON.stringify({
+        type: 'heartbeat',
+        source: 'main_control',
+        frequency: 73.0,
+        ts: Date.now()
+      }));
+    }
+  }, 12000);
+}
+
+function stopManifoldHeartbeat() {
+  if (manifoldHeartbeatTimer) {
+    clearInterval(manifoldHeartbeatTimer);
+    manifoldHeartbeatTimer = null;
+  }
+}
+
+function scheduleManifoldReconnect() {
+  const delay = Math.min(1000 * Math.pow(2, manifoldReconnectAttempts), maxReconnectDelay);
+  manifoldReconnectAttempts += 1;
+  window.setTimeout(connectToVanguardManifold, delay);
+}
+
+function updateManifoldState(payload) {
+  if (!payload) {
+    return;
+  }
+
+  manifoldStateCache = {
+    ...manifoldStateCache,
+    ...payload,
+    link: manifoldStateCache.link
+  };
+  renderStatePanel();
+}
+
+function handleManifoldMessage(message) {
+  if (message.type === 'pulse' || message.type === 'manifold_state') {
+    updateManifoldState(message.data);
+    return;
+  }
+
+  if (message.type === 'ping') {
+    if (manifoldSocket && manifoldSocket.readyState === WebSocket.OPEN) {
+      manifoldSocket.send(JSON.stringify({
+        type: 'heartbeat',
+        source: 'main_control',
+        frequency: 73.0,
+        ts: Date.now()
+      }));
+    }
+    return;
+  }
+
+  if (message.type === 'pong') {
+    return;
+  }
+
+  if (message.type === 'telemetry_echo') {
+    addLog(`Manifold: ${typeof message.message === 'string' ? message.message : JSON.stringify(message.message)}`);
+    return;
+  }
+
+  if (message.type === 'error') {
+    addLog(`Manifold error: ${message.message}`);
+  }
+}
+
+function connectToVanguardManifold() {
+  const url = manifoldUrl();
+  addLog(`Connecting manifold: ${url}`);
+  setManifoldStatus('MANIFOLD: CONNECTING');
+
+  manifoldSocket = new WebSocket(url);
+
+  manifoldSocket.onopen = () => {
+    manifoldReconnectAttempts = 0;
+    setManifoldStatus('MANIFOLD: LINKED');
+    addLog('Persistent manifold linked');
+    startManifoldHeartbeat();
+    manifoldSocket.send(JSON.stringify({
+      type: 'heartbeat',
+      source: 'main_control',
+      frequency: 73.0,
+      ts: Date.now()
+    }));
+  };
+
+  manifoldSocket.onmessage = (event) => {
+    try {
+      handleManifoldMessage(JSON.parse(event.data));
+    } catch (error) {
+      addLog(`Manifold parse error: ${error.message}`);
+    }
+  };
+
+  manifoldSocket.onclose = (event) => {
+    stopManifoldHeartbeat();
+    setManifoldStatus('MANIFOLD: RECONNECTING');
+    addLog(`Manifold closed (${event.code}). Reconnecting...`);
+    scheduleManifoldReconnect();
+  };
+
+  manifoldSocket.onerror = () => {
+    addLog('Manifold socket error');
+  };
+}
+
+// Connection events
+socket.on('connect', () => {
+  console.log('🌌 Connected to LUMENIS Runtime');
+  addLog('Connected to runtime');
+});
+
+socket.on('disconnect', () => {
+  console.log('💫 Disconnected from LUMENIS Runtime');
+  addLog('Disconnected from runtime');
+});
+
+// Runtime state updates
+socket.on('runtime_state', (state) => {
+  console.log('⚡ Runtime state:', state);
+  updateRuntimeState(state);
+});
+
+// Memory state updates
+socket.on('memory_state', (memory) => {
+  console.log('💾 Memory state:', memory);
+  updateMemoryState(memory);
+  updateAgentList(memory.agents);
+});
+
+// Agent pulse updates
+socket.on('agent_pulse', (data) => {
+  console.log(`🦝 ${data.agent} pulse:`, data.action);
+  addLog(`${data.agent}: ${data.action}`);
+  updateAgentActivity(data);
+});
+
+// Runtime sync
+socket.on('runtime_sync', (data) => {
+  console.log('🔗 Runtime sync:', data);
+});
+
+// ==================== UI UPDATES ====================
+
+function updateRuntimeState(state) {
+  const statusSpan = document.getElementById('runtime-status');
+  runtimeStateCache = state;
+  statusSpan.textContent = state.LUMENIS_CORE || 'UNKNOWN';
+  renderStatePanel();
+}
+
+function renderStatePanel() {
+  const statePanel = document.getElementById('state-panel');
+  const panelState = {
+    ...runtimeStateCache,
+    SOVEREIGN_MANIFOLD: manifoldStateCache.link
+  };
+
+  if (manifoldStateCache.reactor) {
+    panelState.REACTOR_TEMP = manifoldStateCache.reactor.temperature;
+    panelState.REACTOR_PULSES = manifoldStateCache.reactor.pulse_count;
+  }
+
+  if (manifoldStateCache.nodes) {
+    panelState.VANGUARD_ACTIVE = manifoldStateCache.nodes.active_workers ?? manifoldStateCache.nodes.active_nodes;
+    panelState.VANGUARD_QUEUE = manifoldStateCache.nodes.queue_depth;
+  }
+
+  statePanel.innerHTML = Object.keys(panelState)
+    .filter(key => key !== 'connectedClients')
+    .map(key => `<div style="margin: 3px 0;"><strong>${key}:</strong> ${panelState[key]}</div>`)
+    .join('');
+}
+
+function updateMemoryState(memory) {
+  const memoryPanel = document.getElementById('memory-panel');
+
+  memoryPanel.innerHTML = `
+    <div><strong>Session:</strong> ${memory.session_id?.substring(0, 20) || 'N/A'}</div>
+    <div><strong>State:</strong> ${memory.runtime_state}</div>
+    <div><strong>Agents:</strong> ${Object.keys(memory.agents || {}).length}</div>
+  `;
+}
+
+function updateAgentList(agents) {
+  const agentList = document.getElementById('agent-list');
+
+  agentList.innerHTML = Object.keys(agents).map(name => {
+    const agent = agents[name];
+    const isActive = agent.status === 'ACTIVE';
+
+    return `
+      <div class="agent-item ${isActive ? 'active' : ''}">
+        <span class="name">${name}</span>
+        <span class="status">${agent.status}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateAgentActivity(data) {
+  const agentPanel = document.getElementById('agent-panel');
+
+  const timestamp = new Date(data.timestamp).toLocaleTimeString();
+
+  agentPanel.innerHTML = `
+    <div class="agent-status">
+      <span class="agent-name">${data.agent}</span>
+      <span class="agent-action">${data.action}</span>
+    </div>
+    <div style="font-size: 0.75em; color: #64748b; margin-top: 5px;">
+      ${timestamp}
+    </div>
+  `;
+}
+
+function addLog(message) {
+  const logOutput = document.getElementById('log-output');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+
+  logOutput.appendChild(entry);
+  logOutput.scrollTop = logOutput.scrollHeight;
+
+  // Keep last 20 entries
+  while (logOutput.children.length > 20) {
+    logOutput.removeChild(logOutput.firstChild);
+  }
+}
+
+// ==================== RACCOON INTERACTION ====================
+
+const raccoon = document.getElementById('raccoon-agent');
+let clickCount = 0;
+
+raccoon.addEventListener('click', () => {
+  clickCount++;
+
+  const transformations = ['🦝', '🦝⚡', '🦝🌌', '🦝✨'];
+  raccoon.textContent = transformations[clickCount % transformations.length];
+
+  socket.emit('agent_update', {
+    agent: 'RACCOON',
+    action: 'activated',
+    status: 'ACTIVE'
+  });
+
+  if (manifoldSocket && manifoldSocket.readyState === WebSocket.OPEN) {
+    manifoldSocket.send(JSON.stringify({
+      type: 'telemetry',
+      source: 'main_control',
+      event: 'raccoon_activated',
+      ts: Date.now()
+    }));
+  }
+
+  addLog('Raccoon agent activated');
+});
+
+// ==================== KEYBOARD SHORTCUTS ====================
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'l' || e.key === 'L') {
+    const logOutput = document.getElementById('log-output');
+    logOutput.classList.toggle('visible');
+  }
+});
+
+// ==================== CONSOLE GREETING ====================
+
+console.log('%c🌌 LUMENIS ONE2LVOS LOADED', 'color: #2dd4bf; font-size: 20px; font-weight: bold;');
+console.log('%cPress L to toggle log output', 'color: #94a3b8; font-size: 12px;');
+console.log('%cClick raccoon to activate agent', 'color: #94a3b8; font-size: 12px;');
+connectToVanguardManifold();
+
+</script>
+
+</body>
+</html>

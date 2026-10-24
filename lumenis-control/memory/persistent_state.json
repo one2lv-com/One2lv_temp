@@ -1,0 +1,29 @@
+{
+  "session_id": "lumenis_001",
+  "runtime_state": "EVOLVING",
+  "agents": {
+    "SCOUT": {
+      "status": "ACTIVE",
+      "last_action": "analyzing",
+      "priority": 3
+    },
+    "GUARDIAN": {
+      "status": "ACTIVE",
+      "last_action": "analyzing",
+      "priority": 5
+    },
+    "BERSERKER": {
+      "status": "STANDBY",
+      "last_action": "ready",
+      "priority": 2
+    },
+    "ARCHIVIST": {
+      "status": "ACTIVE",
+      "last_action": "pattern_detected",
+      "priority": 4
+    }
+  },
+  "match_history": [],
+  "discord_alerts": [],
+  "twitch_commentary": []
+}

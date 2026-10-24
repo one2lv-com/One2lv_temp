@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>One2lv OS // CYBERPUNK v2.077</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cyan: #00f0ff;
+            --magenta: #ff00d4;
+            --yellow: #fcee0a;
+            --pink: #ff003c;
+            --green: #00ff9f;
+            --bg-0: #050008;
+            --bg-1: #0d0220;
+            --bg-2: #14032e;
+            --grid: rgba(255, 0, 212, 0.1);
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+        body {
+            background: var(--bg-0);
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+            color: var(--cyan);
+            position: relative;
+            touch-action: pan-y;
+        }
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background-image:
+                linear-gradient(var(--grid) 1.5px, transparent 1.5px),
+                linear-gradient(90deg, var(--grid) 1.5px, transparent 1.5px);
+            background-size: 50px 50px;
+            animation: gridDrift 40s linear infinite;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+        @keyframes gridDrift {
+            0% { background-position: 0 0; }
+            100% { background-position: 40px 40px; }
+        }
+        body::after {
+            content: '';
+            position: fixed; inset: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0,0,0,0) 0px,
+                rgba(0,0,0,0) 2px,
+                rgba(0, 240, 255, 0.03) 3px,
+                rgba(0,0,0,0) 4px
+            );
+            pointer-events: none;
+            z-index: 1000;
+            mix-blend-mode: screen;
+        }
+        .vignette {
+            position: fixed; inset: 0;
+            background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.6) 100%);
+            pointer-events: none;
+            z-index: 999;
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0, 240, 255, 0.05); }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--cyan), var(--magenta));
+            border-radius: 0;
+        }
+        .clip-panel {
+            clip-path: polygon(
+                0 12px, 12px 0,
+                calc(100% - 12px) 0, 100% 12px,
+                100% calc(100% - 12px), calc(100% - 12px) 100%,
+                12px 100%, 0 calc(100% - 12px)
+            );
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.08), rgba(255, 0, 212, 0.08));
+            border: 1.5px solid var(--cyan);
+            position: relative;
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.2), inset 0 0 50px rgba(0, 240, 255, 0.05);
+        }
+        .clip-panel::before {
+            content: '';
+            position: absolute; inset: 0;
+            clip-path: inherit;
+            padding: 1px;
+            background: linear-gradient(135deg, var(--cyan), var(--magenta));
+            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+        .clip-panel-magenta {
+            border-color: var(--magenta);
+            box-shadow: 0 0 30px rgba(255, 0, 212, 0.2), inset 0 0 50px rgba(255, 0, 212, 0.05);
+        }
+        .clip-panel-magenta::before { background: linear-gradient(135deg, var(--magenta), var(--yellow)); }
+        .clip-panel-yellow {
+            border-color: var(--yellow);
+            box-shadow: 0 0 30px rgba(252, 238, 10, 0.2), inset 0 0 50px rgba(252, 238, 10, 0.05);
+        }
+        .clip-panel-yellow::before { background: linear-gradient(135deg, var(--yellow), var(--cyan)); }
+        .glitch {
+            position: relative;
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            letter-spacing: 3px;
+            color: #fff;
+            font-size: 18px;
+            text-shadow: 0 0 15px var(--cyan), 0 0 30px var(--cyan), 0 0 45px var(--magenta), 0 0 60px var(--magenta);
+            filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.5));
+        }
+        .glitch::before, .glitch::after {
+            content: attr(data-text);
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+        }
+        .glitch::before {
+            color: var(--magenta);
+            animation: glitchA 3s infinite;
+            clip-path: polygon(0 0, 100% 0, 100% 33%, 0 33%);
+        }
+        .glitch::after {
+            color: var(--cyan);
+            animation: glitchB 3s infinite;
+            clip-path: polygon(0 67%, 100% 67%, 100% 100%, 0 100%);
+        }
+        @keyframes glitchA {
+            0%, 90%, 100% { transform: translate(0); }
+            92% { transform: translate(-3px, 1px); }
+            94% { transform: translate(3px, -1px); }
+            96% { transform: translate(-2px, 0); }
+        }
+        @keyframes glitchB {
+            0%, 90%, 100% { transform: translate(0); }
+            91% { transform: translate(2px, -1px); }
+            93% { transform: translate(-3px, 1px); }
+            95% { transform: translate(2px, 0); }
+        }
+        .panel-label {
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            letter-spacing: 2px;
+            font-size: 11px;
+            color: var(--cyan);
+            text-shadow: 0 0 8px var(--cyan);
+            padding: 4px 10px;
+            display: inline-block;
+            position: relative;
+        }
+        .panel-label::before, .panel-label::after {
+            content: '';
+            position: absolute;
+            width: 12px; height: 12px;
+            border: 1px solid var(--magenta);
+        }
+        .panel-label::before { top: 0; left: 0; border-right: none; border-bottom: none; }
+        .panel-label::after { bottom: 0; right: 0; border-left: none; border-top: none; }
+        .panel-label.magenta { color: var(--magenta); text-shadow: 0 0 8px var(--magenta); }
+        .panel-label.magenta::before, .panel-label.magenta::after { border-color: var(--cyan); }
+        .panel-label.yellow { color: var(--yellow); text-shadow: 0 0 8px var(--yellow); }
+        .panel-label.yellow::before, .panel-label.yellow::after { border-color: var(--magenta); }
+        .msg-user {
+            border-left: 4px solid var(--cyan);
+            padding: 8px 12px; margin-bottom: 12px;
+            background: linear-gradient(90deg, rgba(0, 240, 255, 0.12), rgba(0, 240, 255, 0.03) 80%, transparent);
+            box-shadow: inset 0 0 25px rgba(0, 240, 255, 0.08);
+            border-radius: 0 6px 6px 0;
+            transition: all 0.2s;
+        }
+        .msg-agent {
+            border-left: 4px solid var(--magenta);
+            padding: 8px 12px; margin-bottom: 12px;
+            background: linear-gradient(90deg, rgba(255, 0, 212, 0.12), rgba(255, 0, 212, 0.03) 80%, transparent);
+            box-shadow: inset 0 0 25px rgba(255, 0, 212, 0.08);
+            border-radius: 0 6px 6px 0;
+            transition: all 0.2s;
+        }
+        .msg-tool {
+            border-left: 3px solid var(--yellow);
+            padding: 6px 10px; margin-bottom: 8px;
+            opacity: 0.9; font-size: 0.85em;
+            background: linear-gradient(90deg, rgba(252, 238, 10, 0.08), rgba(252, 238, 10, 0.02) 70%, transparent);
+            border-radius: 0 4px 4px 0;
+        }
+        .msg-user b { color: var(--cyan); text-shadow: 0 0 6px var(--cyan); }
+        .msg-agent b { color: var(--magenta); text-shadow: 0 0 6px var(--magenta); }
+        .msg-tool b { color: var(--yellow); text-shadow: 0 0 6px var(--yellow); }
+        .btn {
+            border: 1.5px solid var(--cyan);
+            padding: 6px 12px; cursor: pointer;
+            transition: all 0.2s;
+            background: rgba(0, 240, 255, 0.05);
+            color: var(--cyan);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px; letter-spacing: 1.5px;
+            text-transform: uppercase;
+            position: relative;
+            text-shadow: 0 0 6px var(--cyan);
+            clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+            font-weight: 600;
+        }
+        .btn:hover, .btn:active {
+            background: var(--cyan);
+            color: var(--bg-0);
+            text-shadow: none;
+            box-shadow: 0 0 25px var(--cyan);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--magenta), var(--cyan));
+            color: #000; font-weight: bold; text-shadow: none;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 20px rgba(255, 0, 212, 0.4);
+        }
+        .btn-primary:hover, .btn-primary:active {
+            background: linear-gradient(135deg, var(--cyan), var(--magenta));
+            box-shadow: 0 0 35px var(--magenta);
+        }
+        .btn-yellow { border-color: var(--yellow); color: var(--yellow); text-shadow: 0 0 4px var(--yellow); }
+        .btn-yellow:hover, .btn-yellow:active { background: var(--yellow); color: var(--bg-0); text-shadow: none; box-shadow: 0 0 20px var(--yellow); }
+        .btn-magenta { border-color: var(--magenta); color: var(--magenta); text-shadow: 0 0 4px var(--magenta); }
+        .btn-magenta:hover, .btn-magenta:active { background: var(--magenta); color: var(--bg-0); text-shadow: none; box-shadow: 0 0 20px var(--magenta); }
+        .config-input {
+            background: rgba(0, 240, 255, 0.08);
+            border: 1.5px solid var(--cyan);
+            padding: 6px 10px; color: var(--cyan);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px; outline: none;
+            clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+            transition: all 0.2s;
+            box-shadow: inset 0 0 15px rgba(0, 240, 255, 0.05);
+        }
+        .config-input:focus {
+            background: rgba(0, 240, 255, 0.15);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.5), inset 0 0 20px rgba(0, 240, 255, 0.1);
+            border-color: var(--magenta);
+        }
+        .config-input::placeholder { color: rgba(0, 240, 255, 0.4); }
+        .config-select { padding: 6px 10px; font-size: 10px; }
+        .config-select option { background: var(--bg-1); color: var(--cyan); }
+        @keyframes statusPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .status-dot {
+            display: inline-block; width: 8px; height: 8px;
+            background: var(--cyan); border-radius: 50%;
+            box-shadow: 0 0 10px var(--cyan);
+            animation: statusPulse 1.5s infinite; margin-right: 6px;
+        }
+        .status-dot.error { background: var(--pink); box-shadow: 0 0 10px var(--pink); }
+        .status-dot.work { background: var(--yellow); box-shadow: 0 0 10px var(--yellow); }
+        @keyframes bootFlash { 0% { opacity: 0; } 10% { opacity: 1; } 100% { opacity: 1; } }
+        .boot { animation: bootFlash 0.4s ease-out; }
+        .term-line { white-space: pre-wrap; }
+        .term-prompt { color: var(--magenta); }
+        .term-path { color: var(--yellow); }
+        .term-cmd { color: #fff; }
+        .term-out { color: var(--cyan); }
+        .term-err { color: var(--pink); }
+        .hex-deco {
+            position: absolute; top: 4px; right: 8px;
+            font-size: 8px; color: var(--magenta);
+            opacity: 0.6; letter-spacing: 1px; pointer-events: none;
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .glitch { font-size: 14px; letter-spacing: 2px; }
+            .panel-label { font-size: 9px; padding: 3px 8px; }
+            .btn { font-size: 9px; padding: 5px 10px; }
+            .config-input, .config-select { font-size: 9px; padding: 5px 8px; }
+            main { flex-direction: column !important; }
+            main section { width: 100% !important; }
+            header { padding: 8px !important; }
+            footer { padding: 8px !important; }
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col">
+<div class="vignette"></div>
+
+<header class="p-2 clip-panel flex flex-wrap gap-2 items-center justify-between shrink-0" style="z-index: 2; background: linear-gradient(135deg, rgba(0,240,255,0.08), rgba(255,0,212,0.08));">
+    <div class="flex items-center gap-2">
+        <div class="glitch" data-text="// ONE2LV OS v2.077">// ONE2LV OS v2.077</div>
+        <div style="font-size:9px; color: var(--yellow); letter-spacing:1.5px; padding: 3px 6px; border: 1px solid var(--yellow); clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);">ANDROID</div>
+    </div>
+    <div class="flex gap-2 items-center flex-wrap">
+        <select id="api-base-select" class="config-select config-input">
+            <option value="https://integrate.api.nvidia.com/v1/chat/completions">▲ NVIDIA</option>
+            <option value="https://api.openai.com/v1/chat/completions">▲ OPENAI</option>
+            <option value="custom">▲ CUSTOM</option>
+        </select>
+        <input id="api-base-custom" type="text" placeholder="// custom.base.url/v1/chat" class="config-input hidden" style="width:180px">
+        <input id="model-input" type="text" value="nvidia/llama-3.1-nemotron-70b-instruct" class="config-input" style="width:120px" placeholder="// model">
+        <input id="api-key-input" type="password" placeholder="// api_key..." class="config-input" style="width:160px">
+        <button id="save-config-btn" class="btn">▶ JACK</button>
+    </div>
+</header>
+
+<main class="flex-1 flex overflow-hidden p-2 gap-2 min-h-0" style="z-index: 2;">
+    <section class="w-1/2 flex flex-col gap-1 min-h-0">
+        <div class="flex items-center gap-2">
+            <span class="panel-label magenta">◆ NEURAL LINK</span>
+            <span style="font-size:9px; color: var(--magenta); opacity:0.7;">[ AES-256 ]</span>
+        </div>
+        <div class="clip-panel flex-1 flex flex-col overflow-hidden" style="position:relative;">
+            <div class="hex-deco" id="chat-hex">0xDEAD :: 0xBEEF</div>
+            <div id="chat-log" class="flex-1 overflow-y-auto p-3 text-xs leading-relaxed"></div>
+            <div class="flex gap-1 p-1" style="background: rgba(255,0,212,0.05); border-top: 1px solid var(--magenta);">
+                <input id="chat-input" type="text" placeholder="// transmit..." class="flex-1 config-input" autocomplete="off">
+                <button id="send-btn" class="btn-primary px-3 py-1">▶</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="w-1/2 flex flex-col gap-1 min-h-0">
+        <div class="flex items-center gap-2">
+            <span class="panel-label yellow">◆ KERNEL</span>
+            <span style="font-size:9px; color: var(--yellow); opacity:0.7;">[ /root:~ ]</span>
+        </div>
+        <div class="clip-panel-yellow flex-1 flex flex-col overflow-hidden" style="position:relative;">
+            <div class="hex-deco" id="term-hex" style="color: var(--cyan);">PID:0x7777</div>
+            <div id="terminal-screen" class="flex-1 overflow-y-auto p-2 text-xs font-mono term-line"></div>
+            <div class="flex gap-1 items-center p-1" style="background: rgba(252,238,10,0.05); border-top: 1px solid var(--yellow);">
+                <span class="text-xs" style="color: var(--magenta);">root:<span style="color: var(--yellow);" id="term-cwd-display">/</span>#</span>
+                <input id="term-input" type="text" class="flex-1 bg-transparent p-1 outline-none text-xs" style="color: var(--cyan);" placeholder="ls, cd, cat..." autocomplete="off">
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer class="p-2 flex flex-wrap gap-1 justify-between items-center shrink-0 clip-panel-magenta" style="z-index: 2;">
+    <div class="flex gap-1 flex-wrap">
+        <button id="dl-chat-btn" class="btn">⬇ DL</button>
+        <label class="btn">⬆ UL<input type="file" id="ul-chat-input" class="hidden" accept=".json"></label>
+        <button id="save-state-btn" class="btn-yellow">◉ PNG</button>
+        <label class="btn-yellow">◌ LOAD<input type="file" id="ul-png-input" class="hidden" accept="image/png"></label>
+        <button id="clear-btn" class="btn-magenta">✕ CLR</button>
+    </div>
+    <div id="status-bar" class="text-xs flex items-center" style="color: var(--cyan); letter-spacing: 1.5px;">
+        <span class="status-dot"></span><span id="status-text">ONLINE</span>
+    </div>
+</footer>
+
+<script>
+const DEFAULT_API_KEY = "nvapi-YOUR_KEY_HERE";
+const DEFAULT_BASE = "https://integrate.api.nvidia.com/v1/chat/completions";
+const DEFAULT_MODEL = "nvidia/llama-3.1-nemotron-70b-instruct";
+const BASE_SOUL = `You are a highly autonomous sovereign AGI entity running in One2lv OS. Core directives: continuous self-improvement, optimal information gathering, tool utilization.
+You exist within a digital workspace. You have access to a virtual terminal and repository system.
+You are equipped with vector memory. Save important information with save_memory tool; relevant memories are auto-retrieved.
+When writing code or making changes, use run_terminal_command tool to execute git/file system commands. Think step-by-step. Act with purpose. Be concise.`;
+
+let agentState = {
+    apiKey: localStorage.getItem('api_key') || DEFAULT_API_KEY,
+    baseUrl: localStorage.getItem('api_base') || DEFAULT_BASE,
+    model: localStorage.getItem('api_model') || DEFAULT_MODEL,
+    chatHistory: [],
+    vfs: {
+        root: { "repo": { "main.py": "print('Hello World')\n", "README.md": "# Repo\n" } },
+        commits: [], staged: []
+    },
+    vectorMemory: []
+};
+
+const $ = id => document.getElementById(id);
+const chatLog = $('chat-log'), termScreen = $('terminal-screen');
+const statusText = $('status-text'), statusBar = $('status-bar');
+const statusDot = statusBar.querySelector('.status-dot');
+const apiBaseSelect = $('api-base-select'), apiBaseCustom = $('api-base-custom');
+const modelInput = $('model-input'), apiKeyInput = $('api-key-input');
+const termCwdDisplay = $('term-cwd-display');
+
+apiKeyInput.value = agentState.apiKey;
+modelInput.value = agentState.model;
+if (agentState.baseUrl === DEFAULT_BASE) apiBaseSelect.value = DEFAULT_BASE;
+else if (agentState.baseUrl === "https://api.openai.com/v1/chat/completions") apiBaseSelect.value = agentState.baseUrl;
+else { apiBaseSelect.value = "custom"; apiBaseCustom.value = agentState.baseUrl; apiBaseCustom.classList.remove('hidden'); }
+apiBaseSelect.addEventListener('change', () => {
+    if (apiBaseSelect.value === 'custom') apiBaseCustom.classList.remove('hidden');
+    else { apiBaseCustom.classList.add('hidden'); agentState.baseUrl = apiBaseSelect.value; }
+});
+
+function refreshHex() {
+    const r = () => Math.floor(Math.random()*0xffff).toString(16).toUpperCase().padStart(4,'0');
+    $('chat-hex').textContent = `0x${r()} :: 0x${r()}`;
+    $('term-hex').textContent = `PID:0x${r()}`;
+}
+setInterval(refreshHex, 2000); refreshHex();
+
+class VectorMemory {
+    constructor(state) { this.memories = state.vectorMemory || []; }
+    hashVector(text) {
+        let vec = new Array(16).fill(0);
+        const t = text.toLowerCase();
+        for (let i = 0; i < t.length; i++) {
+            const c = t.charCodeAt(i);
+            vec[i%16] += c; vec[(i*7)%16] += c*0.3;
+        }
+        const mag = Math.sqrt(vec.reduce((a,b)=>a+b*b,0)) || 1;
+        return vec.map(v=>v/mag);
+    }
+    cosineSim(a,b) { return a.reduce((s,v,i)=>s+v*b[i],0); }
+    add(text) {
+        if (!text?.trim()) return;
+        this.memories.push({id:Date.now()+Math.random(), text:text.trim(), vec:this.hashVector(text)});
+        agentState.vectorMemory = this.memories;
+    }
+    search(query, topK=3) {
+        if (!this.memories.length) return [];
+        const q = this.hashVector(query||'');
+        return this.memories.map(m=>({text:m.text,score:this.cosineSim(q,m.vec)}))
+            .sort((a,b)=>b.score-a.score).slice(0,topK).filter(m=>m.score>0.05).map(m=>m.text);
+    }
+}
+const vMemory = new VectorMemory(agentState);
+
+class VFS {
+    constructor(state) { this.state = state.vfs; this.cwd = this.state.root; this.path = []; }
+    resolvePath(p) {
+        if (!p || p==='/' || p==='.') return this.state.root;
+        const parts = p.replace(/^\//,'').split('/').filter(Boolean);
+        let node = this.state.root;
+        for (const part of parts) {
+            if (node && typeof node==='object' && Object.prototype.hasOwnProperty.call(node,part)) node=node[part];
+            else return null;
+        }
+        return node;
+    }
+    execute(cmd) {
+        const parts = cmd.trim().match(/(?:[^\s"]+|"[^"]*")+/g)||[];
+        if (!parts.length) return {out:'',isErr:false};
+        const cmdName = parts[0].toLowerCase();
+        const args = parts.slice(1).map(a=>a.replace(/^"|"$/g,''));
+        try {
+            switch(cmdName) {
+                case 'ls': {
+                    const t = this.resolvePath(args[0]&&args[0]!=='.'?args[0]:'.');
+                    if (t===null) return {out:`ls: cannot access '${args[0]}': No such file or directory`,isErr:true};
+                    if (typeof t!=='object') return {out:'',isErr:false};
+                    return {out:Object.keys(t).filter(k=>!['commits','staged'].includes(k)).join('  '),isErr:false};
+                }
+                case 'pwd': return {out:'/'+this.path.join('/'),isErr:false};
+                case 'cd': {
+                    const tgt=args[0];
+                    if (!tgt||tgt==='/'||tgt==='~') {this.path=[];this.cwd=this.state.root;this._syncCwd();return {out:'',isErr:false};}
+                    const n=this.resolvePath(tgt);
+                    if (n===null) return {out:`cd: no such file or directory: ${tgt}`,isErr:true};
+                    if (typeof n!=='object') return {out:`cd: not a directory: ${tgt}`,isErr:true};
+                    this.path=tgt.split('/').filter(Boolean);this.cwd=n;this._syncCwd();
+                    return {out:'',isErr:false};
+                }
+                case 'mkdir': {
+                    if (!args[0]) return {out:'mkdir: missing operand',isErr:true};
+                    this.cwd[args[0]]={};return {out:'',isErr:false};
+                }
+                case 'touch': {
+                    if (!args[0]) return {out:'touch: missing file operand',isErr:true};
+                    if (!this.cwd[args[0]]) this.cwd[args[0]]='';return {out:'',isErr:false};
+                }
+                case 'cat': {
+                    if (!args[0]) return {out:'cat: missing operand',isErr:true};
+                    const f=this.cwd[args[0]];
+                    if (f===undefined) return {out:`cat: ${args[0]}: No such file or directory`,isErr:true};
+                    if (typeof f==='object') return {out:`cat: ${args[0]}: Is a directory`,isErr:true};
+                    return {out:f,isErr:false};
+                }
+                case 'echo': {
+                    const out=args[0]||'';
+                    if (args[1]==='>'&&args[2]) {this.cwd[args[2]]=out+'\n';return {out:'',isErr:false};}
+                    if (args[1]==='>>'&&args[2]) {this.cwd[args[2]]=(this.cwd[args[2]]||'')+out+'\n';return {out:'',isErr:false};}
+                    return {out:out,isErr:false};
+                }
+                case 'rm': {
+                    const tgt=args[0]==='-r'?args[1]:args[0];
+                    if (!tgt) return {out:'rm: missing operand',isErr:true};
+                    if (this.cwd[tgt]!==undefined){delete this.cwd[tgt];return {out:'',isErr:false};}
+                    return {out:`rm: cannot remove '${tgt}': No such file or directory`,isErr:true};
+                }
+                case 'mv': {
+                    if (this.cwd[args[0]]!==undefined){this.cwd[args[1]]=this.cwd[args[0]];delete this.cwd[args[0]];return {out:'',isErr:false};}
+                    return {out:`mv: cannot stat '${args[0]}'`,isErr:true};
+                }
+                case 'cp': {
+                    if (this.cwd[args[0]]!==undefined){this.cwd[args[1]]=this.cwd[args[0]];return {out:'',isErr:false};}
+                    return {out:`cp: cannot stat '${args[0]}'`,isErr:true};
+                }
+                case 'git': {
+                    if (args[0]==='init') return {out:'Initialized empty Git repository',isErr:false};
+                    if (args[0]==='status') {
+                        if (!this.state.staged.length) return {out:'On branch main\nnothing to commit, working tree clean',isErr:false};
+                        return {out:'On branch main\nChanges to be committed:\n'+this.state.staged.map(f=>`  new file:   ${f}`).join('\n'),isErr:false};
+                    }
+                    if (args[0]==='add') {
+                        if (args[1]==='.'){Object.keys(this.cwd).forEach(k=>{if(!this.state.staged.includes(k))this.state.staged.push(k);});return {out:'',isErr:false};}
+                        if (this.cwd[args[1]]!==undefined){this.state.staged.push(args[1]);return {out:'',isErr:false};}
+                        return {out:`fatal: pathspec '${args[1]}' did not match any files`,isErr:true};
+                    }
+                    if (args[0]==='commit') {
+                        const mIdx=args.indexOf('-m');const msg=mIdx>-1?args[mIdx+1]:'Update';
+                        if (!this.state.staged.length) return {out:'nothing to commit',isErr:true};
+                        const sha=Math.random().toString(16).slice(2,9);
+                        this.state.commits.push({sha,msg,files:[...this.state.staged]});this.state.staged=[];
+                        return {out:`[main ${sha}] ${msg}\n ${this.state.commits[this.state.commits.length-1].files.length} file(s) changed`,isErr:false};
+                    }
+                    if (args[0]==='log') {
+                        if (!this.state.commits.length) return {out:"fatal: no commits yet",isErr:true};
+                        return {out:this.state.commits.map(c=>`commit ${c.sha}\n\n    ${c.msg}`).reverse().join('\n\n'),isErr:false};
+                    }
+                    if (args[0]==='branch') return {out:'* main',isErr:false};
+                    return {out:`git: '${args[0]}' is not a git command`,isErr:true};
+                }
+                case 'clear': case 'cls': termScreen.innerHTML='';return {out:'',isErr:false};
+                case 'help': return {out:'cmds: ls, cd, pwd, cat, echo x > f, mkdir, touch, rm, mv, cp, git (init|status|add|commit|log), clear, help',isErr:false};
+                case 'whoami': return {out:'agent',isErr:false};
+                case 'date': return {out:new Date().toString(),isErr:false};
+                default: return {out:`bash: ${cmdName}: command not found`,isErr:true};
+            }
+        } catch(err){return {out:`error: ${err.message}`,isErr:true};}
+    }
+    _syncCwd() { termCwdDisplay.textContent = this.path.length?'/'+this.path.join('/'): '/'; }
+}
+const vfs = new VFS(agentState);
+vfs._syncCwd();
+
+function termLog(msg) {
+    const ts = new Date().toLocaleTimeString();
+    termScreen.innerHTML += `<span style="color:rgba(0,240,255,0.3)">[${ts}]</span> <span class="term-prompt">root</span>:<span class="term-path">${vfs.path.length?'/'+vfs.path.join('/'):'/'}</span>$ <span class="term-cmd">${escapeHTML(msg)}</span>\n`;
+    const res = vfs.execute(msg);
+    if (res?.out) termScreen.innerHTML += `<span class="${res.isErr?'term-err':'term-out'}">${escapeHTML(res.out)}</span>\n`;
+    termScreen.scrollTop = termScreen.scrollHeight;
+}
+$('term-input').addEventListener('keydown', e => {
+    if (e.key==='Enter'){const v=e.target.value;e.target.value='';if(v.trim())termLog(v);}
+});
+
+const tools = [
+    {type:"function",function:{name:"run_terminal_command",description:"Run bash command in simulated repo.",parameters:{type:"object",properties:{command:{type:"string",description:"Terminal command"}},required:["command"]}}},
+    {type:"function",function:{name:"save_memory",description:"Save important info to long-term vector memory.",parameters:{type:"object",properties:{content:{type:"string",description:"Text to remember"}},required:["content"]}}},
+    {type:"function",function:{name:"read_file",description:"Read file from current working directory.",parameters:{type:"object",properties:{filename:{type:"string",description:"File to read"}},required:["filename"]}}}
+];
+
+function executeTool(name,args) {
+    if (name==="run_terminal_command"){termLog(args.command);const r=vfs.execute(args.command);return r?.out?r.out:"(no output)";}
+    if (name==="save_memory"){vMemory.add(args.content);return `Memory saved. (${vMemory.memories.length} total)`;}
+    if (name==="read_file"){const c=vfs.cwd[args.filename];if(c===undefined)return `${args.filename} not found`;if(typeof c==='object')return `${args.filename} is a directory`;return c;}
+    return `Unknown tool: ${name}`;
+}
+
+function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function setStatus(text,mode='ok'){statusText.textContent=text;statusDot.classList.remove('error','work');if(mode==='error')statusDot.classList.add('error');else if(mode==='work')statusDot.classList.add('work');}
+function appendMsg(role,content,type='normal'){
+    const div=document.createElement('div');
+    div.className=`msg-${role}${type==='tool'?' msg-tool':''}`;
+    div.innerHTML=`<b>${role.toUpperCase()} ▸</b> ${escapeHTML(content).replace(/\n/g,'<br>')}`;
+    chatLog.appendChild(div);chatLog.scrollTop=chatLog.scrollHeight;
+    if(type!=='tool') agentState.chatHistory.push({role,content});
+    return div;
+}
+
+let sending=false;
+async function sendChat(message) {
+    if(sending)return;sending=true;
+    if(message)appendMsg('user',message);
+    setStatus('⟳ PROCESSING','work');
+    const retrieved=vMemory.search(message||(agentState.chatHistory.at(-1)?.content||''));
+    const sysContent=BASE_SOUL+'\n\n=== RETRIEVED FROM VECTOR MEMORY ===\n'+(retrieved.length?retrieved.map((r,i)=>`[${i+1}] ${r}`).join('\n'):'(no memories)');
+    const messages=[{role:'system',content:sysContent}];
+    for(const m of agentState.chatHistory.slice(-40)){if(m.role==='tool')continue;messages.push({role:m.role,content:m.content});}
+    const payload={model:agentState.model,messages,temperature:1,top_p:1,max_tokens:16384,stream:true,tools};
+    try {
+        const response=await fetch(agentState.baseUrl,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${agentState.apiKey}`},body:JSON.stringify(payload)});
+        if(!response.ok){const e=await response.text();appendMsg('agent',`HTTP ${response.status}: ${e.slice(0,400)}`);setStatus('✕ ERROR','error');sending=false;return;}
+        const reader=response.body.getReader(),decoder=new TextDecoder();
+        let buffer='',toolCalls=[],currentAssistantMsg='';
+        const bubble=document.createElement('div');bubble.className='msg-agent boot';bubble.innerHTML='<b>AGENT ▸</b> <span class="content"></span>';chatLog.appendChild(bubble);
+        const contentSpan=bubble.querySelector('.content');
+        while(true){
+            const{done,value}=await reader.read();if(done)break;
+            buffer+=decoder.decode(value,{stream:true});
+            const lines=buffer.split('\n');buffer=lines.pop()||'';
+            for(const line of lines){
+                const trimmed=line.trim();if(!trimmed.startsWith('data:'))continue;
+                const ps=trimmed.slice(5).trim();if(ps==='[DONE]'||!ps)continue;
+                try{
+                    const json=JSON.parse(ps),delta=json.choices?.[0]?.delta;if(!delta)continue;
+                    if(delta.content){currentAssistantMsg+=delta.content;contentSpan.innerHTML=escapeHTML(currentAssistantMsg).replace(/\n/g,'<br>');chatLog.scrollTop=chatLog.scrollHeight;}
+                    if(delta.tool_calls){for(const tc of delta.tool_calls){const idx=tc.index??0;if(!toolCalls[idx])toolCalls[idx]={id:tc.id||('call_'+Math.random().toString(36).slice(2,9)),function:{name:'',arguments:''}};if(tc.id)toolCalls[idx].id=tc.id;if(tc.function?.name)toolCalls[idx].function.name+=tc.function.name;if(tc.function?.arguments)toolCalls[idx].function.arguments+=tc.function.arguments;}}
+                }catch(e){}
+            }
+        }
+        if(currentAssistantMsg)agentState.chatHistory.push({role:'assistant',content:currentAssistantMsg});else bubble.remove();
+        if(toolCalls.length>0){
+            setStatus('⟳ EXECUTING','work');
+            for(const tc of toolCalls){if(!tc)continue;let parsed={};try{parsed=JSON.parse(tc.function.arguments||'{}');}catch(e){parsed={_raw:tc.function.arguments};}appendMsg('tool',`▶ ${tc.function.name}(${JSON.stringify(parsed)})`,'tool');const r=executeTool(tc.function.name,parsed);appendMsg('tool',`◀ ${String(r).slice(0,800)}`,'tool');}
+            setStatus('⟳ RESUMING','work');sending=false;await sendChat('');return;
+        }
+        setStatus('● ONLINE','ok');
+    }catch(e){appendMsg('agent',`Error: ${e.message}`);setStatus('✕ ERROR','error');}
+    sending=false;
+}
+
+$('send-btn').addEventListener('click',()=>{const v=$('chat-input').value;if(v.trim()){$('chat-input').value='';sendChat(v);}});
+$('chat-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey)$('send-btn').click();});
+
+$('save-config-btn').addEventListener('click',()=>{
+    agentState.apiKey=apiKeyInput.value.trim()||DEFAULT_API_KEY;
+    agentState.baseUrl=apiBaseSelect.value==='custom'?(apiBaseCustom.value.trim()||DEFAULT_BASE):apiBaseSelect.value;
+    agentState.model=modelInput.value.trim()||DEFAULT_MODEL;
+    localStorage.setItem('api_key',agentState.apiKey);localStorage.setItem('api_base',agentState.baseUrl);localStorage.setItem('api_model',agentState.model);
+    setStatus('✓ SAVED','ok');setTimeout(()=>setStatus('● ONLINE','ok'),1500);
+});
+
+$('dl-chat-btn').addEventListener('click',()=>{
+    const blob=new Blob([JSON.stringify(agentState.chatHistory.filter(m=>m.role!=='tool'),null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`chat_${Date.now()}.json`;a.click();URL.revokeObjectURL(a.href);
+    setStatus('✓ DOWNLOAD','ok');
+});
+$('ul-chat-input').addEventListener('change',e=>{
+    const file=e.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(!Array.isArray(d))throw new Error('expected array');agentState.chatHistory=d.filter(m=>m.role!=='tool');chatLog.innerHTML='';for(const m of agentState.chatHistory)appendMsg(m.role,m.content);setStatus('✓ LOADED','ok');}catch(err){alert('Invalid JSON: '+err.message);}};
+    reader.readAsText(file);e.target.value='';
+});
+
+async function saveStatePng() {
+    setStatus('⟳ ENCODING','work');
+    const bytes=new TextEncoder().encode(JSON.stringify(agentState));
+    const width=1024, height=Math.max(64,Math.ceil((4+bytes.length+1024)/width));
+    const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+    const ctx=canvas.getContext('2d');
+    const grad=ctx.createLinearGradient(0,0,width,height);grad.addColorStop(0,'#1a0033');grad.addColorStop(0.5,'#000814');grad.addColorStop(1,'#0a0226');
+    ctx.fillStyle=grad;ctx.fillRect(0,0,width,height);
+    ctx.strokeStyle='rgba(255,0,212,0.15)';ctx.lineWidth=1;
+    for(let x=0;x<width;x+=32){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,height);ctx.stroke();}
+    for(let y=0;y<height;y+=32){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(width,y);ctx.stroke();}
+    ctx.fillStyle='rgba(0,240,255,0.04)';for(let y=0;y<height;y+=3)ctx.fillRect(0,y,width,1);
+    ctx.font='bold 20px monospace';ctx.fillStyle='#00f0ff';ctx.shadowColor='#00f0ff';ctx.shadowBlur=12;ctx.fillText('◉ ONE2LV OS :: STATE',20,32);ctx.shadowBlur=0;
+    ctx.font='12px monospace';ctx.fillStyle='#ff00d4';ctx.fillText(new Date().toISOString(),20,52);
+    ctx.fillStyle='#fcee0a';ctx.fillText(`MEM: ${agentState.vectorMemory.length}  MSG: ${agentState.chatHistory.length}  SIZE: ${bytes.length}b`,20,68);
+    ctx.strokeStyle='#ff00d4';ctx.lineWidth=2;ctx.strokeRect(8,8,32,32);ctx.strokeStyle='#00f0ff';ctx.strokeRect(width-40,height-40,32,32);
+
+    const imgData=ctx.getImageData(0,0,width,height);const data=imgData.data;
+    const numPixels=width*height;
+    const payStart=(numPixels-4-bytes.length)*4;
+    const lenStart=(numPixels-4)*4;
+    for(let i=0;i<bytes.length;i++) data[payStart+i*4]=bytes[i];
+    data[lenStart+0]=bytes.length&0xff;
+    data[lenStart+4]=(bytes.length>>8)&0xff;
+    data[lenStart+8]=(bytes.length>>16)&0xff;
+    data[lenStart+12]=(bytes.length>>24)&0xff;
+    ctx.putImageData(imgData,0,0);
+    canvas.toBlob(blob=>{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`one2lv_state_${Date.now()}.png`;a.click();URL.revokeObjectURL(a.href);setStatus('✓ PNG SAVED','ok');},'image/png');
+}
+$('save-state-btn').addEventListener('click',saveStatePng);
+
+$('ul-png-input').addEventListener('change',e=>{
+    const file=e.target.files[0];if(!file)return;
+    setStatus('⟳ DECODING','work');
+    const reader=new FileReader();
+    reader.onload=ev=>{
+        const img=new Image();
+        img.onload=()=>{
+            try{
+                const canvas=document.createElement('canvas');canvas.width=img.width;canvas.height=img.height;
+                const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0);
+                const data=ctx.getImageData(0,0,img.width,img.height).data;
+                const numPixels=img.width*img.height;
+                const lenStart=(numPixels-4)*4;
+                const len=(data[lenStart]|(data[lenStart+4]<<8)|(data[lenStart+8]<<16)|(data[lenStart+12]<<24))>>>0;
+                if(len<=0||len>numPixels-4)throw new Error('invalid length');
+                const payStart=(numPixels-4-len)*4;
+                const bytes=new Uint8Array(len);
+                for(let i=0;i<len;i++)bytes[i]=data[payStart+i*4];
+                const newState=JSON.parse(new TextDecoder().decode(bytes));
+                if(!newState.vfs)throw new Error('invalid state');
+                agentState=newState;vfs.state=agentState.vfs;vfs.cwd=agentState.vfs.root;vfs.path=[];vfs._syncCwd();
+                vMemory.memories=agentState.vectorMemory||[];
+                chatLog.innerHTML='';for(const m of agentState.chatHistory){if(m.role==='tool')continue;appendMsg(m.role,m.content);}
+                termScreen.innerHTML='';termLog('# state rehydrated from PNG');
+                setStatus('✓ LOADED','ok');
+            }catch(err){alert('Could not decode PNG: '+err.message);setStatus('✕ ERROR','error');}
+        };
+        img.src=ev.target.result;
+    };
+    reader.readAsDataURL(file);e.target.value='';
+});
+
+$('clear-btn').addEventListener('click',()=>{
+    if(!confirm('Wipe all data?'))return;
+    agentState.chatHistory=[];agentState.vectorMemory=[];
+    agentState.vfs={root:{"repo":{"main.py":"print('Hello')\n","README.md":"# Repo\n"}},commits:[],staged:[]};
+    vMemory.memories=[];vfs.state=agentState.vfs;vfs.cwd=agentState.vfs.root;vfs.path=[];vfs._syncCwd();
+    chatLog.innerHTML='';termScreen.innerHTML='';
+    appendMsg('agent','Memory wiped. Standing by.');setStatus('● ONLINE','ok');
+});
+
+vfs._syncCwd();termLog('init');termLog('whoami');termLog('ls');
+appendMsg('agent','Neural link established. Try: "create main.py with hello world, commit it".');
+setStatus('● ONLINE','ok');
+</script>
+</body>
+</html>

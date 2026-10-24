@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sovereign Agentic Core</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a14;
+            color: #2dd4bf;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        h1 {
+            font-size: 2.5em;
+            margin: 40px 0 20px;
+            text-shadow: 0 0 20px #2dd4bf;
+        }
+        .status {
+            background: #111827;
+            border: 2px solid #2dd4bf;
+            border-radius: 10px;
+            padding: 30px;
+            max-width: 800px;
+            width: 100%;
+            margin: 20px 0;
+        }
+        .status h2 {
+            color: #2dd4bf;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .stat-item {
+            background: #0f172a;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #334155;
+        }
+        .stat-label {
+            color: #94a3b8;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+        .stat-value {
+            color: #2dd4bf;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+        .pulse {
+            width: 20px;
+            height: 20px;
+            background: #2dd4bf;
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+        .seats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .seat {
+            background: #0f172a;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 3px solid #2dd4bf;
+        }
+        .seat-name {
+            font-weight: bold;
+            color: #2dd4bf;
+            margin-bottom: 5px;
+        }
+        .seat-role {
+            color: #94a3b8;
+            font-size: 0.9em;
+        }
+        .link {
+            color: #2dd4bf;
+            text-decoration: none;
+            padding: 10px 20px;
+            border: 2px solid #2dd4bf;
+            border-radius: 5px;
+            display: inline-block;
+            margin: 10px 5px;
+            transition: all 0.3s;
+        }
+        .link:hover {
+            background: #2dd4bf;
+            color: #0a0a14;
+        }
+    </style>
+</head>
+<body>
+    <h1>⚡ Sovereign Agentic Core</h1>
+
+    <div class="status">
+        <h2><span class="pulse"></span> Reactor Status</h2>
+        <div class="stat-grid">
+            <div class="stat-item">
+                <div class="stat-label">Temperature</div>
+                <div class="stat-value" id="temperature">0.18°C</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Pulse Count</div>
+                <div class="stat-value" id="pulses">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Uptime</div>
+                <div class="stat-value" id="uptime">0s</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Model</div>
+                <div class="stat-value" id="model">claude-opus-4-6</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Active Nodes</div>
+                <div class="stat-value" id="nodes">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Frequency</div>
+                <div class="stat-value" id="frequency">13.7 Hz</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="status">
+        <h2>🧠 ITT Council of Seven</h2>
+        <div class="seats" id="seats"></div>
+    </div>
+
+    <div style="margin-top: 30px;">
+        <a href="/api/status" class="link" target="_blank">API Status</a>
+        <a href="/api/sessions" class="link" target="_blank">Sessions</a>
+        <a href="http://localhost:3000" class="link">Lumenis Control UI</a>
+    </div>
+
+    <script>
+        async function loadStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+
+                document.getElementById('temperature').textContent = `${data.reactor.temperature}°C`;
+                document.getElementById('pulses').textContent = data.reactor.pulse_count.toLocaleString();
+                document.getElementById('uptime').textContent = `${data.reactor.uptime_seconds}s`;
+                document.getElementById('model').textContent = data.reactor.model;
+                document.getElementById('nodes').textContent = data.nodes.active;
+                document.getElementById('frequency').textContent = `${data.reactor.frequency_hz} Hz`;
+
+                const seatsContainer = document.getElementById('seats');
+                seatsContainer.innerHTML = data.seats.map(seat => `
+                    <div class="seat">
+                        <div class="seat-name">${seat.name}</div>
+                        <div class="seat-role">${seat.role}</div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error('Failed to load status:', err);
+            }
+        }
+
+        // Load initial status
+        loadStatus();
+
+        // Refresh every 5 seconds
+        setInterval(loadStatus, 5000);
+    </script>
+</body>
+</html>

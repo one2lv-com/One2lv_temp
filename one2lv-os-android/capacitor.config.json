@@ -1,0 +1,18 @@
+{
+  "appId": "com.one2lv.os",
+  "appName": "One2lv OS",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#050008",
+      "showSpinner": false
+    }
+  }
+}

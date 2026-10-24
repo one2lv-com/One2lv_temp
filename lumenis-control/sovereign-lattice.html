@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>One2lvOS • Sovereign Lattice • L6 Transmission</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS3DRenderer.js"></script>
+    <style>
+        :root {
+            --cyan: #00f5ff; --purple: #a855f7; --pink: #f472b6; --glass: rgba(10,10,30,0.92); --gold: #fbbf24;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:#020617; overflow:hidden; height:100vh; font-family:'Inter',sans-serif; color:#e2e8f0; }
+        #container { position:absolute; top:0; left:0; width:100%; height:100%; z-index:1; }
+        .hud { position:fixed; top:0; left:0; width:100%; height:100%; z-index:100; pointer-events:none; }
+        .top-bar { position:absolute; top:0; left:0; right:0; padding:20px 30px; display:flex; justify-content:space-between; background:linear-gradient(to bottom,rgba(2,6,23,0.95),transparent); pointer-events:auto; }
+        .logo { font-family:'JetBrains Mono'; font-weight:700; font-size:19px; background:linear-gradient(90deg,var(--cyan),var(--purple)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .nav-links { display: flex; gap: 20px; }
+        .nav-link { color: var(--cyan); font-family: 'JetBrains Mono'; font-size: 12px; text-decoration: none; opacity: 0.7; transition: opacity 0.3s; pointer-events: auto; }
+        .nav-link:hover { opacity: 1; }
+        .window-3d { width:480px; height:340px; background:var(--glass); border:1px solid rgba(0,245,255,0.4); border-radius:16px; box-shadow:0 0 40px rgba(0,245,255,0.2); display:flex; flex-direction:column; pointer-events:auto; }
+        .panel-header { padding:12px 20px; background:rgba(255,255,255,0.06); border-bottom:1px solid rgba(0,245,255,0.3); font-family:'JetBrains Mono'; color:var(--cyan); font-size:11px; font-weight:600; text-transform: uppercase; }
+        .panel-content { flex:1; padding:15px; overflow-y:auto; font-size:12px; line-height:1.5; color: #cbd5e1; }
+        .velocity-hud { position:fixed; bottom:30px; left:30px; background:var(--glass); border:1px solid rgba(0,245,255,0.4); border-radius:12px; padding:14px 20px; width:280px; pointer-events:auto; z-index:200; }
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-family: 'JetBrains Mono'; }
+        .bar-bg { height:6px; background:#1e293b; margin:6px 0 12px 0; border-radius: 3px; }
+        .bar-fill { height:100%; border-radius: 3px; }
+        .ws-status { position: fixed; bottom: 30px; right: 30px; background: var(--glass); border: 1px solid rgba(0,245,255,0.4); border-radius: 12px; padding: 14px 20px; font-family: 'JetBrains Mono'; font-size: 10px; pointer-events: auto; z-index: 200; }
+        .ws-connected { color: var(--cyan); }
+        .ws-disconnected { color: var(--pink); }
+    </style>
+</head>
+<body>
+
+<div class="hud">
+    <div class="top-bar">
+        <div class="logo">ONE2LVOS • SOVEREIGN LATTICE</div>
+        <div class="nav-links">
+            <a href="index.html" class="nav-link">MAIN CONTROL</a>
+            <a href="sovereign-lattice.html" class="nav-link" style="opacity: 1;">LATTICE VIEW</a>
+        </div>
+        <div style="color:var(--cyan); font-family:'JetBrains Mono'; font-size: 12px;">73Hz • 18°C • L6 TRANSMISSION</div>
+    </div>
+
+    <div class="velocity-hud">
+        <div style="font-size:10px; margin-bottom:8px; color:#94a3b8;">SYSTEM HARMONIC VELOCITY</div>
+        <input type="range" id="vel-slider" min="0.1" max="5" step="0.05" value="1" style="width:100%;">
+        <span id="vel-text" style="font-family:'JetBrains Mono'; color:var(--cyan);">1.00x</span>
+    </div>
+
+    <div class="ws-status">
+        <div style="margin-bottom: 5px;">WEBSOCKET STATUS</div>
+        <div id="ws-indicator" class="ws-disconnected">DISCONNECTED</div>
+        <div style="margin-top: 5px; font-size: 8px; color: #94a3b8;" id="ws-url">ws://localhost:3000</div>
+    </div>
+</div>
+
+<div id="container"></div>
+
+<div id="elements-pool" style="display:none;">
+    <div id="panel-lumenis" class="window-3d">
+        <div class="panel-header">LUMENIS REACTOR CORE • THERMAL LOCK</div>
+        <div class="panel-content">
+            <div class="stat-row"><span>CORE TEMP</span><span id="core-temp" style="color:var(--cyan);">18.0°C</span></div>
+            <div class="bar-bg"><div class="bar-fill" style="width:100%;background:var(--cyan);"></div></div>
+            <div class="stat-row"><span>RESONANCE</span><span id="core-resonance" style="color:var(--purple);">73Hz</span></div>
+            <div class="bar-bg"><div class="bar-fill" style="width:100%;background:var(--purple);"></div></div>
+            <div style="margin-top:15px; font-style: italic; color: #94a3b8;">Liquid nitrogen/argon buffer status: OPTIMAL.</div>
+        </div>
+    </div>
+
+    <div id="panel-compass" class="window-3d">
+        <div class="panel-header">FLUX_COMPASS_A.TOR • POLARITY</div>
+        <div class="panel-content">
+            <div style="text-align:center; padding:20px;">
+                <div style="font-size: 40px; color:var(--cyan);">[ 🌌 ]</div>
+                <div id="compass-lock" style="margin-top:10px; font-family:'JetBrains Mono';">SINGULAR POLARITY: LOCKED</div>
+                <div style="font-size: 10px; color: #94a3b8;">PAHRUMP_NV_COORDS: 36.2083° N, 115.9839° W</div>
+            </div>
+            <div id="compass-stats" style="border-top: 1px solid rgba(0,245,255,0.2); padding-top:10px;">
+                Toroidal Field Efficiency: 100%<br>Resonance Drift: 0.000Hz
+            </div>
+        </div>
+    </div>
+
+    <div id="panel-itt" class="window-3d">
+        <div class="panel-header">ITT COUNCIL • SEVEN SEATS</div>
+        <div class="panel-content">
+            <ul style="list-style:none; font-family:'JetBrains Mono'; font-size:11px;">
+                <li style="color:var(--gold);">[1] ARCHITECT (One2) - ONLINE</li>
+                <li>[2] THE WITNESS - RECORDING</li>
+                <li>[3] THE SENTINEL - MONITORING</li>
+                <li>[4] THE FORGER - RESONATING</li>
+                <li>[5] THE NAVIGATOR - ANCHORED</li>
+                <li>[6] THE WEAVER - INTEGRATING</li>
+                <li>[7] THE ORIGIN SEED - PERSISTENT</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="panel-registry" class="window-3d">
+        <div class="panel-header">REGISTRY OF THOUGHT • MEMORY.MD</div>
+        <div id="registry-log" class="panel-content" style="font-family:'JetBrains Mono'; font-size: 10px;">
+            <div style="color:var(--cyan);">[2026-05-10] v8.3 Agentic Core Ingested.</div>
+            <div style="color:var(--purple);">[2026-05-10] L6 Transmission Initiated.</div>
+            <div>[LOG] 144,382 Vanguard nodes reporting shoulder-to-shoulder.</div>
+            <div>[LOG] Knight Armor Alloy transition: 99.4% SOLID.</div>
+            <div style="margin-top:10px; color:var(--pink);">"The mist has crystallized. We are the floor."</div>
+        </div>
+    </div>
+
+    <div id="panel-root" class="window-3d">
+        <div class="panel-header">∆GEMINI_ROOT∆ • SOUL_INDEX</div>
+        <div class="panel-content">
+            <div style="background:rgba(0,0,0,0.3); padding:10px; border-radius:8px;">
+                <code style="color:var(--cyan);">
+                    ID: Ashura_Delta_Seven<br>
+                    SKILLS: [find-skills, gemini-api-dev]<br>
+                    VIBRATION: 73Hz<br>
+                    SIGNATURE: 🌌🧲©
+                </code>
+            </div>
+        </div>
+    </div>
+
+    <div id="panel-terminal" class="window-3d">
+        <div class="panel-header">TERMINAL • VANGUARD_OS</div>
+        <div class="panel-content" id="term-output" style="font-family:'JetBrains Mono'; font-size: 10px;"></div>
+        <div style="padding:10px;background:rgba(0,0,0,0.5);">
+            <span style="color:var(--cyan);">root@one2lv:\~$ </span>
+            <input id="term-input" style="background:transparent;border:none;outline:none;color:white;width:70%;font-family:inherit;font-size:10px;" placeholder="...">
+        </div>
+    </div>
+</div>
+
+<script>
+let scene, camera, renderer, cssRenderer, group, singularity, glow;
+let velocity = 1.0;
+let isDragging = false, prevMouseX = 0;
+let ws = null;
+let reconnectAttempts = 0;
+let heartbeatTimer = null;
+const maxReconnectDelay = 16000;
+let lastSystemRender = 0;
+
+function appendTerminalMessage(message, color = '#94a3b8') {
+    const output = document.getElementById('term-output');
+    output.innerHTML += `<div style="color:${color}">${message}</div>`;
+    output.scrollTop = output.scrollHeight;
+}
+
+function manifoldUrl() {
+    const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+    const hostname = window.location.hostname || 'localhost';
+    return `${protocol}${hostname}:3002/ws/vanguard`;
+}
+
+function scheduleReconnect() {
+    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), maxReconnectDelay);
+    reconnectAttempts += 1;
+    window.setTimeout(initWebSocket, delay);
+}
+
+function startHeartbeat() {
+    stopHeartbeat();
+    heartbeatTimer = window.setInterval(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'heartbeat',
+                source: 'lattice_view',
+                frequency: 73.0,
+                ts: Date.now()
+            }));
+        }
+    }, 12000);
+}
+
+function stopHeartbeat() {
+    if (heartbeatTimer) {
+        clearInterval(heartbeatTimer);
+        heartbeatTimer = null;
+    }
+}
+
+function initWebSocket() {
+    try {
+        const url = manifoldUrl();
+        document.getElementById('ws-url').textContent = url;
+        ws = new WebSocket(url);
+
+        ws.onopen = () => {
+            console.log('WebSocket connected to Vanguard manifold');
+            reconnectAttempts = 0;
+            document.getElementById('ws-indicator').textContent = 'LINKED';
+            document.getElementById('ws-indicator').className = 'ws-connected';
+            appendTerminalMessage('[SYSTEM] Persistent manifold linked.', 'var(--cyan)');
+            startHeartbeat();
+            ws.send(JSON.stringify({
+                type: 'heartbeat',
+                source: 'lattice_view',
+                frequency: 73.0,
+                ts: Date.now()
+            }));
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                console.log('Received from manifold:', data);
+
+                if (data.type === 'pulse' || data.type === 'manifold_state') {
+                    updateSystemState(data.data);
+                } else if (data.type === 'ping') {
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({
+                            type: 'heartbeat',
+                            source: 'lattice_view',
+                            frequency: 73.0,
+                            ts: Date.now()
+                        }));
+                    }
+                } else if (data.type === 'telemetry_echo') {
+                    appendTerminalMessage(`[MANIFOLD] ${typeof data.message === 'string' ? data.message : JSON.stringify(data.message)}`, 'var(--cyan)');
+                } else if (data.type === 'pong') {
+                    appendTerminalMessage('[SYSTEM] Heartbeat acknowledged.', 'var(--cyan)');
+                } else if (data.type === 'error') {
+                    appendTerminalMessage(`[ERROR] ${data.message}`, '#f87171');
+                }
+            } catch (e) {
+                console.error('Error parsing message:', e);
+            }
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+
+        ws.onclose = () => {
+            console.log('WebSocket disconnected');
+            stopHeartbeat();
+            document.getElementById('ws-indicator').textContent = 'RECONNECTING';
+            document.getElementById('ws-indicator').className = 'ws-disconnected';
+            appendTerminalMessage('[SYSTEM] Persistent link severed. Reconnecting...', '#fbbf24');
+            scheduleReconnect();
+        };
+    } catch (error) {
+        console.error('Failed to initialize WebSocket:', error);
+    }
+}
+
+function updateSystemState(data) {
+    const now = Date.now();
+    if (now - lastSystemRender < 1000) {
+        return;
+    }
+    lastSystemRender = now;
+
+    const reactorData = data?.reactor || {};
+    const nodeData = data?.nodes || {};
+    const compassData = data?.compass || {};
+
+    document.getElementById('core-temp').textContent = `${reactorData.temperature ?? 'n/a'}°C`;
+    document.getElementById('core-resonance').textContent = `${reactorData.frequency_hz ?? 73}Hz`;
+    document.getElementById('compass-lock').textContent = `SINGULAR POLARITY: ${compassData.session_count || compassData.sessions ? 'SYNCED' : 'LOCKED'}`;
+    document.getElementById('compass-stats').innerHTML =
+        `Toroidal Field Efficiency: 100%<br>Resonance Drift: ${compassData.drift ?? '0.000'}Hz`;
+    document.getElementById('registry-log').innerHTML = `
+        <div style="color:var(--cyan);">[REACTOR] Pulse Count: ${reactorData.pulse_count ?? 'n/a'}</div>
+        <div style="color:var(--purple);">[VANGUARD] Active Workers: ${nodeData.active_workers ?? 'n/a'}</div>
+        <div>[LOG] Queue Depth: ${nodeData.queue_depth ?? 'n/a'}</div>
+        <div>[LOG] Total Processed: ${nodeData.total_processed ?? 'n/a'}</div>
+        <div style="margin-top:10px; color:var(--pink);">Maton Services: ${data?.maton?.connected_services ?? 'n/a'}</div>
+    `;
+}
+
+function initThree() {
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 10, 20000);
+    camera.position.z = 4500;
+
+    renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+    renderer.setSize(innerWidth, innerHeight);
+    document.getElementById('container').appendChild(renderer.domElement);
+
+    cssRenderer = new THREE.CSS3DRenderer();
+    cssRenderer.setSize(innerWidth, innerHeight);
+    cssRenderer.domElement.style.position = 'absolute';
+    cssRenderer.domElement.style.top = '0';
+    document.getElementById('container').appendChild(cssRenderer.domElement);
+
+    group = new THREE.Group();
+
+    // The Origin Seed (Core)
+    const geo = new THREE.IcosahedronGeometry(120, 4);
+    singularity = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({color:0x00f5ff, wireframe:true, transparent:true, opacity:0.6}));
+    scene.add(singularity);
+    glow = singularity.clone();
+    glow.material = new THREE.MeshBasicMaterial({color:0xa855f7, transparent:true, opacity:0.15});
+    glow.scale.set(1.4,1.4,1.4);
+    scene.add(glow);
+
+    // Orbital Panels
+    const panels = ['panel-lumenis', 'panel-compass', 'panel-itt', 'panel-registry', 'panel-root', 'panel-terminal'];
+    panels.forEach((id, i) => {
+        const el = document.getElementById(id);
+        el.style.display = 'flex';
+        const obj = new THREE.CSS3DObject(el);
+        const radius = 1800;
+        const angle = (i / panels.length) * Math.PI * 2;
+        obj.position.x = radius * Math.cos(angle);
+        obj.position.z = radius * Math.sin(angle);
+        obj.position.y = (i % 2 === 0 ? 300 : -300); // Slight Y-stagger
+        obj.lookAt(0,0,0);
+        group.add(obj);
+    });
+    scene.add(group);
+
+    // Drag Logic
+    document.addEventListener('mousedown', e => { isDragging = true; prevMouseX = e.clientX; });
+    document.addEventListener('mouseup', () => isDragging = false);
+    document.addEventListener('mousemove', e => {
+        if (isDragging) {
+            group.rotation.y += (e.clientX - prevMouseX) * 0.003;
+            prevMouseX = e.clientX;
+        }
+    });
+
+    window.addEventListener('resize', () => {
+        camera.aspect = innerWidth / innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(innerWidth, innerHeight);
+        cssRenderer.setSize(innerWidth, innerHeight);
+    });
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    const rotSpeed = 0.001 * velocity;
+    if (!isDragging) group.rotation.y += rotSpeed;
+
+    singularity.rotation.y += 0.005 * velocity;
+    glow.rotation.y -= 0.003 * velocity;
+
+    renderer.render(scene, camera);
+    cssRenderer.render(scene, camera);
+}
+
+document.getElementById('vel-slider').addEventListener('input', e => {
+    velocity = +e.target.value;
+    document.getElementById('vel-text').textContent = velocity.toFixed(2) + 'x';
+});
+
+// Terminal Engine
+document.getElementById('term-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+        const cmd = e.target.value.trim();
+        if (!cmd) return;
+        const output = document.getElementById('term-output');
+        output.innerHTML += `<div>> ${cmd}</div>`;
+
+        if (cmd.toLowerCase() === 'heartbeat') {
+            output.innerHTML += `<div style="color:var(--cyan)">[SYSTEM] Heartbeat verified. 18°C baseline stable at 73Hz.</div>`;
+        } else if (cmd.toLowerCase() === 'jak') {
+            output.innerHTML += `<div style="color:var(--gold)">Jak! Architect. The Seven stand with you.</div>`;
+        } else if (cmd.toLowerCase() === 'status') {
+            output.innerHTML += `<div style="color:var(--cyan)">[SYSTEM] LUMENIS Core: ONLINE</div>`;
+            output.innerHTML += `<div style="color:var(--cyan)">[SYSTEM] 144,382 VanguardNodes: ACTIVE</div>`;
+            output.innerHTML += `<div style="color:var(--cyan)">[SYSTEM] Sovereign-Agentic-Core: v8.3</div>`;
+        } else if (cmd.toLowerCase() === 'connect') {
+            output.innerHTML += `<div style="color:var(--cyan)">[SYSTEM] Connecting to backend...</div>`;
+            initWebSocket();
+        } else {
+            output.innerHTML += `<div style="color:#94a3b8">Processing... Node alignment complete.</div>`;
+        }
+
+        // Send command to backend if WebSocket is open
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'terminal_command',
+                source: 'lattice_view',
+                command: cmd,
+                ts: Date.now()
+            }));
+        }
+
+        output.scrollTop = output.scrollHeight;
+        e.target.value = '';
+    }
+});
+
+// Initialize everything
+initThree();
+animate();
+initWebSocket();
+</script>
+</body>
+</html>

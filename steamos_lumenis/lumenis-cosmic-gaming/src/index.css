@@ -1,0 +1,180 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    --radius: 0.5rem;
+    --cosmic-cyan: #00ffff;
+    --cosmic-purple: #8b5cf6;
+    --cosmic-pink: #ec4899;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+  }
+
+  * {
+    border-color: rgba(0, 255, 255, 0.2);
+  }
+
+  body {
+    @apply bg-black text-white antialiased;
+    font-family: 'Rajdhani', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Orbitron', sans-serif;
+  }
+
+  ::selection {
+    @apply bg-cyan-500/30 text-cyan-300;
+  }
+}
+
+@layer utilities {
+  .cosmic-glow {
+    box-shadow:
+      0 0 20px rgba(0, 255, 255, 0.3),
+      0 0 40px rgba(0, 255, 255, 0.2),
+      0 0 60px rgba(0, 255, 255, 0.1);
+  }
+
+  .cosmic-border {
+    @apply border border-cyan-500/30;
+    box-shadow: inset 0 0 20px rgba(0, 255, 255, 0.05);
+  }
+
+  .cosmic-text {
+    @apply text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500;
+  }
+
+  .holo-panel {
+    @apply backdrop-blur-md bg-black/50 border border-cyan-500/20;
+    background: linear-gradient(
+      135deg,
+      rgba(0, 255, 255, 0.05) 0%,
+      rgba(139, 92, 246, 0.05) 50%,
+      rgba(236, 72, 153, 0.05) 100%
+    );
+  }
+
+  .btn-cosmic {
+    @apply relative overflow-hidden px-6 py-3 font-semibold rounded-lg transition-all duration-300;
+    @apply bg-gradient-to-r from-cyan-500 to-purple-600;
+    @apply hover:shadow-[0_0_30px_rgba(0,255,255,0.5)];
+    @apply active:scale-95;
+  }
+
+  .btn-cosmic::before {
+    content: '';
+    @apply absolute inset-0 bg-white/20 translate-y-full skew-y-6 transition-transform duration-300;
+  }
+
+  .btn-cosmic:hover::before {
+    @apply translate-y-0;
+  }
+
+  .glass-panel {
+    @apply backdrop-blur-xl bg-black/60 border border-white/10;
+  }
+
+  .scan-line {
+    @apply relative overflow-hidden;
+  }
+
+  .scan-line::after {
+    content: '';
+    @apply absolute inset-0 pointer-events-none;
+    background: linear-gradient(
+      to bottom,
+      transparent 50%,
+      rgba(0, 255, 255, 0.03) 50%
+    );
+    background-size: 100% 4px;
+    animation: scanlines 0.1s linear infinite;
+  }
+
+  @keyframes scanlines {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(4px); }
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 255, 255, 0.5);
+}
+
+/* Animations */
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.5;
+    filter: blur(20px);
+  }
+  50% {
+    opacity: 1;
+    filter: blur(30px);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes hologram {
+  0%, 100% {
+    opacity: 0.4;
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translateY(-5px) scale(1.02);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-hologram {
+  animation: hologram 2s ease-in-out infinite;
+}
+
+/* Three.js Canvas Styles */
+canvas {
+  @apply touch-none;
+}
+
+/* Fix for react-resizable-panels */
+[data-panel-group] {
+  @apply flex;
+}
+
+[data-panel-resize-handle] {
+  @apply relative w-1 bg-cyan-500/20 hover:bg-cyan-500/40 transition-colors cursor-col-resize;
+}
+
+[data-panel-resize-handle]::before {
+  content: '';
+  @apply absolute left-1/2 top-0 bottom-0 w-0.5 -translate-x-1/2 bg-cyan-500/50;
+}

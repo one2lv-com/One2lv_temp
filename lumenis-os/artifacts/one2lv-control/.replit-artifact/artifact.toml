@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/one2lv-control/"
+title = "One2lv OS Control Plane"
+version = "1.0.0"
+id = "artifacts/one2lv-control"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/one2lv-control/" ]
+localPort = 20640
+
+[services.development]
+run = "pnpm --filter @workspace/one2lv-control run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/one2lv-control", "run", "build" ]
+publicDir = "artifacts/one2lv-control/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20640"
+BASE_PATH = "/one2lv-control/"

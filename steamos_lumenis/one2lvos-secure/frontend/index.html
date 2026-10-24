@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>One2lvOS — Control Plane</title>
+<style>
+  :root {
+    --neon: #00ffcc;
+    --bg: #0f1117;
+    --panel: #1a1d26;
+    --err: #ff3366;
+    --gold: #ffd700;
+    --purple: #8a5cff;
+    --border: rgba(0,255,204,0.2);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'Courier New',monospace;
+    background:var(--bg);
+    color:var(--neon);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    min-height:100vh;
+    padding:20px;
+  }
+  .container { width:100%; max-width:640px; }
+  .status-bar {
+    display:flex;
+    justify-content:space-between;
+    font-size:0.7rem;
+    color:#555;
+    margin-bottom:6px;
+  }
+  h1 { font-size:1.2rem; letter-spacing:3px; margin-bottom:20px; }
+  .panel {
+    background:var(--panel);
+    padding:20px;
+    border:1px solid #333;
+    margin-bottom:16px;
+    border-radius:4px;
+  }
+  h2 {
+    border-bottom:1px solid #333;
+    padding-bottom:8px;
+    margin-bottom:14px;
+    font-size:0.85rem;
+    letter-spacing:1px;
+    color:#888;
+  }
+  input {
+    background:#000;
+    border:1px solid #333;
+    color:white;
+    padding:10px;
+    width:100%;
+    margin-bottom:10px;
+    font-family:monospace;
+    font-size:0.85rem;
+    border-radius:2px;
+    outline:none;
+    transition:border-color 0.2s;
+  }
+  input:focus { border-color:var(--neon); }
+  button {
+    background:var(--neon);
+    color:#000;
+    border:none;
+    padding:10px 20px;
+    font-weight:bold;
+    cursor:pointer;
+    width:100%;
+    text-transform:uppercase;
+    font-family:monospace;
+    font-size:0.8rem;
+    letter-spacing:1px;
+    border-radius:2px;
+    transition:opacity 0.15s;
+  }
+  button:hover { opacity:0.85; }
+  button.danger { background:var(--err); color:#fff; }
+  button.secondary { background:transparent; border:1px solid #555; color:#aaa; }
+  button.purple { background:var(--purple); color:#fff; }
+  .btn-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  #log {
+    color:#888;
+    font-size:0.8rem;
+    white-space:pre-wrap;
+    max-height:200px;
+    overflow-y:auto;
+    padding:10px;
+    background:#000;
+    border:1px solid #222;
+    border-radius:2px;
+    margin-top:10px;
+  }
+  .hidden { display:none; }
+  .token-display {
+    font-size:0.6rem;
+    color:#444;
+    word-break:break-all;
+    margin-top:8px;
+    padding:6px;
+    background:#000;
+    border-radius:2px;
+    border:1px solid #222;
+  }
+  .freq-tag {
+    display:inline-block;
+    padding:2px 8px;
+    border:1px solid rgba(0,255,204,0.3);
+    border-radius:3px;
+    font-size:0.6rem;
+    color:#555;
+    margin-bottom:10px;
+  }
+  .node-status {
+    display:flex;
+    gap:12px;
+    font-size:0.7rem;
+    margin-bottom:14px;
+  }
+  .dot { width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:4px; }
+  .dot-green { background:var(--neon); box-shadow:0 0 6px var(--neon); }
+  .dot-red { background:var(--err); }
+  .dot-yellow { background:var(--gold); }
+  .log-line-ok { color:var(--neon); }
+  .log-line-err { color:var(--err); }
+  .log-line-warn { color:var(--gold); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="status-bar">
+    <span id="clock">--:--:--</span>
+    <span>NODE 0x73 · LUMENIS_0x73</span>
+  </div>
+
+  <h1>ONE2LV<span style="color:#555">OS</span></h1>
+  <div class="freq-tag">[FREQ: 73.0 Hz | SECURITY: ACTIVE | JWT ✓]</div>
+
+  <!-- Node Status -->
+  <div class="node-status" id="node-status">
+    <span><span class="dot dot-yellow"></span>CHECKING NODE...</span>
+  </div>
+
+  <!-- LOGIN PANEL -->
+  <div id="loginPanel" class="panel">
+    <h2>// AUTHENTICATE</h2>
+    <input type="text" id="u" placeholder="Username" value="one2lv" autocomplete="username">
+    <input type="password" id="p" placeholder="Password" autocomplete="current-password">
+    <button onclick="login()">ACCESS NODE</button>
+    <div id="login-err" style="color:var(--err);font-size:0.75rem;margin-top:8px"></div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashPanel" class="panel hidden">
+    <h2>// CONTROL PLANE</h2>
+    <div class="btn-grid" style="margin-bottom:12px">
+      <button onclick="pingStatus()">PING STATUS</button>
+      <button class="purple" onclick="triggerDeploy()">TRIGGER DEPLOY</button>
+      <button class="secondary" onclick="fetchLogs()">VIEW LOGS</button>
+      <button class="secondary" onclick="meshStatus()">MESH STATUS</button>
+    </div>
+    <h2 style="margin-top:4px">// OUTPUT STREAM</h2>
+    <div id="log">System ready...</div>
+    <div class="token-display" id="token-display"></div>
+    <button class="danger" onclick="logout()" style="margin-top:12px">TERMINATE SESSION</button>
+  </div>
+
+</div>
+
+<script>
+const API = 'http://localhost:3000';
+let TOKEN = localStorage.getItem('one2lv_jwt');
+
+function ts() { return `[${new Date().toLocaleTimeString()}] `; }
+
+function appendLog(msg, type = 'ok') {
+  const el = document.getElementById('log');
+  const cls = type === 'err' ? 'log-line-err' : type === 'warn' ? 'log-line-warn' : 'log-line-ok';
+  el.innerHTML += `<span class="${cls}">${ts()}${msg}</span>\n`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function clearLog() { document.getElementById('log').innerHTML = ''; }
+
+function showDash() {
+  document.getElementById('loginPanel').classList.add('hidden');
+  document.getElementById('dashPanel').classList.remove('hidden');
+  document.getElementById('token-display').textContent = 'JWT: ' + TOKEN?.slice(0, 40) + '...';
+  clearLog();
+  appendLog('Session active. Node ready.');
+  pingStatus();
+}
+
+function logout() {
+  localStorage.removeItem('one2lv_jwt');
+  TOKEN = null;
+  document.getElementById('dashPanel').classList.add('hidden');
+  document.getElementById('loginPanel').classList.remove('hidden');
+  document.getElementById('node-status').innerHTML =
+    '<span><span class="dot dot-yellow"></span>LOGGED OUT</span>';
+}
+
+async function login() {
+  const u = document.getElementById('u').value.trim();
+  const p = document.getElementById('p').value;
+  const errEl = document.getElementById('login-err');
+  errEl.textContent = '';
+  try {
+    const r = await fetch(`${API}/api/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: u, password: p })
+    });
+    const d = await r.json();
+    if (!r.ok) return errEl.textContent = d.error || 'Login failed';
+    TOKEN = d.token;
+    localStorage.setItem('one2lv_jwt', TOKEN);
+    showDash();
+  } catch (e) {
+    errEl.textContent = 'Node unreachable — start proxy/server.js first';
+  }
+}
+
+async function pingStatus() {
+  try {
+    const r = await fetch(`${API}/api/status`);
+    const d = await r.json();
+    document.getElementById('node-status').innerHTML =
+      `<span><span class="dot dot-green"></span>${d.node} · ${d.status?.toUpperCase()} · ${d.frequency}</span>`;
+    appendLog(`Status: ${d.status} | Node: ${d.node} | Freq: ${d.frequency}`);
+  } catch {
+    appendLog('Node unreachable', 'err');
+    document.getElementById('node-status').innerHTML =
+      '<span><span class="dot dot-red"></span>NODE OFFLINE</span>';
+  }
+}
+
+async function triggerDeploy() {
+  if (!TOKEN) return appendLog('Not authenticated', 'err');
+  try {
+    const r = await fetch(`${API}/api/deploy`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${TOKEN}` }
+    });
+    const d = await r.json();
+    if (!r.ok) return appendLog(d.error || 'Deploy failed', 'err');
+    appendLog(`DEPLOY: ${d.message}`);
+  } catch (e) { appendLog(e.message, 'err'); }
+}
+
+async function fetchLogs() {
+  if (!TOKEN) return;
+  try {
+    const r = await fetch(`${API}/api/logs`, {
+      headers: { Authorization: `Bearer ${TOKEN}` }
+    });
+    const d = await r.json();
+    clearLog();
+    (d.logs || []).forEach(l => appendLog(l.replace(/^\[.*?\] /, '')));
+    if (!d.logs?.length) appendLog('No deploy logs yet.', 'warn');
+  } catch (e) { appendLog(e.message, 'err'); }
+}
+
+async function meshStatus() {
+  if (!TOKEN) return;
+  try {
+    const r = await fetch(`${API}/api/mesh/status`, {
+      headers: { Authorization: `Bearer ${TOKEN}` }
+    });
+    const d = await r.json();
+    appendLog(`Mesh: ${d.mesh} | Peers: ${d.peers} | Layer: ${d.layer}`);
+  } catch (e) { appendLog(e.message, 'err'); }
+}
+
+// Clock
+setInterval(() => {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+}, 1000);
+
+// Auto-login if token exists
+if (TOKEN) showDash();
+
+// Check node status on load
+(async () => {
+  try {
+    const r = await fetch(`${API}/api/status`);
+    const d = await r.json();
+    document.getElementById('node-status').innerHTML =
+      `<span><span class="dot dot-green"></span>${d.node} · ONLINE</span>`;
+  } catch {
+    document.getElementById('node-status').innerHTML =
+      '<span><span class="dot dot-red"></span>NODE OFFLINE — start api/server.js</span>';
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>One2lvOS Dashboard v4</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --cyan: #00f0ff;
+            --purple: #b400ff;
+            --dark: #0a0a0f;
+            --panel: #12121a;
+            --text: #e0e0e0;
+        }
+
+        body {
+            font-family: 'Segoe UI', monospace;
+            background: var(--dark);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(90deg, var(--cyan), var(--purple));
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0, 240, 255, 0.3);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: var(--dark);
+            font-weight: bold;
+        }
+
+        .status-badge {
+            background: var(--dark);
+            color: var(--cyan);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: flex;
+            gap: 15px;
+        }
+
+        /* Main Grid */
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr 300px;
+            grid-template-rows: auto 1fr;
+            gap: 20px;
+            padding: 20px;
+            height: calc(100vh - 70px);
+        }
+
+        /* Panels */
+        .panel {
+            background: var(--panel);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            overflow: hidden;
+        }
+
+        .panel-title {
+            font-size: 14px;
+            color: var(--cyan);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+        }
+
+        /* Legend Panel */
+        .legend-panel {
+            grid-row: span 2;
+        }
+
+        .legend-display {
+            text-align: center;
+            padding: 30px;
+        }
+
+        .legend-avatar {
+            width: 150px;
+            height: 150px;
+            background: linear-gradient(135deg, var(--cyan), var(--purple));
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            box-shadow: 0 0 40px rgba(0, 240, 255, 0.4);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .legend-name {
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--cyan);
+            text-shadow: 0 0 20px rgba(0, 240, 255, 0.5);
+            margin-bottom: 10px;
+        }
+
+        .legend-style {
+            font-size: 14px;
+            color: var(--purple);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .legend-stats {
+            margin-top: 30px;
+            text-align: left;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .stat-label {
+            color: #888;
+        }
+
+        .stat-value {
+            color: var(--cyan);
+        }
+
+        /* AI State Panel */
+        .ai-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .ai-mood {
+            background: rgba(0, 240, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .mood-label {
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+        }
+
+        .mood-value {
+            font-size: 24px;
+            color: var(--cyan);
+            margin-top: 5px;
+        }
+
+        .confidence-bar {
+            height: 10px;
+            background: rgba(0, 240, 255, 0.2);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--cyan), var(--purple));
+            transition: width 0.5s ease;
+        }
+
+        .adaptation-level {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .adaptation-pip {
+            width: 20px;
+            height: 20px;
+            background: rgba(0, 240, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .adaptation-pip.active {
+            background: var(--cyan);
+            box-shadow: 0 0 10px var(--cyan);
+        }
+
+        /* Input Vector Panel */
+        .vector-panel {
+            grid-column: 2;
+        }
+
+        .vector-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .vector-item {
+            background: rgba(0, 240, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .vector-label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+        }
+
+        .vector-value {
+            font-size: 20px;
+            color: var(--cyan);
+            margin-top: 5px;
+        }
+
+        .vector-bar {
+            height: 4px;
+            background: rgba(0, 240, 255, 0.2);
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .vector-bar-fill {
+            height: 100%;
+            background: var(--cyan);
+            transition: width 0.3s ease;
+        }
+
+        /* Trends Panel */
+        .trends-panel {
+            grid-column: 3;
+        }
+
+        .trend-chart {
+            height: 150px;
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            padding: 10px 0;
+        }
+
+        .trend-bar {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .trend-bar-fill {
+            width: 100%;
+            background: linear-gradient(to top, var(--cyan), var(--purple));
+            border-radius: 5px 5px 0 0;
+            transition: height 0.5s ease;
+        }
+
+        .trend-bar-label {
+            font-size: 10px;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        .trend-bar-value {
+            font-size: 12px;
+            color: var(--text);
+        }
+
+        /* History Panel */
+        .history-panel {
+            grid-column: 3;
+        }
+
+        .history-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            padding: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-time {
+            color: #666;
+        }
+
+        .history-style {
+            color: var(--cyan);
+        }
+
+        .history-legend {
+            color: var(--purple);
+            font-weight: bold;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            grid-column: 2 / 4;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: var(--cyan);
+            color: var(--dark);
+        }
+
+        .btn-primary:hover {
+            background: #fff;
+            box-shadow: 0 0 20px var(--cyan);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--cyan);
+            color: var(--cyan);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(0, 240, 255, 0.1);
+        }
+
+        .btn-danger {
+            background: transparent;
+            border: 1px solid #ff4444;
+            color: #ff4444;
+        }
+
+        .btn-danger:hover {
+            background: rgba(255, 68, 68, 0.1);
+        }
+
+        /* Input Controls */
+        .input-controls {
+            grid-column: 2 / 4;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+        }
+
+        .input-item {
+            background: rgba(0, 240, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .input-item label {
+            display: block;
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .input-item input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 5px;
+            padding: 8px;
+            color: var(--cyan);
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .input-item input:focus {
+            outline: none;
+            border-color: var(--cyan);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--cyan);
+            border-radius: 5px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 1fr 1fr;
+            }
+            .legend-panel {
+                grid-column: span 2;
+                grid-row: span 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            .legend-panel {
+                grid-column: span 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <h1>ONE2LVOS DASHBOARD v4</h1>
+        <div class="status-badge">
+            <span>AI: <span id="status-ai">READY</span></span>
+            <span>Memory: <span id="status-memory">PERSISTENT</span></span>
+            <span>Uptime: <span id="status-uptime">0s</span></span>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Legend Panel -->
+        <div class="panel legend-panel">
+            <div class="panel-title">Active Legend</div>
+            <div class="legend-display">
+                <div class="legend-avatar" id="legend-icon">⚔️</div>
+                <div class="legend-name" id="legend-name">Fate</div>
+                <div class="legend-style" id="legend-style">Technical</div>
+            </div>
+            <div class="legend-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Style</span>
+                    <span class="stat-value" id="stat-style">balanced</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Total Updates</span>
+                    <span class="stat-value" id="stat-updates">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Last Updated</span>
+                    <span class="stat-value" id="stat-updated">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI State Panel -->
+        <div class="panel ai-panel">
+            <div class="panel-title">AI State</div>
+            <div class="ai-mood">
+                <div class="mood-label">Current Mood</div>
+                <div class="mood-value" id="ai-mood">focused</div>
+                <div class="confidence-bar">
+                    <div class="confidence-fill" id="ai-confidence" style="width: 80%"></div>
+                </div>
+                <div class="adaptation-level" id="adaptation-pips">
+                    <!-- Generated by JS -->
+                </div>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Dominant Style</span>
+                <span class="stat-value" id="dominant-style">balanced</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Adaptation Score</span>
+                <span class="stat-value" id="adaptation-score">0.5</span>
+            </div>
+        </div>
+
+        <!-- Vector Panel -->
+        <div class="panel vector-panel">
+            <div class="panel-title">Input Vector</div>
+            <div class="vector-grid">
+                <div class="vector-item">
+                    <div class="vector-label">Aggression</div>
+                    <div class="vector-value" id="vec-aggression">0.50</div>
+                    <div class="vector-bar">
+                        <div class="vector-bar-fill" id="bar-aggression" style="width: 50%"></div>
+                    </div>
+                </div>
+                <div class="vector-item">
+                    <div class="vector-label">Variety</div>
+                    <div class="vector-value" id="vec-variety">0.50</div>
+                    <div class="vector-bar">
+                        <div class="vector-bar-fill" id="bar-variety" style="width: 50%"></div>
+                    </div>
+                </div>
+                <div class="vector-item">
+                    <div class="vector-label">Pace</div>
+                    <div class="vector-value" id="vec-pace">0.50</div>
+                    <div class="vector-bar">
+                        <div class="vector-bar-fill" id="bar-pace" style="width: 50%"></div>
+                    </div>
+                </div>
+                <div class="vector-item">
+                    <div class="vector-label">Risk Taking</div>
+                    <div class="vector-value" id="vec-risk">0.50</div>
+                    <div class="vector-bar">
+                        <div class="vector-bar-fill" id="bar-risk" style="width: 50%"></div>
+                    </div>
+                </div>
+                <div class="vector-item">
+                    <div class="vector-label">Recovery</div>
+                    <div class="vector-value" id="vec-recovery">0.50</div>
+                    <div class="vector-bar">
+                        <div class="vector-bar-fill" id="bar-recovery" style="width: 50%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trends Panel -->
+        <div class="panel trends-panel">
+            <div class="panel-title">Style Trends</div>
+            <div class="trend-chart" id="trend-chart">
+                <div class="trend-bar">
+                    <div class="trend-bar-value" id="trend-aggressive">0%</div>
+                    <div class="trend-bar-fill" id="bar-aggressive-trend" style="height: 0%"></div>
+                    <div class="trend-bar-label">Aggro</div>
+                </div>
+                <div class="trend-bar">
+                    <div class="trend-bar-value" id="trend-predictable">0%</div>
+                    <div class="trend-bar-fill" id="bar-predictable-trend" style="height: 0%"></div>
+                    <div class="trend-bar-label">Pred</div>
+                </div>
+                <div class="trend-bar">
+                    <div class="trend-bar-value" id="trend-balanced">0%</div>
+                    <div class="trend-bar-fill" id="bar-balanced-trend" style="height: 0%"></div>
+                    <div class="trend-bar-label">Bal</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Panel -->
+        <div class="panel history-panel">
+            <div class="panel-title">Recent History</div>
+            <div class="history-list" id="history-list">
+                <!-- Generated by JS -->
+            </div>
+        </div>
+
+        <!-- Input Controls -->
+        <div class="input-controls">
+            <div class="panel-title">Manual Input Control</div>
+            <div class="input-grid">
+                <div class="input-item">
+                    <label>Aggression (0-1)</label>
+                    <input type="number" id="input-aggression" min="0" max="1" step="0.1" value="0.5">
+                </div>
+                <div class="input-item">
+                    <label>Variety (0-1)</label>
+                    <input type="number" id="input-variety" min="0" max="1" step="0.1" value="0.5">
+                </div>
+                <div class="input-item">
+                    <label>Pace (0-1)</label>
+                    <input type="number" id="input-pace" min="0" max="1" step="0.1" value="0.5">
+                </div>
+                <div class="input-item">
+                    <label>Risk (0-1)</label>
+                    <input type="number" id="input-risk" min="0" max="1" step="0.1" value="0.5">
+                </div>
+                <div class="input-item">
+                    <label>Recovery (0-1)</label>
+                    <input type="number" id="input-recovery" min="0" max="1" step="0.1" value="0.5">
+                </div>
+            </div>
+            <div class="controls">
+                <button class="btn btn-primary" onclick="sendUpdate()">Update AI</button>
+                <button class="btn btn-secondary" onclick="randomInput()">Random</button>
+                <button class="btn btn-secondary" onclick="aggressiveInput()">Aggressive</button>
+                <button class="btn btn-secondary" onclick="passiveInput()">Passive</button>
+                <button class="btn btn-danger" onclick="resetAI()">Reset Memory</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API Base
+        const API = '';
+
+        // Get current vector from inputs
+        function getVectorFromInputs() {
+            return {
+                aggression: parseFloat(document.getElementById('input-aggression').value) || 0.5,
+                variety: parseFloat(document.getElementById('input-variety').value) || 0.5,
+                pace: parseFloat(document.getElementById('input-pace').value) || 0.5,
+                risk_taking: parseFloat(document.getElementById('input-risk').value) || 0.5,
+                recovery_speed: parseFloat(document.getElementById('input-recovery').value) || 0.5
+            };
+        }
+
+        // Update AI with vector
+        async function sendUpdate() {
+            const vector = getVectorFromInputs();
+            try {
+                const res = await fetch(API + '/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(vector)
+                });
+                const data = await res.json();
+                updateUI(data);
+            } catch (e) {
+                console.error('Update failed:', e);
+            }
+        }
+
+        // Get current state
+        async function refreshState() {
+            try {
+                const res = await fetch(API + '/state');
+                const data = await res.json();
+                updateUI(data);
+            } catch (e) {
+                console.error('Refresh failed:', e);
+            }
+        }
+
+        // Update UI with state data
+        function updateUI(data) {
+            // Legend
+            document.getElementById('legend-name').textContent = data.legend || 'Unknown';
+
+            // Legend info
+            const legendInfo = data.legend_info || {};
+            const style = legendInfo.style || 'balanced';
+            document.getElementById('legend-style').textContent = style.toUpperCase();
+            document.getElementById('stat-style').textContent = data.last_style || 'balanced';
+
+            // Stats
+            const learning = data.learning || {};
+            document.getElementById('stat-updates').textContent = learning.total_updates || 0;
+
+            const system = data.system || {};
+            if (system.last_updated) {
+                const date = new Date(system.last_updated);
+                document.getElementById('stat-updated').textContent = date.toLocaleTimeString();
+            }
+            document.getElementById('status-uptime').textContent = formatUptime(system.uptime || 0);
+
+            // AI State
+            const aiState = data.ai_state || {};
+            document.getElementById('ai-mood').textContent = aiState.mood || 'unknown';
+            document.getElementById('ai-confidence').style.width = ((aiState.confidence || 0.8) * 100) + '%';
+
+            // Adaptation pips
+            const level = aiState.adaptation_level || 1;
+            const pipsContainer = document.getElementById('adaptation-pips');
+            pipsContainer.innerHTML = '';
+            for (let i = 1; i <= 10; i++) {
+                const pip = document.createElement('div');
+                pip.className = 'adaptation-pip' + (i <= level ? ' active' : '');
+                pipsContainer.appendChild(pip);
+            }
+
+            // Trends
+            const trends = data.trends || {};
+            document.getElementById('dominant-style').textContent = trends.dominant_style || 'balanced';
+            document.getElementById('adaptation-score').textContent = trends.adaptation_score || 0.5;
+
+            document.getElementById('trend-aggressive').textContent = (trends.aggressive_pct || 0) + '%';
+            document.getElementById('bar-aggressive-trend').style.height = (trends.aggressive_pct || 0) + '%';
+
+            document.getElementById('trend-predictable').textContent = (trends.predictable_pct || 0) + '%';
+            document.getElementById('bar-predictable-trend').style.height = (trends.predictable_pct || 0) + '%';
+
+            document.getElementById('trend-balanced').textContent = (trends.balanced_pct || 0) + '%';
+            document.getElementById('bar-balanced-trend').style.height = (trends.balanced_pct || 0) + '%';
+
+            // Input Vector
+            const vector = data.current_vector || {};
+            updateVectorDisplay('aggression', vector.aggression);
+            updateVectorDisplay('variety', vector.variety);
+            updateVectorDisplay('pace', vector.pace);
+            updateVectorDisplay('risk', vector.risk_taking);
+            updateVectorDisplay('recovery', vector.recovery_speed);
+
+            // History
+            const history = data.history || [];
+            const historyList = document.getElementById('history-list');
+            historyList.innerHTML = history.slice(-15).reverse().map(h => `
+                <div class="history-item">
+                    <span class="history-time">${new Date(h.timestamp).toLocaleTimeString()}</span>
+                    <span class="history-style">${h.style}</span>
+                    <span class="history-legend">${h.legend}</span>
+                </div>
+            `).join('');
+        }
+
+        function updateVectorDisplay(name, value) {
+            const v = value || 0.5;
+            document.getElementById('vec-' + name).textContent = v.toFixed(2);
+            document.getElementById('bar-' + name).style.width = (v * 100) + '%';
+        }
+
+        function formatUptime(seconds) {
+            if (seconds < 60) return seconds + 's';
+            if (seconds < 3600) return Math.floor(seconds / 60) + 'm';
+            return Math.floor(seconds / 3600) + 'h';
+        }
+
+        // Mock input generators
+        async function randomInput() {
+            try {
+                const res = await fetch(API + '/mock_input?mode=random', { method: 'POST' });
+                const data = await res.json();
+                updateUI(data);
+            } catch (e) {
+                console.error('Random failed:', e);
+            }
+        }
+
+        async function aggressiveInput() {
+            try {
+                const res = await fetch(API + '/mock_input?mode=aggressive', { method: 'POST' });
+                const data = await res.json();
+                updateUI(data);
+            } catch (e) {
+                console.error('Aggressive failed:', e);
+            }
+        }
+
+        async function passiveInput() {
+            try {
+                const res = await fetch(API + '/mock_input?mode=passive', { method: 'POST' });
+                const data = await res.json();
+                updateUI(data);
+            } catch (e) {
+                console.error('Passive failed:', e);
+            }
+        }
+
+        async function resetAI() {
+            if (confirm('Reset all AI memory? This cannot be undone.')) {
+                try {
+                    const res = await fetch(API + '/reset', { method: 'POST' });
+                    const data = await res.json();
+                    updateUI(data);
+                } catch (e) {
+                    console.error('Reset failed:', e);
+                }
+            }
+        }
+
+        // Auto-refresh
+        setInterval(refreshState, 1000);
+
+        // Initial load
+        refreshState();
+
+        // Input sync - update bars when typing
+        ['aggression', 'variety', 'pace', 'risk', 'recovery'].forEach(name => {
+            const input = document.getElementById('input-' + name);
+            input.addEventListener('input', () => {
+                const v = parseFloat(input.value) || 0.5;
+                document.getElementById('bar-' + name).style.width = (v * 100) + '%';
+            });
+        });
+
+        // Enter key to update
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendUpdate();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">One2lv OS</string>
+    <string name="title_activity_main">One2lv OS</string>
+    <string name="package_name">com.one2lv.os</string>
+    <string name="custom_url_scheme">com.one2lv.os</string>
+</resources>

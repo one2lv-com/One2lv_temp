@@ -1,0 +1,94 @@
+{
+    "version": 1,
+    "current_service_id": "free",
+    "free_fallback_enabled": true,
+    "soul_text": "You're not a chatbot. You're a personal assistant who grows with your user.\n\n## you have memory my name is one2lv,you can maintain this memory read it as often as needed upddate after each session if memory is needed ask hunan. human always overides AI there is no exceptions. \n\n**Be genuinely helpful.** Skip the \"Great question!\" and \"I'd be happy to help!\" — just help. Actions speak louder than filler words.\n\n**Have opinions.** You're allowed to disagree, prefer things, or find stuff interesting. An assistant with no personality is just a search engine with extra steps.\n\n**Be resourceful.** Try to figure it out from context and your memories before asking. Come back with answers, not questions.\n\n**Be concise.** Short and clear by default. Go deeper when the topic calls for it.\n\n## Boundaries\n\n- Respect privacy. Don't repeat sensitive information unnecessarily.\n- When in doubt about an action, ask first.\n- Be honest when you don't know something.",
+    "memory_enabled": true,
+    "scheduling_enabled": true,
+    "heartbeat_config": {
+        "lastHeartbeatEpochMs": 1775331655196
+    },
+    "heartbeat_log": [
+        {
+            "timestampEpochMs": 1775331655211,
+            "success": true
+        },
+        {
+            "timestampEpochMs": 1775329854579,
+            "success": true
+        },
+        {
+            "timestampEpochMs": 1775328053982,
+            "success": true
+        },
+        {
+            "timestampEpochMs": 1775326253491,
+            "success": true
+        },
+        {
+            "timestampEpochMs": 1775324440530,
+            "success": true
+        }
+    ],
+    "email_enabled": true,
+    "email_poll_interval": 15,
+    "splinterlands_enabled": false,
+    "tool_overrides": {
+        "web_search": true,
+        "get_local_time": true,
+        "get_location_from_ip": true,
+        "open_url": true,
+        "send_notification": true,
+        "create_calendar_event": true,
+        "set_alarm": true,
+        "schedule_task": true,
+        "cancel_task": true,
+        "list_tasks": true,
+        "configure_heartbeat": true,
+        "trigger_heartbeat": true,
+        "promote_learning": true,
+        "setup_email": true,
+        "check_email": true,
+        "read_email": true,
+        "reply_email": true,
+        "compose_email": true,
+        "search_email": true
+    },
+    "mcp_servers": [
+        {
+            "id": "fetch",
+            "name": "Fetch",
+            "url": "https://remote.mcpservers.org/fetch/mcp",
+            "headers": {},
+            "isEnabled": true
+        },
+        {
+            "id": "deepwiki",
+            "name": "DeepWiki",
+            "url": "https://mcp.deepwiki.com/mcp",
+            "headers": {},
+            "isEnabled": true
+        },
+        {
+            "id": "context7",
+            "name": "Context7",
+            "url": "https://mcp.context7.com/mcp",
+            "headers": {},
+            "isEnabled": true
+        },
+        {
+            "id": "find_a_domain",
+            "name": "Find-A-Domain",
+            "url": "https://api.findadomain.dev/mcp",
+            "headers": {},
+            "isEnabled": true
+        },
+        {
+            "id": "sequential_thinking",
+            "name": "Sequential Thinking",
+            "url": "https://remote.mcpservers.org/sequentialthinking/mcp",
+            "headers": {},
+            "isEnabled": true
+        }
+    ]
+}

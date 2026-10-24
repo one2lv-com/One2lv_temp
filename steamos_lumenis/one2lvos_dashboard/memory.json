@@ -1,0 +1,28 @@
+{
+  "legend": "Fate",
+  "last_style": "balanced",
+  "current_vector": {
+    "aggression": 0.5,
+    "variety": 0.5,
+    "pace": 0.5,
+    "risk_taking": 0.5,
+    "recovery_speed": 0.5
+  },
+  "history": [],
+  "learning": {
+    "aggressive_count": 0,
+    "predictable_count": 0,
+    "balanced_count": 0,
+    "total_updates": 0
+  },
+  "ai_state": {
+    "mood": "focused",
+    "confidence": 0.8,
+    "adaptation_level": 1
+  },
+  "system": {
+    "version": "4.0",
+    "last_updated": null,
+    "uptime": 0
+  }
+}

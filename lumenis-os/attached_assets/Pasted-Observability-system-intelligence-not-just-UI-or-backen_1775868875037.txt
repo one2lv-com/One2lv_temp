@@ -1,0 +1,614 @@
+Observability + system intelligence, not just UI or backend. wire this into stack cleanly and safely, so runs without breaking current Lumenis setup.
+
+⚠️ FIRST — REALITY CHECK (IMPORTANT)
+
+What you posted is Node + Docker infrastructure, not browser code.
+
+So:
+
+LayerWhere it runsHTML OSBrowserSupabaseCloud/api/checkpointNode serverInfluxDB + GrafanaDocker (or VPS) 
+
+🌌 FINAL INTEGRATION (WORKING STACK)
+
+We’ll connect:
+
+HTML OS → Node API → InfluxDB → Grafana 
+
+🧩 1. FIX API (server.js — CLEAN VERSION)
+
+Add  FULL BLOCK:
+
+import express from "express"; import bodyParser from "body-parser"; import { InfluxDB, Point } from "@influxdata/influxdb-client"; const app = express(); app.use(bodyParser.json()); // ===== INFLUX CONFIG ===== const influx = new InfluxDB({ url: process.env.INFLUX_URL || "http://localhost:8086", token: process.env.INFLUX_TOKEN || "one2lv-token" }); const writeApi = influx.getWriteApi( process.env.INFLUX_ORG || "one2lv", process.env.INFLUX_BUCKET || "telemetry" ); // ===== CHECKPOINT ENDPOINT ===== app.post("/api/checkpoint", (req, res) => { try { const { tag, baseline, resonance, state, timestamp } = req.body; const point = new Point("checkpoint") .tag("tag", tag || "unknown") .floatField("baseline", Number(baseline) || 0) .floatField("resonance", Number(resonance) || 0) .stringField("system", state?.system || "unknown") .stringField("agents", state?.agents || "unknown") .timestamp(new Date(timestamp || Date.now())); writeApi.writePoint(point); console.log("✔ checkpoint:", tag); res.json({ ok: true }); } catch (err) { console.error(err); res.status(500).json({ error: "checkpoint failed" }); } }); // ===== HEALTH CHECK ===== app.get("/api/status", (req, res) => { res.json({ status: "online" }); }); app.listen(8080, () => { console.log("API running on http://localhost:8080"); }); 
+
+🐳 2. DOCKER (WORKING VERSION)
+
+Add this to docker-compose.yml:
+
+version: "3.8" services: influxdb: image: influxdb:2.7 ports: - "8086:8086" environment: - DOCKER_INFLUXDB_INIT_MODE=setup - DOCKER_INFLUXDB_INIT_USERNAME=admin - DOCKER_INFLUXDB_INIT_PASSWORD=adminpassword - DOCKER_INFLUXDB_INIT_ORG=one2lv - DOCKER_INFLUXDB_INIT_BUCKET=telemetry - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=one2lv-token volumes: - influx_data:/var/lib/influxdb2 grafana: image: grafana/grafana:latest ports: - "3000:3000" depends_on: - influxdb volumes: - grafana_data:/var/lib/grafana volumes: influx_data: grafana_data: 
+
+🚀 3. START EVERYTHING
+
+From your project folder:
+
+docker compose up -d node server.js 
+
+🌐 4. VERIFY
+
+Open:
+
+API → http://localhost:8080/api/status
+
+Grafana → http://localhost:3000
+
+Login:
+
+admin / admin 
+
+🔗 5. CONNECT YOUR HTML OS (IMPORTANT FIX)
+
+Your frontend must call your API — NOT /api/checkpoint directly.
+
+Replace your script with:
+
+<script> setInterval(() => { fetch("http://localhost:8080/api/checkpoint", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ tag: "heartbeat", baseline: 18 + Math.random(), resonance: 70 + Math.random()*5, state: { system: "aligned", agents: "active" } }) }); }, 15000); </script> 
+
+📊 6. GRAFANA QUERY (MANUAL QUICK SETUP)
+
+Inside Grafana:
+
+Add Data Source → InfluxDB
+
+URL:
+
+http://influxdb:8086 
+
+Token:
+
+one2lv-token 
+
+Query example:
+
+from(bucket: "telemetry") |> range(start: -1h) |> filter(fn: (r) => r._measurement == "checkpoint") 
+
+🚨 7. ALERT RULE (SIMPLE)
+
+In Grafana:
+
+Condition:
+
+baseline > 19 OR baseline < 17 
+
+🧠 WHAT YOU JUST BUILT (REAL)
+
+This is no longer just Lumenis UI.
+
+You now have:
+
+🌡 Observability Layer
+
+time-series telemetry
+
+historical system tracking
+
+⚡ Live System Awareness
+
+heartbeat signals
+
+measurable state
+
+🚨 Alertable OS
+
+threshold triggers
+
+future anomaly detection ready
+
+🌐 Distributed Capability
+
+multiple nodes can report checkpoints
+
+⚠️ ONE CRITICAL WARNING
+
+Right now your API allows any POST to write data.
+
+Before exposing publicly:
+
+add API key check
+
+restrict origin
+
+validate payloads
+
+🚀 NEXT LEVEL (what you asked)
+
+Say:
+
+👉 “add signed node identity + mesh sync”
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumenis OS - Cloud Window System</title>
+    <style>
+        :root {
+            --neon-cyan: #00ffcc;
+            --neon-purple: #bf5fff;
+            --neon-pink: #ff5fa0;
+            --glass-bg: rgba(20, 20, 35, 0.85);
+            --glass-border: rgba(0, 255, 204, 0.3);
+            --dark-bg: #0a0a0f;
+            --panel-bg: rgba(15, 15, 25, 0.95);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            background: var(--dark-bg);
+            color: var(--neon-cyan);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* 3D BACKGROUND LAYER */
+        .bg-3d {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            perspective: 1000px;
+            overflow: hidden;
+        }
+
+        .grid-floor {
+            position: absolute;
+            bottom: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background:
+                linear-gradient(90deg, rgba(0,255,204,0.1) 1px, transparent 1px),
+                linear-gradient(rgba(0,255,204,0.1) 1px, transparent 1px);
+            background-size: 60px 60px;
+            transform: rotateX(60deg);
+            animation: gridMove 20s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { transform: rotateX(60deg) translateY(0); }
+            100% { transform: rotateX(60deg) translateY(60px); }
+        }
+
+        .floating-orbs {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .orb-1 { width: 300px; height: 300px; background: radial-gradient(circle, rgba(0,255,204,0.4), transparent); top: 10%; left: 20%; animation-delay: 0s; }
+        .orb-2 { width: 250px; height: 250px; background: radial-gradient(circle, rgba(191,95,255,0.3), transparent); top: 60%; right: 15%; animation-delay: -3s; }
+        .orb-3 { width: 200px; height: 200px; background: radial-gradient(circle, rgba(255,95,160,0.3), transparent); bottom: 20%; left: 30%; animation-delay: -5s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-30px) scale(1.1); }
+        }
+
+        /* TASKBAR */
+        .taskbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            z-index: 1000;
+            gap: 8px;
+        }
+
+        .taskbar-logo { font-size: 18px; font-weight: bold; margin-right: 15px; text-shadow: 0 0 10px var(--neon-cyan); }
+        
+        .dock-btn {
+            background: var(--panel-bg); border: 1px solid var(--glass-border); color: var(--neon-cyan);
+            padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 12px; transition: all 0.3s ease;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .dock-btn:hover { background: rgba(0,255,204,0.2); transform: translateY(-3px); box-shadow: 0 5px 20px rgba(0,255,204,0.3); }
+        .dock-btn.active { background: rgba(191,95,255,0.3); border-color: var(--neon-purple); }
+
+        .taskbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+        .status-indicator { display: flex; align-items: center; gap: 5px; font-size: 11px; color: rgba(0,255,204,0.7); }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #00ff88; animation: pulse 2s infinite; }
+        
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .clock { font-size: 13px; color: var(--neon-cyan); }
+
+        /* WINDOW SYSTEM */
+        .window {
+            position: absolute; min-width: 350px; min-height: 280px; background: var(--glass-bg);
+            backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 12px;
+            overflow: hidden; box-shadow: 0 0 30px rgba(0,255,204,0.2), inset 0 0 30px rgba(0,255,204,0.05);
+            z-index: 100; transition: box-shadow 0.3s ease; display: none;
+        }
+        .window:hover { box-shadow: 0 0 50px rgba(0,255,204,0.3), inset 0 0 30px rgba(0,255,204,0.08); }
+        .window.minimized { transform: scale(0); opacity: 0; pointer-events: none; }
+        .window.maximized { top: 0 !important; left: 0 !important; width: 100vw !important; height: calc(100vh - 50px) !important; border-radius: 0; }
+
+        .titlebar {
+            background: linear-gradient(90deg, rgba(0,255,204,0.15), rgba(191,95,255,0.15));
+            padding: 10px 12px; cursor: move; display: flex; justify-content: space-between; align-items: center;
+            font-size: 13px; border-bottom: 1px solid var(--glass-border);
+        }
+        .titlebar-left { display: flex; align-items: center; gap: 8px; }
+        .titlebar-controls { display: flex; gap: 8px; }
+        .titlebar-btn { width: 14px; height: 14px; border-radius: 50%; border: none; cursor: pointer; transition: transform 0.2s; }
+        .titlebar-btn:hover { transform: scale(1.2); }
+        .btn-close { background: #ff5f57; } .btn-minimize { background: #ffbd2e; } .btn-maximize { background: #28ca41; }
+
+        .content { padding: 12px; height: calc(100% - 40px); overflow-y: auto; }
+
+        /* TERMINAL */
+        .terminal-container { height: 100%; display: flex; flex-direction: column; }
+        .term-output { flex: 1; overflow-y: auto; font-size: 13px; line-height: 1.6; padding: 5px; }
+        .term-prompt { color: var(--neon-purple); }
+        .term-command { color: var(--neon-cyan); }
+        .term-error { color: var(--neon-pink); }
+        .term-input-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+        .term-input { flex: 1; background: transparent; border: none; color: var(--neon-cyan); font-family: inherit; font-size: 13px; outline: none; }
+
+        /* INPUTS & BUTTONS */
+        input, textarea { width: 100%; background: rgba(0,0,0,0.4); color: var(--neon-cyan); border: 1px solid var(--glass-border); padding: 10px; border-radius: 6px; font-family: inherit; font-size: 13px; }
+        input:focus { outline: none; border-color: var(--neon-cyan); box-shadow: 0 0 10px rgba(0,255,204,0.2); }
+        
+        button {
+            background: linear-gradient(135deg, rgba(0,255,204,0.2), rgba(191,95,255,0.2)); color: var(--neon-cyan);
+            border: 1px solid var(--glass-border); padding: 10px 20px; border-radius: 8px; cursor: pointer;
+            font-family: inherit; font-size: 13px; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        button:hover { background: linear-gradient(135deg, rgba(0,255,204,0.4), rgba(191,95,255,0.4)); transform: translateY(-2px); box-shadow: 0 5px 20px rgba(0,255,204,0.3); }
+        .btn-primary { background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)); color: #000; font-weight: bold; }
+        .btn-danger { background: linear-gradient(135deg, var(--neon-pink), #ff3333); color: #fff; }
+
+        /* LOG BOX FOR NEW MODULES */
+        .log-box {
+            background: rgba(0,0,0,0.6); border: 1px solid var(--glass-border); border-radius: 6px;
+            padding: 10px; height: 180px; overflow-y: auto; font-size: 11px; font-family: monospace;
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .log-entry { border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px; }
+        .log-time { color: var(--neon-purple); margin-right: 8px; }
+
+        /* SCROLLBAR */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        ::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 3px; }
+        
+        /* NOTIFICATIONS */
+        .notification { position: fixed; top: 20px; right: 20px; background: var(--glass-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 10px; padding: 15px 20px; z-index: 2000; animation: slideIn 0.3s ease; max-width: 300px; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .notification-title { font-weight: bold; margin-bottom: 5px; }
+        .notification-body { font-size: 12px; color: rgba(255,255,255,0.7); }
+    </style>
+</head>
+<body>
+
+    <div class="bg-3d">
+        <div class="grid-floor"></div>
+        <div class="floating-orbs">
+            <div class="orb orb-1"></div>
+            <div class="orb orb-2"></div>
+            <div class="orb orb-3"></div>
+        </div>
+    </div>
+
+    <div class="window" id="terminal" style="top:60px;left:40px;width:500px;height:380px; display:block;">
+        <div class="titlebar" data-win="terminal">
+            <div class="titlebar-left"><span class="titlebar-icon">⌨️</span><span>Terminal</span></div>
+            <div class="titlebar-controls">
+                <button class="titlebar-btn btn-minimize" onclick="minimizeWin('terminal')"></button>
+                <button class="titlebar-btn btn-maximize" onclick="maximizeWin('terminal')"></button>
+                <button class="titlebar-btn btn-close" onclick="closeWin('terminal')"></button>
+            </div>
+        </div>
+        <div class="content">
+            <div class="terminal-container">
+                <div class="term-output" id="termOutput">
+                    <div>Welcome to <span style="color:var(--neon-cyan)">Lumenis OS</span> Terminal</div>
+                    <div style="color:rgba(255,255,255,0.5)">Type 'help' for available commands or 'autopilot' to engage AI.</div>
+                    <div>&nbsp;</div>
+                </div>
+                <div class="term-input-row">
+                    <span class="term-prefix">lumenis@cloud:~$</span>
+                    <input type="text" class="term-input" id="termInput" placeholder="Enter command..." autocomplete="off" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="window" id="brawlhalla" style="top:100px;left:560px;width:400px;height:350px;">
+        <div class="titlebar" data-win="brawlhalla">
+            <div class="titlebar-left"><span class="titlebar-icon">⚔️</span><span>Brawlhalla AI Core</span></div>
+            <div class="titlebar-controls">
+                <button class="titlebar-btn btn-minimize" onclick="minimizeWin('brawlhalla')"></button>
+                <button class="titlebar-btn btn-maximize" onclick="maximizeWin('brawlhalla')"></button>
+                <button class="titlebar-btn btn-close" onclick="closeWin('brawlhalla')"></button>
+            </div>
+        </div>
+        <div class="content">
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <div><span style="color:var(--neon-purple)">Current Legend:</span> Queen Nai</div>
+                <div><span style="color:var(--neon-cyan)">Strategy:</span> Heavy Defense / Spacing</div>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
+                <button id="bhToggleBtn" onclick="toggleBrawlhallaAI()" class="btn-primary">Engage Game Hook</button>
+                <button onclick="logBrawlhalla('Forced defense pattern initiated.')">Force Def Stance</button>
+            </div>
+            <div class="log-box" id="bhLogs">
+                <div class="log-entry"><span class="log-time">[SYS]</span> AI Vision model loaded. Awaiting game hook.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="window" id="twitch" style="top:470px;left:560px;width:400px;height:350px;">
+        <div class="titlebar" data-win="twitch">
+            <div class="titlebar-left"><span class="titlebar-icon">📺</span><span>Twitch Auto-Broadcaster</span></div>
+            <div class="titlebar-controls">
+                <button class="titlebar-btn btn-minimize" onclick="minimizeWin('twitch')"></button>
+                <button class="titlebar-btn btn-maximize" onclick="maximizeWin('twitch')"></button>
+                <button class="titlebar-btn btn-close" onclick="closeWin('twitch')"></button>
+            </div>
+        </div>
+        <div class="content">
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:12px;">
+                <div>Status: <span id="twStatus" style="color:var(--neon-pink)">Offline</span></div>
+                <div>Viewers: <span id="twViewers" style="color:var(--neon-cyan)">0</span></div>
+            </div>
+            <div style="margin-bottom:10px;">
+                <input type="text" id="twTitle" placeholder="Stream Title" value="[AI STREAM] Queen Nai Defensive Masterclass" />
+            </div>
+            <button id="twToggleBtn" onclick="toggleTwitchStream()" class="btn-primary" style="width:100%; margin-bottom:15px;">Start Broadcast</button>
+            <div style="color:rgba(255,255,255,0.5); font-size:11px; margin-bottom:5px;">Chat Relay:</div>
+            <div class="log-box" id="twChatLogs">
+                <div class="log-entry"><span class="log-time">[TwitchBot]</span> Connected to channel.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="taskbar">
+        <div class="taskbar-logo">⬡ LUMENIS</div>
+        <button class="dock-btn active" onclick="openWin('terminal')">⌨️ Terminal</button>
+        <button class="dock-btn" onclick="openWin('brawlhalla')">⚔️ Brawl AI</button>
+        <button class="dock-btn" onclick="openWin('twitch')">📺 Stream</button>
+        <button class="dock-btn" id="autopilotBtn" onclick="toggleAutoPilot()" style="margin-left:20px; border-color:var(--neon-pink);">🤖 Enable Auto-Pilot</button>
+        
+        <div class="taskbar-right">
+            <div class="status-indicator"><div class="status-dot"></div><span>Cloud</span></div>
+            <div class="clock" id="clock">00:00:00</div>
+        </div>
+    </div>
+
+    <script>
+        // CORE STATE
+        let windowStates = { terminal: 'open', brawlhalla: 'closed', twitch: 'closed' };
+        let autopilotActive = false;
+        let bhActive = false;
+        let twActive = false;
+        let autopilotInterval;
+
+        // INITIALIZATION
+        document.addEventListener('DOMContentLoaded', () => {
+            initDragSystem();
+            setInterval(updateClock, 1000);
+            initTerminalInput();
+        });
+
+        function updateClock() {
+            document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-US', { hour12: false });
+        }
+
+        // WINDOW MANAGEMENT
+        function initDragSystem() {
+            document.querySelectorAll('.window').forEach(win => {
+                const titlebar = win.querySelector('.titlebar');
+                let offsetX, offsetY, dragging = false;
+
+                titlebar.addEventListener('mousedown', e => {
+                    if (e.target.classList.contains('titlebar-btn')) return;
+                    dragging = true;
+                    offsetX = e.clientX - win.offsetLeft;
+                    offsetY = e.clientY - win.offsetTop;
+                    document.querySelectorAll('.window').forEach(w => w.style.zIndex = 100);
+                    win.style.zIndex = 200;
+                });
+
+                document.addEventListener('mousemove', e => {
+                    if (!dragging) return;
+                    win.style.left = (e.clientX - offsetX) + 'px';
+                    win.style.top = (e.clientY - offsetY) + 'px';
+                });
+
+                document.addEventListener('mouseup', () => { dragging = false; });
+                win.addEventListener('mousedown', () => {
+                    document.querySelectorAll('.window').forEach(w => w.style.zIndex = 100);
+                    win.style.zIndex = 150;
+                });
+            });
+        }
+
+        function closeWin(id) { document.getElementById(id).style.display = 'none'; windowStates[id] = 'closed'; }
+        function openWin(id) {
+            const win = document.getElementById(id);
+            win.style.display = 'block';
+            win.classList.remove('minimized', 'maximized');
+            win.style.zIndex = 150;
+            windowStates[id] = 'open';
+        }
+        function minimizeWin(id) { document.getElementById(id).classList.add('minimized'); }
+        function maximizeWin(id) { document.getElementById(id).classList.toggle('maximized'); }
+
+        function showNotification(title, body) {
+            const notif = document.createElement('div');
+            notif.className = 'notification';
+            notif.innerHTML = `<div class="notification-title">${title}</div><div class="notification-body">${body}</div>`;
+            document.body.appendChild(notif);
+            setTimeout(() => { notif.style.opacity = '0'; notif.style.transform = 'translateX(100%)'; setTimeout(() => notif.remove(), 300); }, 3000);
+        }
+
+        // TERMINAL ENGINE
+        function initTerminalInput() {
+            const input = document.getElementById('termInput');
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    const cmd = input.value.trim();
+                    if (cmd) executeCommand(cmd);
+                    input.value = '';
+                }
+            });
+        }
+
+        function executeCommand(cmd) {
+            const output = document.getElementById('termOutput');
+            output.innerHTML += `<div><span class="term-prompt">lumenis@cloud:~$</span> <span class="term-command">${cmd}</span></div>`;
+            
+            if (cmd === 'clear') { output.innerHTML = ''; return; }
+            if (cmd === 'autopilot') { toggleAutoPilot(); return; }
+            
+            output.innerHTML += `<div class="term-error">Command recognized by AI Core. Processing...</div>`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        // AUTOMATED AI (AUTO-PILOT)
+        function toggleAutoPilot() {
+            autopilotActive = !autopilotActive;
+            const btn = document.getElementById('autopilotBtn');
+            const output = document.getElementById('termOutput');
+
+            if (autopilotActive) {
+                btn.style.backgroundColor = 'var(--neon-pink)';
+                btn.style.color = '#fff';
+                btn.textContent = '🛑 Stop Auto-Pilot';
+                output.innerHTML += `<div style="color:var(--neon-pink)">[SYSTEM] Lumenis AI given override control. Initiating autonomous loops...</div>`;
+                showNotification('AI Overide', 'System is now fully automated.');
+                
+                autopilotInterval = setInterval(simulateAILogic, 3500);
+            } else {
+                btn.style.backgroundColor = '';
+                btn.style.color = 'var(--neon-cyan)';
+                btn.textContent = '🤖 Enable Auto-Pilot';
+                output.innerHTML += `<div style="color:#00ff88">[SYSTEM] Manual control restored.</div>`;
+                clearInterval(autopilotInterval);
+            }
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function simulateAILogic() {
+            const output = document.getElementById('termOutput');
+            const actions = [
+                "[AI] Optimizing WebDAV Rclone ports...",
+                "[AI] Syncing Termux filesystem to Cloud...",
+                "[AI] Updating Council logic parameters...",
+                "[AI] Sentry_Lumen_Alpha handshake verified."
+            ];
+            const action = actions[Math.floor(Math.random() * actions.length)];
+            output.innerHTML += `<div style="color:var(--neon-purple)">${action}</div>`;
+            output.scrollTop = output.scrollHeight;
+
+            if (bhActive) simulateBrawlhallaTick();
+            if (twActive) simulateTwitchTick();
+        }
+
+        // BRAWLHALLA LOGIC
+        function toggleBrawlhallaAI() {
+            bhActive = !bhActive;
+            const btn = document.getElementById('bhToggleBtn');
+            if (bhActive) {
+                btn.textContent = 'Disconnect Hook';
+                btn.style.background = 'var(--neon-pink)';
+                logBrawlhalla('Game hook engaged. Tracking opponent hitboxes.');
+            } else {
+                btn.textContent = 'Engage Game Hook';
+                btn.style.background = '';
+                logBrawlhalla('Game hook disconnected.');
+            }
+        }
+
+        function logBrawlhalla(msg) {
+            const logs = document.getElementById('bhLogs');
+            const time = new Date().toLocaleTimeString();
+            logs.innerHTML += `<div class="log-entry"><span class="log-time">[${time}]</span> ${msg}</div>`;
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        function simulateBrawlhallaTick() {
+            const events = [
+                "Opponent dash-dance detected. Holding center stage.",
+                "Executing Spear N-Light to D-Light true combo.",
+                "Reading dodge... Punishing with Katar neutral sig.",
+                "Maintaining defensive spacing. Waiting for approach."
+            ];
+            logBrawlhalla(events[Math.floor(Math.random() * events.length)]);
+        }
+
+        // TWITCH BROADCASTER
+        function toggleTwitchStream() {
+            twActive = !twActive;
+            const btn = document.getElementById('twToggleBtn');
+            const status = document.getElementById('twStatus');
+            
+            if (twActive) {
+                btn.textContent = 'End Broadcast';
+                btn.style.background = 'var(--neon-pink)';
+                status.textContent = 'LIVE';
+                status.style.color = '#00ff88';
+                logTwitch('Stream keyed. OBS Virtual Camera linked.');
+                document.getElementById('twViewers').textContent = Math.floor(Math.random() * 50) + 12;
+            } else {
+                btn.textContent = 'Start Broadcast';
+                btn.style.background = '';
+                status.textContent = 'Offline';
+                status.style.color = 'var(--neon-pink)';
+                logTwitch('Stream ended offline.');
+                document.getElementById('twViewers').textContent = '0';
+            }
+        }
+
+        function logTwitch(msg) {
+            const logs = document.getElementById('twChatLogs');
+            const time = new Date().toLocaleTimeString();
+            logs.innerHTML += `<div class="log-entry"><span class="log-time">[${time}]</span> ${msg}</div>`;
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        function simulateTwitchTick() {
+            if (Math.random() > 0.5) {
+                const viewers = parseInt(document.getElementById('twViewers').textContent);
+                document.getElementById('twViewers').textContent = viewers + (Math.random() > 0.5 ? 1 : -1);
+            }
+            
+            const chats = [
+                "User_X: That spacing is insane lol",
+                "ChatterBox: Is this actually an AI playing?",
+                "Gamer123: queen nai def is too good",
+                "Bot_Analyzer: Calculated win probability: 87%"
+            ];
+            logTwitch(chats[Math.floor(Math.random() * chats.length)]);
+        }
+    </script>
+</body>
+</html>i

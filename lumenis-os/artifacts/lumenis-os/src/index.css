@@ -1,0 +1,186 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+
+:root {
+  --neon-cyan: #00ffcc;
+  --neon-purple: #bf5fff;
+  --neon-pink: #ff5fa0;
+  --glass-bg: rgba(20, 20, 35, 0.85);
+  --glass-border: rgba(0, 255, 204, 0.3);
+  --dark-bg: #0a0a0f;
+  --panel-bg: rgba(15, 15, 25, 0.95);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  background: var(--dark-bg);
+  color: var(--neon-cyan);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* 3D BACKGROUND LAYER */
+.bg-3d {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  perspective: 1000px;
+  overflow: hidden;
+}
+
+.grid-floor {
+  position: absolute;
+  bottom: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background:
+      linear-gradient(90deg, rgba(0,255,204,0.1) 1px, transparent 1px),
+      linear-gradient(rgba(0,255,204,0.1) 1px, transparent 1px);
+  background-size: 60px 60px;
+  transform: rotateX(60deg);
+  animation: gridMove 20s linear infinite;
+}
+
+@keyframes gridMove {
+  0% { transform: rotateX(60deg) translateY(0); }
+  100% { transform: rotateX(60deg) translateY(60px); }
+}
+
+.floating-orbs {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  animation: float 8s ease-in-out infinite;
+}
+
+.orb-1 { width: 300px; height: 300px; background: radial-gradient(circle, rgba(0,255,204,0.4), transparent); top: 10%; left: 20%; animation-delay: 0s; }
+.orb-2 { width: 250px; height: 250px; background: radial-gradient(circle, rgba(191,95,255,0.3), transparent); top: 60%; right: 15%; animation-delay: -3s; }
+.orb-3 { width: 200px; height: 200px; background: radial-gradient(circle, rgba(255,95,160,0.3), transparent); bottom: 20%; left: 30%; animation-delay: -5s; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-30px) scale(1.1); }
+}
+
+/* TASKBAR */
+.taskbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  z-index: 1000;
+  gap: 8px;
+}
+
+.taskbar-logo { font-size: 18px; font-weight: bold; margin-right: 15px; text-shadow: 0 0 10px var(--neon-cyan); }
+
+.dock-btn {
+  background: var(--panel-bg); border: 1px solid var(--glass-border); color: var(--neon-cyan);
+  padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 12px; transition: all 0.3s ease;
+  display: flex; align-items: center; gap: 6px;
+}
+.dock-btn:hover { background: rgba(0,255,204,0.2); transform: translateY(-3px); box-shadow: 0 5px 20px rgba(0,255,204,0.3); }
+.dock-btn.active { background: rgba(191,95,255,0.3); border-color: var(--neon-purple); }
+
+.taskbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.status-indicator { display: flex; align-items: center; gap: 5px; font-size: 11px; color: rgba(0,255,204,0.7); }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #00ff88; animation: pulse 2s infinite; }
+.status-dot.active { background: #00ff88; animation: pulse 2s infinite; }
+.status-dot.connecting { background: var(--neon-cyan); animation: pulse 0.8s infinite; }
+.status-dot.offline { background: var(--neon-pink); animation: none; }
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.clock { font-size: 13px; color: var(--neon-cyan); }
+
+/* WINDOW SYSTEM */
+.os-window {
+  position: absolute; min-width: 350px; min-height: 280px; background: var(--glass-bg);
+  backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 12px;
+  overflow: hidden; box-shadow: 0 0 30px rgba(0,255,204,0.2), inset 0 0 30px rgba(0,255,204,0.05);
+  transition: box-shadow 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
+}
+.os-window:hover { box-shadow: 0 0 50px rgba(0,255,204,0.3), inset 0 0 30px rgba(0,255,204,0.08); }
+.os-window.minimized { transform: scale(0); opacity: 0; pointer-events: none; }
+.os-window.maximized { top: 0 !important; left: 0 !important; width: 100vw !important; height: calc(100vh - 50px) !important; border-radius: 0; }
+
+/* RESIZE HANDLES */
+.resize-handle { position: absolute; z-index: 10; }
+.resize-e  { top: 0; right: 0; width: 6px; height: 100%; cursor: e-resize; }
+.resize-s  { bottom: 0; left: 0; width: 100%; height: 6px; cursor: s-resize; }
+.resize-se { bottom: 0; right: 0; width: 14px; height: 14px; cursor: se-resize; background: linear-gradient(135deg, transparent 50%, rgba(0,255,204,0.3) 50%); border-radius: 0 0 10px 0; }
+
+.titlebar {
+  background: linear-gradient(90deg, rgba(0,255,204,0.15), rgba(191,95,255,0.15));
+  padding: 10px 12px; cursor: move; display: flex; justify-content: space-between; align-items: center;
+  font-size: 13px; border-bottom: 1px solid var(--glass-border);
+  user-select: none;
+}
+.titlebar-left { display: flex; align-items: center; gap: 8px; }
+.titlebar-controls { display: flex; gap: 8px; }
+.titlebar-btn { width: 14px; height: 14px; border-radius: 50%; border: none; cursor: pointer; transition: transform 0.2s; }
+.titlebar-btn:hover { transform: scale(1.2); }
+.btn-close { background: #ff5f57; } .btn-minimize { background: #ffbd2e; } .btn-maximize { background: #28ca41; }
+
+.os-content { padding: 12px; height: calc(100% - 40px); overflow-y: auto; }
+
+/* TERMINAL */
+.terminal-container { height: 100%; display: flex; flex-direction: column; }
+.term-output { flex: 1; overflow-y: auto; font-size: 13px; line-height: 1.6; padding: 5px; }
+.term-prompt { color: var(--neon-purple); }
+.term-command { color: var(--neon-cyan); }
+.term-error { color: var(--neon-pink); }
+.term-input-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.term-input { flex: 1; background: transparent; border: none; color: var(--neon-cyan); font-family: inherit; font-size: 13px; outline: none; }
+
+/* INPUTS & BUTTONS */
+input, textarea { width: 100%; background: rgba(0,0,0,0.4); color: var(--neon-cyan); border: 1px solid var(--glass-border); padding: 10px; border-radius: 6px; font-family: inherit; font-size: 13px; }
+input:focus { outline: none; border-color: var(--neon-cyan); box-shadow: 0 0 10px rgba(0,255,204,0.2); }
+
+button.os-btn {
+  background: linear-gradient(135deg, rgba(0,255,204,0.2), rgba(191,95,255,0.2)); color: var(--neon-cyan);
+  border: 1px solid var(--glass-border); padding: 10px 20px; border-radius: 8px; cursor: pointer;
+  font-family: inherit; font-size: 13px; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+button.os-btn:hover { background: linear-gradient(135deg, rgba(0,255,204,0.4), rgba(191,95,255,0.4)); transform: translateY(-2px); box-shadow: 0 5px 20px rgba(0,255,204,0.3); }
+.btn-primary { background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)) !important; color: #000 !important; font-weight: bold; }
+.btn-danger { background: linear-gradient(135deg, var(--neon-pink), #ff3333) !important; color: #fff !important; }
+
+/* LOG BOX FOR NEW MODULES */
+.log-box {
+  background: rgba(0,0,0,0.6); border: 1px solid var(--glass-border); border-radius: 6px;
+  padding: 10px; height: 180px; overflow-y: auto; font-size: 11px; font-family: monospace;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.log-entry { border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px; }
+.log-time { color: var(--neon-purple); margin-right: 8px; }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 3px; }
+
+/* NOTIFICATIONS */
+.notification { position: fixed; top: 20px; right: 20px; background: var(--glass-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 10px; padding: 15px 20px; z-index: 2000; max-width: 300px; }
+.notification-title { font-weight: bold; margin-bottom: 5px; }
+.notification-body { font-size: 12px; color: rgba(255,255,255,0.7); }

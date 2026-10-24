@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>One2lvOS — Lumenis Live System</title>
+<style>
+body {margin:0;background:black;color:#00f0ff;font-family:monospace;}
+#app {display:flex;height:100vh;}
+#game {flex:2;display:flex;align-items:center;justify-content:center;font-size:40px;transition:0.5s;}
+#ui {flex:1;border-left:2px solid #00f0ff;padding:10px;overflow:auto;}
+.legend {font-size:28px;margin-bottom:10px;}
+.console {color:#0f0;}
+.chat {color:#fff;}
+.subtitle {position:absolute;bottom:20px;width:100%;text-align:center;font-size:20px;}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="game">⚔️</div>
+  <div id="ui">
+    <div class="legend" id="legend">Legend: -</div>
+    <div id="console"></div>
+    <div id="chat"></div>
+  </div>
+</div>
+
+<div class="subtitle" id="subtitle"></div>
+
+<script>
+const Lumenis = {
+  chooseLegend(style){
+    if(style==="aggressive") return "Queen Nai";
+    if(style==="predictable") return "Fate";
+    if(style==="balanced") return "Wu Shang";
+    return "Fate";
+  }
+};
+
+const visuals = {
+  "Queen Nai":"🛡️",
+  "Fate":"🔮",
+  "Wu Shang":"🧘"
+};
+
+const scenes = [
+{title:"The Stream Begins", narration:"The stream begins.", opponent:"aggressive",
+ console:["System Booting","Lumenis Online"], chat:["GO ONE2","LET'S GO"]},
+{title:"First Signs", narration:"Prediction begins.", opponent:"predictable",
+ console:["prediction_confidence: 0.72"], chat:["AI COACH","WHAT"]},
+{title:"The Raccoon", narration:"A raccoon enables dev mode.", opponent:"chaotic",
+ console:["external_agent_detected","DEV MODE ENABLED"], chat:["RACCOON DEV"]},
+{title:"The Evolution", narration:"Lumenis evolves.", opponent:"balanced",
+ console:["self_model_forming","objective: PROTECT PLAYER"], chat:["THIS IS CRAZY"]}
+];
+
+let i=0;
+
+function speak(text){
+  document.getElementById("subtitle").innerText=text;
+  let u=new SpeechSynthesisUtterance(text);
+  speechSynthesis.speak(u);
+}
+
+function next(){
+  if(i>=scenes.length) return;
+  let s=scenes[i];
+  let legend=Lumenis.chooseLegend(s.opponent);
+  document.getElementById("legend").innerText="Legend: "+legend;
+  document.getElementById("game").innerText=visuals[legend];
+  document.getElementById("console").innerHTML="<div class='console'>"+s.console.join("<br>")+"</div>";
+  document.getElementById("chat").innerHTML="<div class='chat'>"+s.chat.join("<br>")+"</div>";
+  speak(s.narration);
+  i++;
+}
+
+setInterval(next,4000);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lumenis v7 HUD</title>
+<style>
+  :root {
+    --purple: #8a5cff;
+    --cyan: #00ffcc;
+    --gold: #ffd700;
+    --bg: #090914;
+    --panel: rgba(255,255,255,0.04);
+    --border: rgba(138,92,255,0.3);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:#e0e0e0; font-family:'Courier New',monospace; min-height:100vh; padding:16px; }
+  header { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:16px; }
+  h1 { color:var(--purple); font-size:1.1rem; letter-spacing:2px; }
+  .pulse { width:8px; height:8px; background:var(--cyan); border-radius:50%; display:inline-block; animation:pulse 1.4s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;box-shadow:0 0 6px var(--cyan)} 50%{opacity:0.3} }
+  .grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:14px; }
+  .card h3 { color:var(--purple); font-size:0.75rem; letter-spacing:1px; margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:6px; }
+  .metric { color:var(--cyan); font-size:1.4rem; font-weight:bold; }
+  .metric-label { color:#666; font-size:0.65rem; margin-top:2px; }
+  .btn { background:var(--purple); color:#fff; border:none; padding:9px 14px; border-radius:4px; cursor:pointer; font-family:monospace; font-size:0.75rem; letter-spacing:1px; transition:all 0.15s; }
+  .btn:hover { opacity:0.85; box-shadow:0 0 10px rgba(138,92,255,0.4); }
+  .btn.cyan { background:transparent; border:1px solid var(--cyan); color:var(--cyan); }
+  .btn.gold { background:transparent; border:1px solid var(--gold); color:var(--gold); }
+  .btn-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  pre { color:#888; font-size:0.7rem; white-space:pre-wrap; word-break:break-all; max-height:180px; overflow-y:auto; }
+  pre::-webkit-scrollbar { width:3px; } pre::-webkit-scrollbar-thumb { background:var(--border); }
+  .combo-bar { height:6px; background:#1a1a2e; border-radius:3px; margin-top:8px; overflow:hidden; }
+  .combo-fill { height:100%; background:linear-gradient(90deg,var(--purple),var(--cyan)); transition:width 0.3s; }
+  .tag { display:inline-block; padding:2px 6px; border-radius:3px; font-size:0.6rem; background:rgba(138,92,255,0.15); border:1px solid var(--border); color:var(--purple); margin-right:4px; }
+  .status-online { color:var(--cyan); } .status-offline { color:#ff4444; }
+  .log-entry { border-left:2px solid var(--purple); padding-left:8px; margin-bottom:6px; font-size:0.68rem; }
+  .log-ts { color:#555; font-size:0.6rem; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>🌷 LUMENIS v7 HUD</h1>
+    <div style="font-size:0.65rem;color:#666;margin-top:3px">Council · Telemetry · Mesh · OBS</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;font-size:0.7rem">
+    <div class="pulse"></div>
+    <span class="status-online" id="sys-status">CONNECTING...</span>
+  </div>
+</header>
+
+<div class="grid">
+  <div class="card">
+    <h3>COMBO STATE</h3>
+    <div class="metric" id="combo-hits">0</div>
+    <div class="metric-label">CURRENT HIT COUNT</div>
+    <div class="combo-bar"><div class="combo-fill" id="combo-bar" style="width:0%"></div></div>
+    <div style="margin-top:8px;font-size:0.65rem;color:#666">Max: <span id="combo-max">0</span> | Active: <span id="combo-active">No</span></div>
+  </div>
+  <div class="card">
+    <h3>COUNCIL STRATEGY</h3>
+    <div class="metric" id="strategy" style="font-size:1rem">—</div>
+    <div class="metric-label">TOP VOTED STRATEGY</div>
+    <div style="margin-top:10px" id="vote-breakdown"></div>
+  </div>
+  <div class="card">
+    <h3>OBS / STREAM</h3>
+    <div id="obs-status" class="metric-label status-offline">DISCONNECTED</div>
+    <div style="margin-top:10px" class="btn-row">
+      <button class="btn cyan" onclick="obsScene('Game')">Game</button>
+      <button class="btn cyan" onclick="obsScene('Menu')">Menu</button>
+      <button class="btn cyan" onclick="obsScene('BRB')">BRB</button>
+    </div>
+  </div>
+</div>
+
+<div class="grid2" style="margin-bottom:12px">
+  <div class="card">
+    <h3>SIMULATE TELEMETRY</h3>
+    <div class="btn-row">
+      <button class="btn" onclick="sendTelemetry('hit')">HIT</button>
+      <button class="btn" onclick="sendTelemetry('miss')">MISS</button>
+      <button class="btn gold" onclick="sendTelemetry('jump')">JUMP</button>
+      <button class="btn gold" onclick="sendTelemetry('dodge_left')">DODGE L</button>
+      <button class="btn" style="background:#ff4444" onclick="sendTelemetry('reset')">RESET</button>
+    </div>
+    <div style="margin-top:8px">
+      <input id="vote-input" placeholder="Strategy name..." style="background:#000;border:1px solid #333;color:#fff;padding:6px 8px;font-family:monospace;font-size:0.75rem;width:calc(100% - 80px)">
+      <button class="btn" onclick="castVote()" style="margin-left:6px;padding:6px 10px">VOTE</button>
+    </div>
+  </div>
+  <div class="card">
+    <h3>AI ADVICE</h3>
+    <div id="ai-advice" style="font-size:0.72rem;line-height:1.7;color:#ccc">Loading...</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>COUNCIL LOG <span class="tag" id="log-count">0</span></h3>
+  <pre id="log">Connecting to Lumenis v7...</pre>
+</div>
+
+<script>
+const API = '';
+let ws;
+
+async function fetchStatus() {
+  try {
+    const r = await fetch(`${API}/api/status`);
+    const d = await r.json();
+    document.getElementById('sys-status').textContent = d.status?.toUpperCase() || 'ONLINE';
+    document.getElementById('sys-status').className = 'status-online';
+    document.getElementById('combo-hits').textContent = d.combo?.hitCount || 0;
+    document.getElementById('combo-max').textContent = d.combo?.maxCombo || 0;
+    document.getElementById('combo-active').textContent = d.combo?.active ? 'Yes' : 'No';
+    document.getElementById('combo-bar').style.width = Math.min((d.combo?.hitCount || 0) * 10, 100) + '%';
+    document.getElementById('obs-status').textContent = d.obs ? 'CONNECTED' : 'DISCONNECTED';
+    document.getElementById('obs-status').className = d.obs ? 'metric-label status-online' : 'metric-label status-offline';
+    document.getElementById('strategy').textContent = d.councilStrategy || 'Neutral';
+  } catch { document.getElementById('sys-status').className = 'status-offline'; document.getElementById('sys-status').textContent = 'OFFLINE'; }
+}
+
+async function fetchCouncil() {
+  try {
+    const r = await fetch(`${API}/api/council`);
+    const d = await r.json();
+    document.getElementById('log-count').textContent = d.length;
+    const entries = d.slice(-8).reverse().map(e =>
+      `<div class="log-entry"><span style="color:#8a5cff">[${e.agent}]</span> ${e.msg}<div class="log-ts">${new Date(e.time).toLocaleTimeString()}</div></div>`
+    ).join('');
+    document.getElementById('log').innerHTML = entries || '<span style="color:#555">No council messages yet</span>';
+  } catch {}
+}
+
+async function fetchVotes() {
+  try {
+    const r = await fetch(`${API}/api/council/vote`);
+    const d = await r.json();
+    const entries = Object.entries(d.votes || {}).map(([k,v]) =>
+      `<span class="tag">${k}: ${v}</span>`
+    ).join('');
+    document.getElementById('vote-breakdown').innerHTML = entries || '<span style="color:#555">No votes yet</span>';
+  } catch {}
+}
+
+async function fetchAdvice() {
+  try {
+    const r = await fetch(`${API}/api/ai/advice`);
+    const d = await r.json();
+    document.getElementById('ai-advice').innerHTML =
+      `<div style="color:#00ffcc">Gemini:</div>${d.gemini || '—'}<br><br>` +
+      `<div style="color:#ffd700">Coach:</div>${d.coach || '—'}<br><br>` +
+      `<div style="color:#8a5cff">Predict:</div>${d.prediction || '—'}`;
+  } catch {}
+}
+
+async function sendTelemetry(type) {
+  await fetch(`${API}/api/telemetry`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type, damage: Math.floor(Math.random() * 30 + 5) })
+  });
+  fetchStatus();
+}
+
+async function castVote() {
+  const strat = document.getElementById('vote-input').value.trim();
+  if (!strat) return;
+  await fetch(`${API}/api/council/vote`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ agent: 'viewer', strategy: strat })
+  });
+  document.getElementById('vote-input').value = '';
+  fetchVotes(); fetchStatus();
+}
+
+async function obsScene(scene) {
+  await fetch(`${API}/api/obs/scene`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scene })
+  });
+}
+
+function connectWS() {
+  const wsUrl = `ws://${location.host}`;
+  ws = new WebSocket(wsUrl);
+  ws.onopen = () => ws.send(JSON.stringify({ type: 'ping' }));
+  ws.onmessage = e => {
+    const d = JSON.parse(e.data);
+    if (d.type === 'council_msg') fetchCouncil();
+  };
+  ws.onclose = () => setTimeout(connectWS, 3000);
+}
+
+fetchStatus(); fetchCouncil(); fetchVotes(); fetchAdvice();
+connectWS();
+setInterval(() => { fetchStatus(); fetchCouncil(); fetchVotes(); }, 2000);
+setInterval(fetchAdvice, 10000);
+</script>
+</body>
+</html>

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Lumenis Space Agent v1</title>
+
+<style>
+  body { margin:0; overflow:hidden; background:#000; }
+
+  #ui {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: #0ff;
+    font-family: monospace;
+    z-index: 10;
+  }
+
+  button {
+    margin:5px;
+    padding:8px;
+    background:#111;
+    color:#0ff;
+    border:1px solid #0ff;
+    cursor:pointer;
+  }
+
+  button:hover {
+    background:#0ff;
+    color:#000;
+  }
+</style>
+</head>
+
+<body>
+
+<div id="ui">
+  <button onclick="openPanel()">Open Panel</button>
+  <button onclick="closePanel()">Close Panel</button>
+  <span style="margin-left:20px;">
+    Mode: <span id="modeDisplay">ORBIT</span>
+  </span>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+let scene, camera, renderer;
+
+// CORE SYSTEM
+let raccoonCore;
+let anchor = null;
+let mode = "orbit";
+let t = 0;
+
+// SWARM + GRAPH
+let raccoons = [];
+let nodes = [];
+let links = [];
+
+init();
+animate();
+
+// ---------------- INIT ----------------
+function init() {
+  scene = new THREE.Scene();
+
+  camera = new THREE.PerspectiveCamera(
+    75,
+    innerWidth / innerHeight,
+    0.1,
+    1000
+  );
+
+  camera.position.z = 6;
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(innerWidth, innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  // CORE
+  const core = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 32, 32),
+    new THREE.MeshBasicMaterial({
+      color: 0x00ffff,
+      wireframe: true
+    })
+  );
+  scene.add(core);
+
+  // MAIN RACCOON
+  raccoonCore = new THREE.Mesh(
+    new THREE.SphereGeometry(0.2, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0xffffff })
+  );
+  scene.add(raccoonCore);
+
+  // SWARM
+  createRaccoon(0xffffff, "explorer");
+  createRaccoon(0xffaa00, "executor");
+  createRaccoon(0x00ffcc, "critic");
+
+  // INITIAL NODE
+  createNode(new THREE.Vector3(2, 1, 0), "boot node");
+
+  window.addEventListener("resize", () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+}
+
+// ---------------- GRAPH SYSTEM ----------------
+function createNode(pos, label) {
+  const node = {
+    pos: pos.clone(),
+    label,
+    memory: [],
+    mesh: new THREE.Mesh(
+      new THREE.SphereGeometry(0.12, 12, 12),
+      new THREE.MeshBasicMaterial({ color: 0x66ffcc })
+    )
+  };
+
+  node.mesh.position.copy(pos);
+  scene.add(node.mesh);
+
+  nodes.push(node);
+  return node;
+}
+
+function connectNodes(a, b) {
+  const line = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([a.pos, b.pos]),
+    new THREE.LineBasicMaterial({ color: 0x003333 })
+  );
+
+  scene.add(line);
+  links.push(line);
+}
+
+// ---------------- SWARM ----------------
+function createRaccoon(color, role) {
+  const r = new THREE.Mesh(
+    new THREE.SphereGeometry(0.18, 16, 16),
+    new THREE.MeshBasicMaterial({ color })
+  );
+
+  r.role = role;
+  r.target = null;
+  r.memory = [];
+
+  scene.add(r);
+  raccoons.push(r);
+}
+
+// ---------------- SWARM BEHAVIOR ----------------
+function updateRaccoons() {
+  raccoons.forEach(r => {
+
+    if (r.role === "explorer") {
+      if (!r.target || Math.random() < 0.01) {
+        r.target = nodes[Math.floor(Math.random() * nodes.length)];
+      }
+    }
+
+    if (r.role === "executor") {
+      r.target = nodes.find(n => n.memory.length < 2) || nodes[0];
+    }
+
+    if (r.role === "critic") {
+      r.target = nodes.reduce(
+        (a, b) => (b.memory.length > a.memory.length ? b : a),
+        nodes[0]
+      );
+    }
+
+    if (r.target) {
+      r.position.lerp(r.target.pos, 0.05);
+
+      if (r.position.distanceTo(r.target.pos) < 0.1) {
+        r.target.memory.push({
+          role: r.role,
+          time: Date.now()
+        });
+
+        r.memory.push(r.target.label);
+      }
+    } else {
+      t += 0.002;
+      r.position.x = Math.cos(t) * 2;
+      r.position.y = Math.sin(t) * 2;
+    }
+  });
+}
+
+// ---------------- GRAPH EVOLUTION ----------------
+function updateGraph() {
+  if (Math.random() < 0.01) {
+    const n = createNode(
+      new THREE.Vector3(
+        (Math.random() - 0.5) * 4,
+        (Math.random() - 0.5) * 3,
+        (Math.random() - 0.5) * 2
+      ),
+      "node_" + Math.floor(Math.random() * 999)
+    );
+
+    if (nodes.length > 1) {
+      connectNodes(n, nodes[Math.floor(Math.random() * nodes.length)]);
+    }
+  }
+}
+
+// ---------------- CORE MOTION ----------------
+function updateCore() {
+  t += 0.01;
+
+  if (mode === "orbit") {
+    raccoonCore.position.x = Math.cos(t) * 2;
+    raccoonCore.position.y = Math.sin(t) * 2;
+  }
+
+  if (mode === "travel" && anchor) {
+    raccoonCore.position.lerp(anchor.position, 0.05);
+
+    if (raccoonCore.position.distanceTo(anchor.position) < 0.1) {
+      mode = "attach";
+      document.getElementById("modeDisplay").innerText = "ATTACH";
+    }
+  }
+
+  if (mode === "attach" && anchor) {
+    raccoonCore.position.copy(anchor.position);
+  }
+}
+
+// ---------------- LOOP ----------------
+function animate() {
+  requestAnimationFrame(animate);
+
+  updateRaccoons();
+  updateGraph();
+  updateCore();
+
+  renderer.render(scene, camera);
+}
+
+// ---------------- UI ----------------
+function createAnchor(pos) {
+  const a = new THREE.Mesh(
+    new THREE.SphereGeometry(0.1, 12, 12),
+    new THREE.MeshBasicMaterial({ color: 0x66ffcc })
+  );
+
+  a.position.copy(pos);
+  scene.add(a);
+
+  return a;
+}
+
+function openPanel() {
+  if (!anchor) anchor = createAnchor(new THREE.Vector3(2, 1, 0));
+  mode = "travel";
+  document.getElementById("modeDisplay").innerText = "TRAVEL";
+}
+
+function closePanel() {
+  if (anchor) scene.remove(anchor);
+  anchor = null;
+  mode = "orbit";
+  document.getElementById("modeDisplay").innerText = "ORBIT";
+}
+</script>
+
+</body>
+</html>
