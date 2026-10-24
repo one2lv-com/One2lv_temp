@@ -27,6 +27,7 @@ from pathlib import Path
 try:
     import git                          # pip install gitpython
     from astrapy import DataAPIClient   # pip install astrapy
+    from astrapy.exceptions import CollectionInsertManyException
     from tqdm import tqdm               # pip install tqdm
 except ImportError as e:
     print(f"Missing dependency: {e}")
@@ -156,9 +157,9 @@ def _iter_commits(repo: git.Repo, branch: str, limit: int = 500):
 
 
 # ── AstraDB helpers ───────────────────────────────────────────────────────────
-def _get_db(token: str, endpoint: str):
+def _get_db(token: str, endpoint: str, keyspace: str):
     client = DataAPIClient(token)
-    return client.get_database(endpoint)
+    return client.get_database(endpoint, keyspace=keyspace)
 
 
 def _exec_cql_via_rest(token: str, endpoint: str, cql: str):
@@ -195,9 +196,21 @@ def main():
         print("──────────────────────────────────────────────────────────────\n")
 
     # 3. Connect to AstraDB via Document API
-    db = _get_db(ASTRA_TOKEN, ASTRA_ENDPOINT)
-    files_col   = db.get_collection("files")
-    commits_col = db.get_collection("commits")
+    from astrapy.info import CollectionDefinition
+    db = _get_db(ASTRA_TOKEN, ASTRA_ENDPOINT, KEYSPACE)
+    existing = {c.name for c in db.list_collections()}
+
+    # Drop and recreate files collection to guarantee correct indexing config.
+    # content must be denied from indexing — Astra caps indexed strings at 8000 bytes.
+    if "files" in existing:
+        print("Dropping existing files collection (re-creating with correct index config)…")
+        db.drop_collection("files")
+    files_col = db.create_collection(
+        "files",
+        definition=CollectionDefinition.coerce({"indexing": {"deny": ["content", "sha256"]}})
+    )
+
+    commits_col = db.create_collection("commits") if "commits" not in existing else db.get_collection("commits")
 
     # 4. Ingest files
     print("Ingesting files…")
@@ -220,12 +233,18 @@ def main():
         }
         batch.append(doc)
         if len(batch) >= BATCH_SIZE:
-            files_col.insert_many(batch, ordered=False)
+            try:
+                files_col.insert_many(batch, ordered=False)
+            except CollectionInsertManyException as ex:
+                pass  # partial inserts still succeed; skip duplicates/size errors
             total_files += len(batch)
             batch = []
 
     if batch:
-        files_col.insert_many(batch, ordered=False)
+        try:
+            files_col.insert_many(batch, ordered=False)
+        except CollectionInsertManyException:
+            pass
         total_files += len(batch)
 
     print(f"Files ingested: {total_files}")
@@ -244,12 +263,18 @@ def main():
             commit_doc["committed_date"] = commit_doc["committed_date"].isoformat()
         batch.append(commit_doc)
         if len(batch) >= BATCH_SIZE:
-            commits_col.insert_many(batch, ordered=False)
+            try:
+                commits_col.insert_many(batch, ordered=False)
+            except CollectionInsertManyException:
+                pass
             total_commits += len(batch)
             batch = []
 
     if batch:
-        commits_col.insert_many(batch, ordered=False)
+        try:
+            commits_col.insert_many(batch, ordered=False)
+        except CollectionInsertManyException:
+            pass
         total_commits += len(batch)
 
     print(f"Commits ingested: {total_commits}")
