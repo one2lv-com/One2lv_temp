@@ -146,6 +146,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
 .tr-cat.System{border-color:rgba(252,238,10,.3);color:var(--accent)}
 .tr-cat.Network{border-color:rgba(0,240,255,.2);color:var(--primary)}
 .tr-cat.Terminal{border-color:rgba(255,153,0,.3);color:var(--warn)}
+.tr-cat.Lobby{border-color:rgba(167,139,250,.4);color:#a78bfa}
 .tr-run-btn{padding:4px 12px;border-radius:6px;border:1px solid rgba(0,240,255,.3);background:rgba(0,240,255,.06);color:var(--primary);font-size:.7rem;cursor:pointer;transition:all .18s;white-space:nowrap;flex-shrink:0}
 .tr-run-btn:hover{background:rgba(0,240,255,.14)}
 /* Tool invoke panel */
@@ -259,6 +260,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
   <button class="sk-btn" onclick="netQuick('https://httpbin.org/get')"><span class="sk-icon">🌐</span>HTTPBin Test</button>
   <button class="sk-btn" onclick="netQuick('http://localhost:8000/api/tools/registry')"><span class="sk-icon">🌐</span>Tool Registry</button>
 
+  <div class="sk-head">AI Lobby</div>
+  <button class="sk-btn" onclick="toolLobbyRegister()"><span class="sk-icon">📡</span>Register Lumenis</button>
+  <button class="sk-btn" onclick="toolLobbyAgents()"><span class="sk-icon">🤖</span>List Agents</button>
+  <button class="sk-btn" onclick="toolLobbyBroadcast()"><span class="sk-icon">📢</span>Broadcast Msg</button>
+
   <div class="sk-head">One2lvOS</div>
   <button class="sk-btn" onclick="skill('Describe your current reactor state — pulse count, uptime, temperature, and all active systems.')"><span class="sk-icon">✨</span>Reactor State</button>
   <button class="sk-btn" onclick="skill('Describe the Four Gates architecture of One2lvOS in detail.')"><span class="sk-icon">⬡</span>Four Gates</button>
@@ -326,6 +332,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
       <button class="tcat-btn" onclick="filterCat('System',this)">System</button>
       <button class="tcat-btn" onclick="filterCat('Network',this)">Net</button>
       <button class="tcat-btn" onclick="filterCat('Terminal',this)">Terminal</button>
+      <button class="tcat-btn" onclick="filterCat('Lobby',this)">Lobby</button>
     </div>
     <div id="tools-grid"></div>
     <div id="tool-invoke-panel">
@@ -866,11 +873,37 @@ function restoreState(data){
   scroll();
 }
 
+// Lobby
+async function toolLobbyRegister(){
+  const el=toolMsg('lobby_register','Registering Lumenis in AI Lobby…','',false);
+  try{
+    const r=await fetch(`${API}/api/tools/lobby/register`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    const d=await r.json();
+    updateToolMsg(el,d.ok?`✓ Registered as lumenis-reactor\nCapabilities: ${(d.response?.capabilities||[]).join(', ')}`:`Failed: ${d.error||JSON.stringify(d)}`,!d.ok);
+  }catch(e){updateToolMsg(el,'Error: '+e.message,true);}
+}
+async function toolLobbyAgents(){
+  const el=toolMsg('lobby_agents','Fetching registered agents…','',false);
+  try{
+    const r=await fetch(`${API}/api/tools/lobby/agents`);const d=await r.json();
+    updateToolMsg(el,d.ok&&d.agents?.length?(Array.isArray(d.agents)?d.agents:Object.values(d.agents)).map(a=>`${a.name||a.id} [${a.role||'?'}] ${a.status||''}`).join('\n'):`No agents found or lobby offline: ${d.error||''}`,!d.ok);
+  }catch(e){updateToolMsg(el,'Error: '+e.message+' — Start: python3 ai_lobby.py',true);}
+}
+async function toolLobbyBroadcast(){
+  const msg=prompt('Broadcast message to all agents:');if(!msg)return;
+  const el=toolMsg('lobby_broadcast',`Broadcasting: "${msg}"`, '',false);
+  try{
+    const r=await fetch(`${API}/api/tools/lobby/broadcast`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
+    const d=await r.json();
+    updateToolMsg(el,d.ok?`✓ Broadcast sent`:`Failed: ${d.error||'lobby offline'}`,!d.ok);
+  }catch(e){updateToolMsg(el,'Error: '+e.message,true);}
+}
+
 // ── BOOT ──
 connect();
 connectTerm();
 sysMsg('Lumenis Reactor Core — Sovereign Interface v3.0 online');
-sysMsg('18 tools loaded across 7 subsystems: Memory · Discord · GitHub · Supabase · System · Network · Terminal');
+sysMsg('21 tools across 8 subsystems: Memory · Discord · GitHub · Supabase · System · Network · Terminal · Lobby');
 </script>
 </body>
 </html>

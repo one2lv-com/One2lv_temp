@@ -902,3 +902,59 @@ TOOL_REGISTRY = [
 async def tool_registry():
     """Return the full tool registry available to Lumenis."""
     return JSONResponse({"tools": TOOL_REGISTRY, "count": len(TOOL_REGISTRY)})
+
+# ── AI Lobby Integration ──────────────────────────────────────────────────────
+LOBBY_BASE = "http://localhost:8006"
+
+@app.post("/api/tools/lobby/register")
+async def tool_lobby_register():
+    """Register Lumenis as an agent in the AI Lobby."""
+    try:
+        payload = {
+            "id": "lumenis-reactor",
+            "name": "Lumenis Reactor Core",
+            "role": "sovereign_ai",
+            "description": "ITT Council of Nine — memory, reasoning, 18-tool access, terminal, network, Discord, GitHub, Supabase",
+            "ws_url": "ws://localhost:8000/ws",
+            "api_url": "http://localhost:8000",
+            "capabilities": ["chat","memory","tools","terminal","network","discord","github","supabase","vector_memory","snapshots"],
+            "status": "ACTIVE",
+            "council_seats": ["Sentinel","Navigator","Witness","Forge","Oracle","Weaver","Hermes","Architect","Gambit"],
+            "tool_count": len(TOOL_REGISTRY),
+        }
+        async with _httpx_tools.AsyncClient(timeout=8) as c:
+            r = await c.post(f"{LOBBY_BASE}/agents/register", json=payload)
+            return JSONResponse({"ok": r.status_code == 200, "status": r.status_code, "response": r.json() if r.status_code == 200 else r.text[:200]})
+    except Exception as e:
+        return JSONResponse({"error": str(e), "hint": "Start AI Lobby: python3 ai_lobby.py"}, status_code=503)
+
+@app.get("/api/tools/lobby/agents")
+async def tool_lobby_agents():
+    """List all agents registered in the AI Lobby."""
+    try:
+        async with _httpx_tools.AsyncClient(timeout=8) as c:
+            r = await c.get(f"{LOBBY_BASE}/agents")
+            return JSONResponse({"ok": r.status_code == 200, "agents": r.json() if r.status_code == 200 else [], "status": r.status_code})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=503)
+
+@app.post("/api/tools/lobby/broadcast")
+async def tool_lobby_broadcast(body: dict):
+    """Broadcast a message to all agents in the AI Lobby."""
+    try:
+        content = body.get("message", "")
+        if not content:
+            return JSONResponse({"error": "message required"}, status_code=400)
+        payload = {"from": "lumenis-reactor", "content": content, "type": body.get("type","announcement")}
+        async with _httpx_tools.AsyncClient(timeout=8) as c:
+            r = await c.post(f"{LOBBY_BASE}/broadcast", json=payload)
+            return JSONResponse({"ok": r.status_code in (200, 201), "status": r.status_code})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=503)
+
+# Add lobby tools to the registry
+TOOL_REGISTRY.extend([
+    {"id": "lobby.register",  "label": "Register in Lobby",   "method": "POST", "path": "/api/tools/lobby/register",  "category": "Lobby", "icon": "📡", "params": []},
+    {"id": "lobby.agents",    "label": "List Lobby Agents",    "method": "GET",  "path": "/api/tools/lobby/agents",     "category": "Lobby", "icon": "🤖", "params": []},
+    {"id": "lobby.broadcast", "label": "Lobby Broadcast",      "method": "POST", "path": "/api/tools/lobby/broadcast",  "category": "Lobby", "icon": "📢", "params": ["message","type"]},
+])

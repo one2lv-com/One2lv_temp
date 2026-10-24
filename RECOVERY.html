@@ -6,374 +6,292 @@
     <title>ONE2LVOS Recovery Console</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: 'Courier New', monospace;
-            background: #000;
-            color: #f80;
-            padding: 20px;
-        }
-
-        .recovery-container {
-            max-width: 1000px;
-            margin: 0 auto;
-            border: 3px solid #f80;
-            padding: 20px;
-        }
-
-        .recovery-header {
-            text-align: center;
-            border-bottom: 2px solid #f80;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-        }
-
-        .recovery-title {
-            font-size: 24px;
-            color: #ff0;
-            animation: flash 1s infinite;
-        }
-
-        @keyframes flash {
-            0%, 50%, 100% { opacity: 1; }
-            25%, 75% { opacity: 0.3; }
-        }
-
-        .warning {
-            background: rgba(255, 136, 0, 0.2);
-            border: 2px solid #f80;
-            padding: 15px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .recovery-section {
-            border: 1px solid #f80;
-            padding: 15px;
-            margin-bottom: 15px;
-            background: rgba(255, 136, 0, 0.05);
-        }
-
-        .recovery-section h2 {
-            color: #ff0;
-            margin-bottom: 15px;
-            font-size: 16px;
-        }
-
+        body { font-family: 'Courier New', monospace; background: #000; color: #f80; padding: 20px; }
+        .recovery-container { max-width: 1000px; margin: 0 auto; border: 3px solid #f80; padding: 20px; }
+        .recovery-header { text-align: center; border-bottom: 2px solid #f80; padding-bottom: 15px; margin-bottom: 20px; }
+        .recovery-title { font-size: 24px; color: #ff0; animation: flash 1.5s infinite; }
+        @keyframes flash { 0%,60%,100%{opacity:1} 30%,80%{opacity:.35} }
+        .warning { background: rgba(255,136,0,.18); border: 2px solid #f80; padding: 12px; margin-bottom: 18px; text-align: center; }
+        .recovery-section { border: 1px solid #f80; padding: 14px; margin-bottom: 14px; background: rgba(255,136,0,.04); }
+        .recovery-section h2 { color: #ff0; margin-bottom: 12px; font-size: 15px; }
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .btn-grid.single { grid-template-columns: 1fr; }
         .recovery-btn {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            margin: 5px 0;
-            background: rgba(255, 136, 0, 0.2);
-            border: 2px solid #f80;
-            color: #f80;
-            cursor: pointer;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            transition: all 0.3s;
-            text-align: left;
+            padding: 11px 12px; background: rgba(255,136,0,.14); border: 2px solid #f80;
+            color: #f80; cursor: pointer; font-family: 'Courier New', monospace; font-size: 13px;
+            transition: all .2s; text-align: left; border-radius: 3px;
         }
-
-        .recovery-btn:hover {
-            background: rgba(255, 136, 0, 0.4);
-            color: #ff0;
-            border-color: #ff0;
-            padding-left: 20px;
-        }
-
-        .recovery-btn::before {
-            content: '⚠️ ';
-            margin-right: 10px;
-        }
-
+        .recovery-btn:hover { background: rgba(255,136,0,.35); color: #ff0; border-color: #ff0; padding-left: 18px; }
+        .recovery-btn:active { background: rgba(255,136,0,.5); }
+        .recovery-btn.green { border-color: #0f0; color: #0f0; background: rgba(0,255,0,.07); }
+        .recovery-btn.green:hover { background: rgba(0,255,0,.18); border-color: #0f0; color: #0f0; }
+        .recovery-btn.red { border-color: #f33; color: #f33; background: rgba(255,0,0,.07); }
+        .recovery-btn.red:hover { background: rgba(255,0,0,.18); }
+        .recovery-btn.cyan { border-color: #0ff; color: #0ff; background: rgba(0,255,255,.05); }
+        .recovery-btn.cyan:hover { background: rgba(0,255,255,.15); border-color: #0ff; color: #0ff; }
         .console-output {
-            background: #000;
-            border: 2px solid #f80;
-            padding: 15px;
-            min-height: 200px;
-            max-height: 400px;
-            overflow-y: auto;
-            margin-top: 15px;
-            font-size: 12px;
+            background: #000; border: 2px solid #f80; padding: 12px;
+            min-height: 180px; max-height: 380px; overflow-y: auto; margin-top: 14px; font-size: 12px; line-height: 1.6;
         }
-
-        .quick-links {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .quick-link {
-            padding: 10px;
-            background: rgba(255, 136, 0, 0.1);
-            border: 1px solid #f80;
-            text-align: center;
-            color: #f80;
-            text-decoration: none;
-            transition: all 0.3s;
-        }
-
-        .quick-link:hover {
-            background: rgba(255, 136, 0, 0.3);
-            color: #ff0;
-        }
-
-        .embed-viewer {
-            margin-top: 20px;
-            border: 3px solid #f80;
-            display: none;
-        }
-
-        .embed-viewer.active {
-            display: block;
-        }
-
-        .embed-viewer iframe {
-            width: 100%;
-            height: 600px;
-            border: none;
-        }
-
-        .embed-header {
-            background: #f80;
-            color: #000;
-            padding: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .close-embed {
-            background: #000;
-            color: #f80;
-            border: none;
-            padding: 5px 15px;
-            cursor: pointer;
-            font-family: 'Courier New', monospace;
-        }
+        .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 8px; margin-top: 10px; }
+        .status-card { border: 1px solid #555; padding: 8px 12px; border-radius: 3px; display: flex; justify-content: space-between; align-items: center; }
+        .status-card.up { border-color: #0f0; }
+        .status-card.down { border-color: #f33; }
+        .status-card.checking { border-color: #f80; animation: blink-border .6s infinite alternate; }
+        @keyframes blink-border { from{opacity:.5} to{opacity:1} }
+        .svc-name { font-size: 12px; }
+        .svc-status { font-size: 11px; font-weight: bold; }
+        .svc-status.up { color: #0f0; }
+        .svc-status.down { color: #f33; }
+        .svc-status.checking { color: #f80; }
+        .quick-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 8px; margin-top: 12px; }
+        .quick-link { padding: 9px; background: rgba(255,136,0,.08); border: 1px solid #f80; text-align: center; color: #f80; text-decoration: none; transition: all .2s; font-size: 13px; border-radius: 2px; }
+        .quick-link:hover { background: rgba(255,136,0,.28); color: #ff0; }
+        .quick-link.cyan { border-color: #0ff; color: #0ff; background: rgba(0,255,255,.05); }
+        .quick-link.cyan:hover { background: rgba(0,255,255,.18); }
+        .embed-viewer { margin-top: 16px; border: 3px solid #f80; display: none; }
+        .embed-viewer.active { display: block; }
+        .embed-viewer iframe { width: 100%; height: 620px; border: none; }
+        .embed-header { background: #f80; color: #000; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        .close-embed { background: #000; color: #f80; border: 2px solid #f80; padding: 4px 14px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 13px; }
+        .close-embed:hover { background: #f80; color: #000; }
     </style>
 </head>
 <body>
-    <div class="recovery-container">
-        <div class="recovery-header">
-            <div class="recovery-title">⚠️ ONE2LVOS RECOVERY CONSOLE ⚠️</div>
-            <div style="font-size: 12px; margin-top: 10px;">System Recovery & Emergency Boot Mode</div>
-        </div>
+<div class="recovery-container">
+    <div class="recovery-header">
+        <div class="recovery-title">⚠ ONE2LVOS RECOVERY CONSOLE ⚠</div>
+        <div style="font-size:12px;margin-top:8px;color:#aaa">System Recovery &amp; Emergency Boot Mode — One2lvOS v2.0</div>
+    </div>
 
-        <div class="warning">
-            <strong>⚠️ WARNING ⚠️</strong><br>
-            You are in Recovery Mode. Use these tools to diagnose and recover system services.
-        </div>
+    <div class="warning">
+        <strong>⚠ RECOVERY MODE ACTIVE ⚠</strong><br>
+        Diagnose and restart services. Lumenis Reactor Core runs on port 8000.
+    </div>
 
-        <!-- Quick Recovery -->
-        <div class="recovery-section">
-            <h2>🚀 QUICK RECOVERY</h2>
-            <button class="recovery-btn" onclick="quickBoot('all')">Boot All Services</button>
-            <button class="recovery-btn" onclick="quickBoot('frontend')">Boot Frontend Only</button>
-            <button class="recovery-btn" onclick="quickBoot('backend')">Boot Backend Only</button>
-            <button class="recovery-btn" onclick="quickBoot('bios')">Return to BIOS</button>
+    <!-- Service Status -->
+    <div class="recovery-section">
+        <h2>📡 LIVE SERVICE STATUS</h2>
+        <div class="btn-grid">
+            <button class="recovery-btn cyan" onclick="checkAllServices()">⟳ Scan All Services</button>
+            <button class="recovery-btn cyan" onclick="checkService('reactor',8000,'/api/status')">⟳ Check Reactor</button>
         </div>
+        <div class="status-grid" id="status-grid"></div>
+    </div>
 
-        <!-- Service Recovery -->
-        <div class="recovery-section">
-            <h2>🔧 SERVICE RECOVERY</h2>
-            <button class="recovery-btn" onclick="recoverService('dashboard')">Recover Dashboard (9000)</button>
-            <button class="recovery-btn" onclick="recoverService('agent')">Recover Agent Hub (5173)</button>
-            <button class="recovery-btn" onclick="recoverService('minimax')">Recover Minimax AI (8080)</button>
-            <button class="recovery-btn" onclick="recoverService('reactor')">Recover Reactor Core (8000)</button>
-            <button class="recovery-btn" onclick="recoverService('hud')">Recover Infinity HUD (4000)</button>
-        </div>
-
-        <!-- Embedded Services -->
-        <div class="recovery-section">
-            <h2>📦 EMBEDDED ACCESS</h2>
-            <button class="recovery-btn" onclick="embedService('http://localhost:9000/FRONTEND_ACCESS.html')">Load Access Portal</button>
-            <button class="recovery-btn" onclick="embedService('http://localhost:9000/unified-dashboard.html')">Load Dashboard</button>
-            <button class="recovery-btn" onclick="embedService('http://localhost:9000/tasks.html')">Load Task Manager</button>
-            <button class="recovery-btn" onclick="embedService('http://localhost:5173')">Load Agent Hub</button>
-        </div>
-
-        <!-- Diagnostics -->
-        <div class="recovery-section">
-            <h2>🔍 DIAGNOSTICS</h2>
-            <button class="recovery-btn" onclick="runRecoveryDiag('full')">Full System Diagnostic</button>
-            <button class="recovery-btn" onclick="runRecoveryDiag('network')">Network Test</button>
-            <button class="recovery-btn" onclick="runRecoveryDiag('memory')">Memory Test</button>
-            <button class="recovery-btn" onclick="runRecoveryDiag('clear')">Clear Console</button>
-        </div>
-
-        <!-- Console Output -->
-        <div id="console-output" class="console-output">
-            [RECOVERY] ONE2LVOS Recovery Console initialized<br>
-            [RECOVERY] Waiting for commands...<br>
-        </div>
-
-        <!-- Quick Links -->
-        <div class="recovery-section">
-            <h2>🔗 QUICK ACCESS LINKS</h2>
-            <div class="quick-links">
-                <a href="BIOS_BOOT.html" class="quick-link">BIOS Boot</a>
-                <a href="http://localhost:9000/FRONTEND_ACCESS.html" target="_blank" class="quick-link">Access Portal</a>
-                <a href="http://localhost:9000/START_HERE.md" target="_blank" class="quick-link">Documentation</a>
-                <a href="http://localhost:8080/health" target="_blank" class="quick-link">Health Check</a>
-            </div>
-        </div>
-
-        <!-- Embed Viewer -->
-        <div id="embed-viewer" class="embed-viewer">
-            <div class="embed-header">
-                <span id="embed-title">Loading...</span>
-                <button class="close-embed" onclick="closeEmbed()">✕ CLOSE</button>
-            </div>
-            <iframe id="embed-frame"></iframe>
+    <!-- Quick Recovery -->
+    <div class="recovery-section">
+        <h2>🚀 QUICK RECOVERY</h2>
+        <div class="btn-grid">
+            <button class="recovery-btn green" onclick="bootReactor()">▶ Start Lumenis Reactor (8000)</button>
+            <button class="recovery-btn green" onclick="bootLobby()">▶ Start AI Lobby (8006)</button>
+            <button class="recovery-btn" onclick="quickBoot('frontend')">▶ Boot Frontend Server</button>
+            <button class="recovery-btn" onclick="quickBoot('bios')">⟵ Return to BIOS</button>
         </div>
     </div>
 
-    <script>
-        function log(msg, type = 'INFO') {
-            const output = document.getElementById('console-output');
-            const time = new Date().toLocaleTimeString();
-            const color = type === 'ERROR' ? '#f00' : type === 'SUCCESS' ? '#0f0' : '#f80';
-            output.innerHTML += `<span style="color: ${color}">[${time}] [${type}] ${msg}</span><br>`;
-            output.scrollTop = output.scrollHeight;
-        }
+    <!-- Service Recovery -->
+    <div class="recovery-section">
+        <h2>🔧 SERVICE RECOVERY COMMANDS</h2>
+        <div class="btn-grid">
+            <button class="recovery-btn" onclick="showCmd('reactor')">Reactor Core (8000)</button>
+            <button class="recovery-btn" onclick="showCmd('lobby')">AI Lobby (8006)</button>
+            <button class="recovery-btn" onclick="showCmd('desktop')">Desktop UI (file)</button>
+            <button class="recovery-btn" onclick="showCmd('env')">Load Environment</button>
+        </div>
+    </div>
 
-        function quickBoot(mode) {
-            log(`Initiating quick boot: ${mode.toUpperCase()}`, 'INFO');
+    <!-- Embedded Services -->
+    <div class="recovery-section">
+        <h2>📦 EMBEDDED ACCESS</h2>
+        <div class="btn-grid">
+            <button class="recovery-btn cyan" onclick="embedService('http://localhost:8000/lumenis-chat','Lumenis Chat')">Load Lumenis Chat</button>
+            <button class="recovery-btn cyan" onclick="embedService('http://localhost:8000/hud','Reactor HUD')">Load Reactor HUD</button>
+            <button class="recovery-btn" onclick="embedService('one2lvos-desktop.html','One2lvOS Desktop')">Load Desktop</button>
+            <button class="recovery-btn" onclick="embedService('http://localhost:8000/api/status','API Status JSON')">API Status</button>
+        </div>
+    </div>
 
-            switch(mode) {
-                case 'all':
-                    log('Starting all services...', 'INFO');
-                    log('Command: ./start-all.sh', 'INFO');
-                    setTimeout(() => log('All services started', 'SUCCESS'), 2000);
-                    break;
-                case 'frontend':
-                    log('Starting frontend services...', 'INFO');
-                    log('Command: ./start-frontend.sh', 'INFO');
-                    setTimeout(() => log('Frontend services started', 'SUCCESS'), 1500);
-                    break;
-                case 'backend':
-                    log('Starting backend services...', 'INFO');
-                    log('Command: cd ∆Gemini_Root∆/core && python3 main.py', 'INFO');
-                    setTimeout(() => log('Backend services started', 'SUCCESS'), 1500);
-                    break;
-                case 'bios':
-                    log('Returning to BIOS...', 'INFO');
-                    setTimeout(() => window.location.href = 'BIOS_BOOT.html', 1000);
-                    break;
+    <!-- Diagnostics -->
+    <div class="recovery-section">
+        <h2>🔍 DIAGNOSTICS</h2>
+        <div class="btn-grid">
+            <button class="recovery-btn" onclick="runDiag('full')">Full System Diagnostic</button>
+            <button class="recovery-btn" onclick="runDiag('reactor')">Reactor Deep Check</button>
+            <button class="recovery-btn" onclick="runDiag('memory')">Memory / Facts Check</button>
+            <button class="recovery-btn red" onclick="clearConsole()">✕ Clear Console</button>
+        </div>
+    </div>
+
+    <!-- Console -->
+    <div id="console-output" class="console-output">
+        <span style="color:#0f0">[RECOVERY] Console initialized — One2lvOS v2.0</span><br>
+        <span style="color:#f80">[RECOVERY] Primary service: Lumenis Reactor Core → http://localhost:8000</span><br>
+        <span style="color:#f80">[RECOVERY] Chat UI: http://localhost:8000/lumenis-chat</span><br>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="recovery-section" style="margin-top:14px">
+        <h2>🔗 QUICK ACCESS</h2>
+        <div class="quick-links">
+            <a href="http://localhost:8000/lumenis-chat" target="_blank" class="quick-link cyan">Lumenis Chat</a>
+            <a href="http://localhost:8000/hud" target="_blank" class="quick-link cyan">Reactor HUD</a>
+            <a href="http://localhost:8000/api/status" target="_blank" class="quick-link">API Status</a>
+            <a href="http://localhost:8000/api/facts/all" target="_blank" class="quick-link">All Facts</a>
+            <a href="one2lvos-desktop.html" class="quick-link">Desktop</a>
+            <a href="BIOS_BOOT.html" class="quick-link">BIOS Boot</a>
+        </div>
+    </div>
+
+    <!-- Embed Viewer -->
+    <div id="embed-viewer" class="embed-viewer">
+        <div class="embed-header">
+            <span id="embed-title">Loading...</span>
+            <button class="close-embed" onclick="closeEmbed()">✕ CLOSE</button>
+        </div>
+        <iframe id="embed-frame"></iframe>
+    </div>
+</div>
+
+<script>
+const SERVICES = [
+    { id: 'reactor',  name: 'Lumenis Reactor',  port: 8000, url: 'http://localhost:8000/api/status' },
+    { id: 'lobby',    name: 'AI Lobby',          port: 8006, url: 'http://localhost:8006/' },
+    { id: 'desktop',  name: 'HTTP Server',        port: 9000, url: 'http://localhost:9000/' },
+    { id: 'arcade',   name: 'AI Arcade',          port: 8080, url: 'http://localhost:8080/' },
+];
+
+const CMDS = {
+    reactor: 'cd /home/vercel-sandbox/One2lvos\nset -a && source .env && set +a\npython3 -m uvicorn lumenis-main:app --host 0.0.0.0 --port 8000',
+    lobby:   'cd /home/vercel-sandbox/One2lvos\npython3 ai_lobby.py',
+    desktop: 'cd /home/vercel-sandbox/One2lvos\npython3 -m http.server 9000',
+    env:     'cd /home/vercel-sandbox/One2lvos\nexport $(grep -v "^#" .env | grep "=" | xargs)'
+};
+
+function log(msg, type) {
+    const out = document.getElementById('console-output');
+    const t = new Date().toLocaleTimeString();
+    const colors = { ERROR:'#f44', SUCCESS:'#0f0', INFO:'#f80', CMD:'#0ff', WARN:'#ff0' };
+    const c = colors[type] || '#f80';
+    out.innerHTML += `<span style="color:${c}">[${t}] [${type||'INFO'}] ${msg}</span><br>`;
+    out.scrollTop = out.scrollHeight;
+}
+
+function clearConsole() {
+    document.getElementById('console-output').innerHTML = '<span style="color:#0f0">[RECOVERY] Console cleared</span><br>';
+}
+
+async function checkService(id, port, path) {
+    const url = `http://localhost:${port}${path||'/'}`;
+    const card = document.getElementById(`sc-${id}`);
+    if (card) { card.className = 'status-card checking'; card.querySelector('.svc-status').textContent = 'CHECKING...'; card.querySelector('.svc-status').className = 'svc-status checking'; }
+    try {
+        const r = await fetch(url, { signal: AbortSignal.timeout(4000) });
+        const ok = r.ok;
+        if (card) { card.className = `status-card ${ok?'up':'down'}`; const s = card.querySelector('.svc-status'); s.textContent = ok?'ONLINE':'ERROR'; s.className = `svc-status ${ok?'up':'down'}`; }
+        log(`${id.toUpperCase()} :${port} → ${ok?'ONLINE':'HTTP '+r.status}`, ok?'SUCCESS':'WARN');
+        return ok;
+    } catch (e) {
+        if (card) { card.className = 'status-card down'; const s = card.querySelector('.svc-status'); s.textContent = 'OFFLINE'; s.className = 'svc-status down'; }
+        log(`${id.toUpperCase()} :${port} → OFFLINE`, 'ERROR');
+        return false;
+    }
+}
+
+async function checkAllServices() {
+    log('Scanning all services...', 'INFO');
+    const grid = document.getElementById('status-grid');
+    grid.innerHTML = SERVICES.map(s => `
+        <div class="status-card checking" id="sc-${s.id}">
+            <span class="svc-name">${s.name} :${s.port}</span>
+            <span class="svc-status checking">CHECKING...</span>
+        </div>`).join('');
+    for (const svc of SERVICES) {
+        await checkService(svc.id, svc.port, new URL(svc.url).pathname);
+    }
+    log('Scan complete.', 'SUCCESS');
+}
+
+function showCmd(key) {
+    const cmd = CMDS[key];
+    if (!cmd) return;
+    log('--- Recovery command ---', 'CMD');
+    cmd.split('\n').forEach(l => log(l, 'CMD'));
+    log('--- Copy and run in terminal ---', 'CMD');
+}
+
+function bootReactor() {
+    log('Reactor recovery command:', 'INFO');
+    showCmd('reactor');
+    log('Check: http://localhost:8000/api/status', 'INFO');
+    setTimeout(() => checkService('reactor', 8000, '/api/status'), 3000);
+}
+
+function bootLobby() {
+    log('AI Lobby recovery command:', 'INFO');
+    showCmd('lobby');
+    setTimeout(() => checkService('lobby', 8006, '/'), 3000);
+}
+
+function quickBoot(mode) {
+    if (mode === 'bios') { window.location.href = 'BIOS_BOOT.html'; return; }
+    if (mode === 'frontend') { showCmd('desktop'); return; }
+    log(`Boot mode: ${mode}`, 'INFO');
+}
+
+async function runDiag(type) {
+    if (type === 'full') {
+        log('=== FULL SYSTEM DIAGNOSTIC ===', 'INFO');
+        await checkAllServices();
+        try {
+            const r = await fetch('http://localhost:8000/api/status', { signal: AbortSignal.timeout(5000) });
+            if (r.ok) {
+                const d = await r.json();
+                log(`Reactor model: ${d.reactor?.model}`, 'SUCCESS');
+                log(`Pulses: ${d.reactor?.pulse_count} | Uptime: ${Math.round(d.reactor?.uptime_seconds||0)}s`, 'SUCCESS');
+                log(`Sessions: ${d.compass?.sessions} | Facts: ${d.compass?.facts}`, 'SUCCESS');
             }
-        }
+        } catch(e) { log('Reactor unreachable: ' + e.message, 'ERROR'); }
+        log('Diagnostic complete.', 'SUCCESS');
+    } else if (type === 'reactor') {
+        log('=== REACTOR DEEP CHECK ===', 'INFO');
+        try {
+            const r = await fetch('http://localhost:8000/api/status', { signal: AbortSignal.timeout(5000) });
+            const d = await r.json();
+            log('Reactor: ' + JSON.stringify(d.reactor), 'SUCCESS');
+            log('Compass: ' + JSON.stringify(d.compass), 'SUCCESS');
+            const r2 = await fetch('http://localhost:8000/api/tools/registry');
+            const d2 = await r2.json();
+            log(`Tool registry: ${d2.count} tools available`, 'SUCCESS');
+        } catch(e) { log('Error: ' + e.message, 'ERROR'); }
+    } else if (type === 'memory') {
+        log('=== MEMORY / FACTS CHECK ===', 'INFO');
+        try {
+            const r = await fetch('http://localhost:8000/api/facts/all', { signal: AbortSignal.timeout(5000) });
+            const d = await r.json();
+            log(`FluxCompass facts: ${d.count}`, 'SUCCESS');
+            (d.facts||[]).slice(0,6).forEach(f => log(`  [${(f.key||'').slice(0,30)}] ${String(f.value||'').slice(0,80)}`, 'INFO'));
+        } catch(e) { log('Error: ' + e.message, 'ERROR'); }
+    }
+}
 
-        function recoverService(service) {
-            log(`Recovering service: ${service.toUpperCase()}`, 'INFO');
+function embedService(url, title) {
+    document.getElementById('embed-frame').src = url;
+    document.getElementById('embed-title').textContent = title || url;
+    document.getElementById('embed-viewer').classList.add('active');
+    log(`Embedded: ${url}`, 'INFO');
+}
 
-            const commands = {
-                dashboard: 'python3 -m http.server 9000',
-                agent: 'cd minimax/agent-hub && npm run dev',
-                minimax: 'pm2 restart one2lvos-minimax',
-                reactor: 'cd ∆Gemini_Root∆/core && python3 main.py',
-                hud: 'cd ∆Gemini_Root∆/ui && node server.js'
-            };
+function closeEmbed() {
+    document.getElementById('embed-viewer').classList.remove('active');
+    document.getElementById('embed-frame').src = '';
+    log('Embed closed.', 'INFO');
+}
 
-            log(`Command: ${commands[service]}`, 'INFO');
-            log(`Checking service status...`, 'INFO');
-
-            setTimeout(() => {
-                checkServiceHealth(service);
-            }, 2000);
-        }
-
-        async function checkServiceHealth(service) {
-            const ports = {
-                dashboard: 9000,
-                agent: 5173,
-                minimax: 8080,
-                reactor: 8000,
-                hud: 4000
-            };
-
-            try {
-                const res = await fetch(`http://localhost:${ports[service]}/`);
-                log(`✅ ${service.toUpperCase()} is ONLINE (Port ${ports[service]})`, 'SUCCESS');
-            } catch (e) {
-                log(`❌ ${service.toUpperCase()} is OFFLINE (Port ${ports[service]})`, 'ERROR');
-                log(`Manual recovery required`, 'ERROR');
-            }
-        }
-
-        function embedService(url) {
-            const viewer = document.getElementById('embed-viewer');
-            const frame = document.getElementById('embed-frame');
-            const title = document.getElementById('embed-title');
-
-            log(`Loading embedded service: ${url}`, 'INFO');
-
-            frame.src = url;
-            title.textContent = url;
-            viewer.classList.add('active');
-
-            log('Service loaded in embedded viewer', 'SUCCESS');
-        }
-
-        function closeEmbed() {
-            const viewer = document.getElementById('embed-viewer');
-            const frame = document.getElementById('embed-frame');
-
-            viewer.classList.remove('active');
-            frame.src = '';
-            log('Embedded viewer closed', 'INFO');
-        }
-
-        async function runRecoveryDiag(type) {
-            log(`Running ${type.toUpperCase()} diagnostic...`, 'INFO');
-
-            if (type === 'clear') {
-                document.getElementById('console-output').innerHTML = '[RECOVERY] Console cleared<br>';
-                return;
-            }
-
-            if (type === 'full') {
-                log('=== FULL SYSTEM DIAGNOSTIC ===', 'INFO');
-                log('Checking all services...', 'INFO');
-
-                const services = [
-                    { name: 'Dashboard', port: 9000 },
-                    { name: 'Agent Hub', port: 5173 },
-                    { name: 'Minimax AI', port: 8080 },
-                    { name: 'Reactor', port: 8000 },
-                    { name: 'HUD', port: 4000 }
-                ];
-
-                for (const service of services) {
-                    try {
-                        await fetch(`http://localhost:${service.port}/`);
-                        log(`✅ ${service.name}: ONLINE (${service.port})`, 'SUCCESS');
-                    } catch (e) {
-                        log(`❌ ${service.name}: OFFLINE (${service.port})`, 'ERROR');
-                    }
-                }
-
-                log('Diagnostic complete', 'SUCCESS');
-            } else if (type === 'network') {
-                log('=== NETWORK DIAGNOSTIC ===', 'INFO');
-                log('Testing network connectivity...', 'INFO');
-                log('✅ localhost: REACHABLE', 'SUCCESS');
-                log('✅ Ports 4000-9000: AVAILABLE', 'SUCCESS');
-                log('Network test complete', 'SUCCESS');
-            } else if (type === 'memory') {
-                log('=== MEMORY DIAGNOSTIC ===', 'INFO');
-                log('L1 Memory: Astra DB (aria_memory_v2, 2048-dim)', 'INFO');
-                log('L2 Memory: Supabase (7 tables)', 'INFO');
-                log('✅ Memory configuration: VALID', 'SUCCESS');
-                log('Memory test complete', 'SUCCESS');
-            }
-        }
-
-        // Initial system check
-        log('Recovery console ready', 'SUCCESS');
-        log('Type command or use buttons above', 'INFO');
-    </script>
+// Auto-check reactor on load
+window.onload = () => {
+    setTimeout(checkAllServices, 400);
+};
+</script>
 </body>
 </html>
