@@ -12,7 +12,9 @@ import asyncio
 import time
 import json
 import os
+import sqlite3
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -957,4 +959,159 @@ TOOL_REGISTRY.extend([
     {"id": "lobby.register",  "label": "Register in Lobby",   "method": "POST", "path": "/api/tools/lobby/register",  "category": "Lobby", "icon": "📡", "params": []},
     {"id": "lobby.agents",    "label": "List Lobby Agents",    "method": "GET",  "path": "/api/tools/lobby/agents",     "category": "Lobby", "icon": "🤖", "params": []},
     {"id": "lobby.broadcast", "label": "Lobby Broadcast",      "method": "POST", "path": "/api/tools/lobby/broadcast",  "category": "Lobby", "icon": "📢", "params": ["message","type"]},
+])
+
+# =============================================================================
+#  VectorFS — persistent cosine-similarity search (mirrors interplanetary-disk)
+# =============================================================================
+import struct, math as _math
+
+_DB_PATH = os.path.join(os.path.dirname(__file__), "compass.db")
+
+def _vec_db():
+    """Return a compass.db connection with vectors + checkpoints tables ensured."""
+    conn = sqlite3.connect(_DB_PATH)
+    conn.execute("""CREATE TABLE IF NOT EXISTS vectors (
+        id         TEXT PRIMARY KEY,
+        path       TEXT NOT NULL,
+        vector     BLOB NOT NULL,
+        dimension  INTEGER NOT NULL,
+        updated_at TEXT NOT NULL
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS checkpoints (
+        id         TEXT PRIMARY KEY,
+        label      TEXT NOT NULL,
+        state_json TEXT NOT NULL,
+        created_at REAL NOT NULL
+    )""")
+    conn.commit()
+    return conn
+
+def _encode_vec(v: list) -> bytes:
+    return struct.pack(f'{len(v)}f', *v)
+
+def _decode_vec(b: bytes) -> list:
+    n = len(b) // 4
+    return list(struct.unpack(f'{n}f', b))
+
+def _cosine(a, b):
+    if len(a) != len(b): return 0.0
+    dot = sum(x*y for x,y in zip(a,b))
+    na  = _math.sqrt(sum(x*x for x in a))
+    nb  = _math.sqrt(sum(x*x for x in b))
+    return dot / (na * nb) if na and nb else 0.0
+
+
+@app.post("/vectorfs/index")
+async def vectorfs_index(body: dict):
+    """Index a path+vector pair into the persistent vector store."""
+    path   = body.get("path","").strip()
+    vector = body.get("vector",[])
+    if not path or not vector:
+        return JSONResponse({"error": "path and vector required"}, status_code=400)
+    vid = f"{path}_{int(datetime.now().timestamp()*1000)}"
+    try:
+        conn = _vec_db()
+        conn.execute(
+            "INSERT OR REPLACE INTO vectors (id, path, vector, dimension, updated_at) VALUES (?,?,?,?,?)",
+            (path, path, _encode_vec(vector), len(vector), datetime.now().isoformat())
+        )
+        conn.commit(); conn.close()
+        return JSONResponse({"indexed": path, "dimension": len(vector)})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/vectorfs/search")
+async def vectorfs_search(body: dict):
+    """Cosine-similarity search over the persistent vector store."""
+    query = body.get("queryVector", body.get("vector", []))
+    top_k = int(body.get("topK", body.get("top_k", 10)))
+    if not query:
+        return JSONResponse({"error": "queryVector required"}, status_code=400)
+    try:
+        conn  = _vec_db()
+        rows  = conn.execute("SELECT path, vector FROM vectors").fetchall()
+        conn.close()
+        results = sorted(
+            [{"path": r[0], "similarity": _cosine(query, _decode_vec(r[1]))} for r in rows],
+            key=lambda x: x["similarity"], reverse=True
+        )
+        return JSONResponse({"results": results[:top_k], "total_indexed": len(rows)})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/vectorfs/stats")
+async def vectorfs_stats():
+    """Return VectorFS index statistics."""
+    try:
+        conn = _vec_db()
+        count = conn.execute("SELECT COUNT(*) FROM vectors").fetchone()[0]
+        recent = conn.execute("SELECT path, updated_at FROM vectors ORDER BY updated_at DESC LIMIT 5").fetchall()
+        conn.close()
+        return JSONResponse({"indexed_count": count, "recent": [{"path":r[0],"updated_at":r[1]} for r in recent]})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# =============================================================================
+#  Checkpoints — persistent to compass.db
+# =============================================================================
+import json as _json_mod
+
+@app.post("/api/checkpoints")
+async def create_checkpoint(body: dict):
+    """Create a named checkpoint persisted to compass.db."""
+    label      = body.get("label", "auto")
+    state_json = body.get("state", body)
+    cid        = f"checkpoint_{int(datetime.now().timestamp()*1000)}"
+    try:
+        conn = _vec_db()
+        conn.execute(
+            "INSERT INTO checkpoints (id, label, state_json, created_at) VALUES (?,?,?,?)",
+            (cid, label, _json_mod.dumps(state_json), datetime.now().timestamp())
+        )
+        conn.commit(); conn.close()
+        return JSONResponse({"id": cid, "label": label, "created": True})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/api/checkpoints")
+async def list_checkpoints(limit: int = 10):
+    """List recent checkpoints from compass.db."""
+    try:
+        conn = _vec_db()
+        rows = conn.execute(
+            "SELECT id, label, created_at FROM checkpoints ORDER BY created_at DESC LIMIT ?", (limit,)
+        ).fetchall()
+        conn.close()
+        return JSONResponse({"checkpoints": [{"id":r[0],"label":r[1],"created_at":r[2]} for r in rows], "count": len(rows)})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/api/checkpoints/{checkpoint_id}")
+async def get_checkpoint(checkpoint_id: str):
+    """Retrieve a checkpoint's full state from compass.db."""
+    try:
+        conn = _vec_db()
+        row  = conn.execute("SELECT id, label, state_json, created_at FROM checkpoints WHERE id=?", (checkpoint_id,)).fetchone()
+        conn.close()
+        if not row:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse({"id":row[0], "label":row[1], "state":_json_mod.loads(row[2]), "created_at":row[3]})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# Register VectorFS + Checkpoint tools
+TOOL_REGISTRY.extend([
+    {"id": "vectorfs.index",    "label": "VectorFS Index",       "method": "POST", "path": "/vectorfs/index",       "category": "VectorFS",    "icon": "🧭", "params": ["path","vector"]},
+    {"id": "vectorfs.search",   "label": "VectorFS Search",      "method": "POST", "path": "/vectorfs/search",      "category": "VectorFS",    "icon": "🔍", "params": ["queryVector","topK"]},
+    {"id": "vectorfs.stats",    "label": "VectorFS Stats",        "method": "GET",  "path": "/vectorfs/stats",       "category": "VectorFS",    "icon": "📊", "params": []},
+    {"id": "checkpoint.create", "label": "Create Checkpoint",     "method": "POST", "path": "/api/checkpoints",      "category": "Checkpoints", "icon": "💾", "params": ["label","state"]},
+    {"id": "checkpoint.list",   "label": "List Checkpoints",      "method": "GET",  "path": "/api/checkpoints",      "category": "Checkpoints", "icon": "📋", "params": []},
+    {"id": "checkpoint.get",    "label": "Get Checkpoint",        "method": "GET",  "path": "/api/checkpoints/{id}", "category": "Checkpoints", "icon": "📂", "params": ["id"]},
 ])

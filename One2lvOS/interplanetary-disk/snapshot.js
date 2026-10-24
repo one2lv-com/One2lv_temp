@@ -19,6 +19,13 @@
                     timestamp: Date.now()
                 });
 
+                // Also embed snapshot into a PNG for portable boot recovery
+                if (window.PNGBoot) {
+                    PNGBoot.embed(snapshot).then(blob => {
+                        if (blob) Logger.info('Snapshot', 'PNG boot image written');
+                    }).catch(() => {});
+                }
+
                 Logger.info('Snapshot', 'Snapshot created');
                 return snapshot;
             } catch (error) {

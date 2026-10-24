@@ -16,8 +16,18 @@
 
         async recover() {
             try {
-                // Try to restore from latest snapshot
-                const snapshot = await Snapshot.load();
+                // First attempt: boot from embedded PNG snapshot
+                let snapshot = null;
+                if (window.PNGBoot) {
+                    snapshot = await PNGBoot.extract('boot.png');
+                    if (snapshot) Logger.info('Recovery', 'Recovered from PNG boot image');
+                }
+
+                // Fallback: load from Storage
+                if (!snapshot) {
+                    snapshot = await Snapshot.load();
+                }
+
                 if (snapshot) {
                     await Snapshot.restore(snapshot);
                     Logger.info('Recovery', 'System recovered from snapshot');

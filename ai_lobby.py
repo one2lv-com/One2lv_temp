@@ -177,13 +177,13 @@ _INITIAL_AGENTS = [
      "capabilities": ["match prediction", "combo detection", "telemetry"]},
     # steamos AI agents
     {"id": "steamos_coach",       "name": "One2lv Coach",         "system": "SteamOS Lumenis",
-     "role": "coach",              "url": "http://localhost:8080", "protocol": "http",
+     "role": "coach",              "url": "http://localhost:8005", "protocol": "http",
      "capabilities": ["combat coaching", "adaptive learning", "Brawlhalla"]},
     {"id": "steamos_broadcaster", "name": "One2lv Broadcaster",  "system": "SteamOS Lumenis",
-     "role": "broadcaster",        "url": "http://localhost:8080", "protocol": "http",
+     "role": "broadcaster",        "url": "http://localhost:8005", "protocol": "http",
      "capabilities": ["live commentary", "Twitch integration", "stream enhancement"]},
     {"id": "steamos_second",      "name": "One2lv Second Player", "system": "SteamOS Lumenis",
-     "role": "companion",          "url": "http://localhost:8080", "protocol": "http",
+     "role": "companion",          "url": "http://localhost:8005", "protocol": "http",
      "capabilities": ["autonomous gameplay", "co-op partner"]},
     # AI Arcade itself
     {"id": "ai_arcade",           "name": "AI Arcade MCP",        "system": "AI Arcade",
@@ -254,7 +254,7 @@ async def lobby_manifest():
             "ai_arcade":      "http://localhost:8003",
             "unified_gateway":"http://localhost:8888",
             "lumenis_v7":     "http://localhost:8005",
-            "steamos_dash":   "http://localhost:8080",
+            "steamos_dash":   "http://localhost:8005",
             "lumenis_ui":     "http://localhost:9001",
         },
         "lobby_manifest": LOBBY_MANIFEST.format(agent_count=len(AGENTS)),
@@ -346,7 +346,7 @@ async def systems_status():
         "ai_arcade":   "http://localhost:8003",
         "unified_gw":  "http://localhost:8888/status",
         "lumenis_v7":  "http://localhost:8005",
-        "steamos_dash":"http://localhost:8080",
+        "steamos_dash":"http://localhost:8005",
         "lumenis_ui":  "http://localhost:9001",
     }
     results = {}
