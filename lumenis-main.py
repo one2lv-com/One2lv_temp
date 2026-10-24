@@ -1708,3 +1708,190 @@ TOOL_REGISTRY.extend([
     {"id": "recent.clear", "label": "Clear Recent Files",  "method": "DELETE", "path": "/api/recent-files", "category": "Files", "icon": "🗑️", "params": []},
     {"id": "watchdog.ping","label": "Watchdog Status",     "method": "GET",    "path": "/api/facts/all",    "category": "System","icon": "🐕", "params": []},
 ])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RESOURCE REGISTRY — External URLs registered as named One2lvOS resources
+# ─────────────────────────────────────────────────────────────────────────────
+
+RESOURCE_REGISTRY: dict = {
+    "linux_emulator": {
+        "id":           "linux_emulator",
+        "name":         "Personal Linux System With Drive",
+        "description":  (
+            "In-browser x86 Linux emulator with Google Drive integration. "
+            "Supports Python, Perl, GCC, wget, ping, telnet. "
+            "Runs entirely in the browser — no install required. "
+            "Import local files or Google Drive files directly."
+        ),
+        "url":          "https://thumbsdb.herokuapp.com/linux/",
+        "type":         "web_app",
+        "category":     "Tools",
+        "icon":         "🐧",
+        "capabilities": ["shell", "python", "perl", "gcc", "wget", "ping",
+                         "telnet", "gdrive_import", "local_file_import"],
+        "source":       "thumbsdb.herokuapp.com",
+    },
+    "onworks_gdrive_php": {
+        "id":           "onworks_gdrive_php",
+        "name":         "Google API PHP Client (OnWorks)",
+        "description":  (
+            "Google API PHP client library provided by OnWorks.net. "
+            "Enables OAuth2, Drive, Gmail, Calendar, and other Google service "
+            "integrations for PHP projects. Installed via the Google 'Add It Now' portal."
+        ),
+        "url":          "https://www.onworks.net/thirdparty/gdrive/google-api-php-client/core/download.php",
+        "install_url":  (
+            "https://apis.google.com/additnow/l"
+            "?applicationid=796898949162&__ls=ogb"
+            "&__lu=https%3A%2F%2Fwww.onworks.net%2Fthirdparty%2Fgdrive"
+            "%2Fgoogle-api-php-client%2Fcore%2Fdownload.php"
+        ),
+        "type":         "sdk_download",
+        "category":     "SDKs",
+        "icon":         "📦",
+        "capabilities": ["google_oauth2", "google_drive", "google_gmail",
+                         "google_calendar", "php_integration"],
+        "source":       "onworks.net / apis.google.com",
+    },
+}
+
+
+# ── /api/resources ────────────────────────────────────────────────────────────
+
+@app.get("/api/resources")
+async def resources_list():
+    """Return all registered external resources."""
+    return JSONResponse({
+        "resources": list(RESOURCE_REGISTRY.values()),
+        "count": len(RESOURCE_REGISTRY),
+    })
+
+
+@app.get("/api/resources/{resource_id}")
+async def resource_get(resource_id: str):
+    """Return a single resource by ID."""
+    r = RESOURCE_REGISTRY.get(resource_id)
+    if not r:
+        return JSONResponse(
+            {"error": f"Resource '{resource_id}' not found.",
+             "available": list(RESOURCE_REGISTRY.keys())},
+            status_code=404,
+        )
+    return JSONResponse(r)
+
+
+@app.post("/api/resources/{resource_id}/fetch")
+async def resource_fetch(resource_id: str, body: dict = {}):
+    """Proxy-fetch the resource URL and return status + headers."""
+    import urllib.request as _ureq
+    r = RESOURCE_REGISTRY.get(resource_id)
+    if not r:
+        return JSONResponse({"error": f"Resource '{resource_id}' not found."}, status_code=404)
+
+    target = body.get("url", r.get("url", ""))
+    try:
+        req = _ureq.Request(target, headers={"User-Agent": "One2lvOS-Lumenis/1.0"})
+        with _ureq.urlopen(req, timeout=10) as resp:
+            return JSONResponse({
+                "resource_id": resource_id,
+                "url":         target,
+                "status":      resp.status,
+                "headers":     dict(resp.headers),
+                "reachable":   True,
+            })
+    except Exception as e:
+        return JSONResponse({
+            "resource_id": resource_id,
+            "url":         target,
+            "reachable":   False,
+            "error":       str(e),
+        }, status_code=502)
+
+
+# ── Per-resource action endpoints ─────────────────────────────────────────────
+
+@app.get("/api/resources/linux_emulator/launch")
+async def linux_emulator_launch():
+    """Return launch URL and metadata for the in-browser Linux emulator."""
+    r = RESOURCE_REGISTRY["linux_emulator"]
+    return JSONResponse({
+        "name":         r["name"],
+        "launch_url":   r["url"],
+        "description":  r["description"],
+        "capabilities": r["capabilities"],
+        "instruction":  "Open launch_url in a browser tab to start the Linux emulator.",
+    })
+
+
+@app.get("/api/resources/onworks_gdrive_php/info")
+async def onworks_gdrive_php_info():
+    """Return download + install URLs for the Google API PHP client."""
+    r = RESOURCE_REGISTRY["onworks_gdrive_php"]
+    return JSONResponse({
+        "name":         r["name"],
+        "download_url": r["url"],
+        "install_url":  r["install_url"],
+        "description":  r["description"],
+        "capabilities": r["capabilities"],
+        "instruction":  (
+            "Use install_url to add via Google 'Add It Now', "
+            "or download_url for direct PHP client archive."
+        ),
+    })
+
+
+# ── TOOL_REGISTRY entries ─────────────────────────────────────────────────────
+
+TOOL_REGISTRY.extend([
+    {
+        "id": "resource.list",
+        "label": "List Resources",
+        "method": "GET",
+        "path": "/api/resources",
+        "category": "Resources",
+        "icon": "🗂️",
+        "params": [],
+        "description": "List all registered external resources (URLs, SDKs, web apps).",
+    },
+    {
+        "id": "resource.get",
+        "label": "Get Resource",
+        "method": "GET",
+        "path": "/api/resources/{id}",
+        "category": "Resources",
+        "icon": "🔗",
+        "params": ["id"],
+        "description": "Get metadata for a specific registered resource by ID.",
+    },
+    {
+        "id": "resource.fetch",
+        "label": "Fetch Resource",
+        "method": "POST",
+        "path": "/api/resources/{id}/fetch",
+        "category": "Resources",
+        "icon": "📡",
+        "params": ["id", "url"],
+        "description": "Proxy-check a resource URL and return reachability status.",
+    },
+    {
+        "id": "resource.linux_emulator.launch",
+        "label": "Launch Linux Emulator",
+        "method": "GET",
+        "path": "/api/resources/linux_emulator/launch",
+        "category": "Resources",
+        "icon": "🐧",
+        "params": [],
+        "description": "Get launch URL for the in-browser x86 Linux emulator with Google Drive support.",
+    },
+    {
+        "id": "resource.onworks_gdrive_php.info",
+        "label": "Google API PHP Client Info",
+        "method": "GET",
+        "path": "/api/resources/onworks_gdrive_php/info",
+        "category": "Resources",
+        "icon": "📦",
+        "params": [],
+        "description": "Get download and install URLs for the Google API PHP client from OnWorks.",
+    },
+])
