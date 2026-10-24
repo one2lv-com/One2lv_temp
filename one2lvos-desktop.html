@@ -114,9 +114,20 @@
         let highestZ = 10;
         let openApps = {};
 
-        // API Configuration
-        const ARCADE = 'http://localhost:8080';
-        const GW = 'http://localhost:8888';
+        // API Configuration — all One2lvOS service endpoints
+        const ARCADE      = 'http://localhost:8003';  // AI Arcade MCP
+        const GW          = 'http://localhost:8888';  // Unified Gateway
+        const LOBBY       = 'http://localhost:8006';  // AI Lobby
+        const LUMENIS_RC  = 'http://localhost:8000';  // Lumenis Reactor Core
+        const SOVEREIGN   = 'http://localhost:3003';  // Sovereign Agentic Core
+        const OS_CORE     = 'http://localhost:3002';  // One2lvOS Core
+        const WITNESS     = 'http://localhost:3001';  // Minimax Witness Proxy
+        const MINIMAX     = 'http://localhost:8080';  // Minimax Core API
+        const STEAMOS     = 'http://localhost:8081';  // SteamOS Dashboard
+        const AETHERIX    = 'http://localhost:9003';  // Aetherix Terminal
+        const LUMENIS_OS  = 'http://localhost:9002';  // LumenisOS API
+        const LUMENIS_UI  = 'http://localhost:9001';  // Lumenis Space Agent UI
+        const LUMENIS_V7  = 'http://localhost:8005';  // Lumenis v7 Cosmic
 
         // Application Configurations
         const apps = {
@@ -360,6 +371,222 @@
                         </div>
                     </div>
                 `
+            },
+            'minimax-hub': {
+                name: 'MiniMax Agent Hub',
+                icon: 'fas fa-robot',
+                color: 'text-emerald-500',
+                width: 780,
+                height: 600,
+                content: `
+                    <div class="h-full flex flex-col bg-[#0a0a14]">
+                        <div class="bg-gradient-to-r from-emerald-700 to-teal-700 text-white p-4 shadow-lg flex-shrink-0 flex items-center justify-between">
+                            <div>
+                                <h2 class="text-lg font-bold flex items-center gap-2"><i class="fas fa-robot"></i> MiniMax Agent Hub</h2>
+                                <p class="text-emerald-200 text-xs mt-0.5">NVIDIA NIM · minimax/minimax-01 · one2lv-agent-hub</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="mmCheckStatus()" class="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"><i class="fas fa-heartbeat mr-1"></i>Status</button>
+                                <button onclick="window.open('minimax/agent-hub/dist/index.html','_blank')" class="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"><i class="fas fa-external-link-alt mr-1"></i>Open Full</button>
+                            </div>
+                        </div>
+                        <iframe src="minimax/agent-hub/dist/index.html" class="flex-1 w-full border-none bg-[#0a0a14]" id="minimax-iframe" onerror="document.getElementById('minimax-fallback').style.display='flex'"></iframe>
+                        <div id="minimax-fallback" class="flex-1 hidden flex-col items-center justify-center text-gray-400 p-8 text-center" style="display:none">
+                            <i class="fas fa-robot text-4xl mb-3 text-emerald-500"></i>
+                            <div class="font-medium mb-1">MiniMax Agent Hub</div>
+                            <div class="text-sm mb-4">Run <code class="bg-gray-800 text-emerald-400 px-1.5 py-0.5 rounded">npm run build</code> in minimax/agent-hub to generate dist files</div>
+                            <div class="text-xs font-mono bg-gray-900 border border-gray-700 rounded p-3 text-left w-full max-w-sm" id="mm-status-out">Click Status to check Minimax Core API (:8080)…</div>
+                        </div>
+                    </div>
+                `,
+                onOpen: () => setTimeout(() => {
+                    const fr = document.getElementById('minimax-iframe');
+                    if (fr) fr.onerror = () => { document.getElementById('minimax-fallback').style.display='flex'; fr.style.display='none'; };
+                }, 200)
+            },
+            'witness-proxy': {
+                name: 'Witness Proxy',
+                icon: 'fas fa-eye',
+                color: 'text-violet-500',
+                width: 620,
+                height: 500,
+                content: `
+                    <div class="h-full flex flex-col bg-white">
+                        <div class="bg-gradient-to-r from-violet-600 to-purple-600 text-white p-4 shadow-lg flex-shrink-0">
+                            <h2 class="text-lg font-bold flex items-center gap-2"><i class="fas fa-eye"></i> Minimax Witness Proxy v8</h2>
+                            <p class="text-violet-200 text-xs mt-0.5">Port 3001 · NVIDIA NIM passthrough · minimax/minimax-01</p>
+                        </div>
+                        <div class="flex-1 overflow-auto p-4 bg-gray-50">
+                            <div class="grid grid-cols-2 gap-3 mb-4">
+                                <button onclick="witnessCmd('health')" class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors shadow"><i class="fas fa-heartbeat mr-1"></i>Health</button>
+                                <button onclick="witnessCmd('status')" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors shadow"><i class="fas fa-info-circle mr-1"></i>Status</button>
+                                <button onclick="witnessChat()" class="bg-violet-500 hover:bg-violet-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors shadow col-span-2"><i class="fas fa-comment mr-1"></i>Test Chat (MiniMax-01)</button>
+                            </div>
+                            <div class="bg-gray-900 border border-gray-700 rounded-lg p-3 font-mono text-xs text-green-400 overflow-auto h-64" id="witness-output">
+                                Click a button to interact with Witness Proxy...
+                            </div>
+                            <div class="mt-3 flex gap-2">
+                                <input id="witness-msg" type="text" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-400" placeholder="Message to MiniMax via proxy..." onkeypress="if(event.key==='Enter')witnessChat()">
+                                <button onclick="witnessChat()" class="bg-violet-500 hover:bg-violet-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"><i class="fas fa-paper-plane"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            'steamos-dash': {
+                name: 'SteamOS Dashboard',
+                icon: 'fas fa-gamepad',
+                color: 'text-blue-400',
+                width: 900,
+                height: 650,
+                content: `
+                    <div class="h-full flex flex-col bg-[#1b2838]">
+                        <iframe src="${STEAMOS}" class="flex-1 w-full border-none" id="steamos-iframe"></iframe>
+                        <div class="bg-[#1b2838] text-gray-400 text-xs px-3 py-1.5 flex items-center justify-between flex-shrink-0 border-t border-gray-700">
+                            <span><i class="fas fa-gamepad mr-1"></i> SteamOS Dashboard · port 8081</span>
+                            <button onclick="document.getElementById('steamos-iframe').src=STEAMOS" class="hover:text-white transition-colors"><i class="fas fa-redo-alt"></i></button>
+                        </div>
+                    </div>
+                `
+            },
+            'aetherix': {
+                name: 'Aetherix Terminal',
+                icon: 'fas fa-satellite',
+                color: 'text-sky-400',
+                width: 860,
+                height: 640,
+                content: `
+                    <div class="h-full flex flex-col bg-[#050a14]">
+                        <iframe src="${AETHERIX}" class="flex-1 w-full border-none" id="aetherix-iframe"></iframe>
+                        <div class="bg-[#050a14] text-gray-500 text-xs px-3 py-1.5 flex items-center justify-between flex-shrink-0 border-t border-gray-800">
+                            <span><i class="fas fa-satellite mr-1 text-sky-400"></i> Aetherix Master Terminal · port 9003</span>
+                            <button onclick="document.getElementById('aetherix-iframe').src=AETHERIX" class="hover:text-sky-400 transition-colors"><i class="fas fa-redo-alt"></i></button>
+                        </div>
+                    </div>
+                `
+            },
+            'lumenis-os': {
+                name: 'LumenisOS API',
+                icon: 'fas fa-cube',
+                color: 'text-indigo-400',
+                width: 680,
+                height: 540,
+                content: `
+                    <div class="h-full flex flex-col bg-white">
+                        <div class="bg-gradient-to-r from-indigo-600 to-blue-600 text-white p-4 shadow-lg flex-shrink-0">
+                            <h2 class="text-lg font-bold flex items-center gap-2"><i class="fas fa-cube"></i> LumenisOS API Server</h2>
+                            <p class="text-indigo-200 text-xs mt-0.5">Port 9002 · TypeScript/Node.js · esbuild dist/index.mjs</p>
+                        </div>
+                        <div class="flex-1 overflow-auto p-4 bg-gray-50">
+                            <div class="grid grid-cols-3 gap-3 mb-4">
+                                <button onclick="lumenosCmd('health')" class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors shadow"><i class="fas fa-heartbeat mr-1"></i>Health</button>
+                                <button onclick="lumenosCmd('api')" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors shadow"><i class="fas fa-code mr-1"></i>API Info</button>
+                                <button onclick="lumenosCmd('status')" class="bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors shadow"><i class="fas fa-server mr-1"></i>Status</button>
+                            </div>
+                            <div class="bg-white border border-gray-200 rounded-lg p-3 font-mono text-xs overflow-auto h-72" id="lumenos-output">
+                                Click a button to interact with LumenisOS API...
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            'sovereign-core': {
+                name: 'Sovereign Core',
+                icon: 'fas fa-crown',
+                color: 'text-amber-400',
+                width: 680,
+                height: 540,
+                content: `
+                    <div class="h-full flex flex-col bg-white">
+                        <div class="bg-gradient-to-r from-amber-600 to-orange-600 text-white p-4 shadow-lg flex-shrink-0">
+                            <h2 class="text-lg font-bold flex items-center gap-2"><i class="fas fa-crown"></i> Sovereign Agentic Core</h2>
+                            <p class="text-amber-200 text-xs mt-0.5">Port 3003 · FastAPI/uvicorn · control-plane-compilers</p>
+                        </div>
+                        <div class="flex-1 overflow-auto p-4 bg-gray-50">
+                            <div class="grid grid-cols-2 gap-3 mb-4">
+                                <button onclick="sovereignCmd('status')" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors shadow"><i class="fas fa-info-circle mr-1"></i>Status</button>
+                                <button onclick="sovereignCmd('agents')" class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors shadow"><i class="fas fa-robot mr-1"></i>Agents</button>
+                                <button onclick="sovereignCmd('health')" class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors shadow"><i class="fas fa-heartbeat mr-1"></i>Health</button>
+                                <button onclick="sovereignCmd('compile')" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors shadow"><i class="fas fa-code mr-1"></i>Compile Info</button>
+                            </div>
+                            <div class="bg-white border border-gray-200 rounded-lg p-3 font-mono text-xs overflow-auto h-64" id="sovereign-output">
+                                Click a button to interact with Sovereign Core...
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            'lumenis-reactor': {
+                name: 'Lumenis Reactor',
+                icon: 'fas fa-atom',
+                color: 'text-cyan-400',
+                width: 700,
+                height: 560,
+                content: `
+                    <div class="h-full flex flex-col bg-[#07030f]">
+                        <div class="bg-gradient-to-r from-cyan-900 to-teal-900 text-white p-4 shadow-lg flex-shrink-0 flex items-center justify-between border-b border-cyan-800/40">
+                            <div>
+                                <h2 class="text-lg font-bold flex items-center gap-2 text-cyan-300"><i class="fas fa-atom"></i> Lumenis Reactor Core</h2>
+                                <p class="text-cyan-500 text-xs mt-0.5">Port 8000 · FastAPI + WebSocket · ITT Council of Nine · 21 tools</p>
+                            </div>
+                            <button onclick="reactorStatus()" class="bg-cyan-800/60 hover:bg-cyan-700/60 text-cyan-300 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border border-cyan-700/40"><i class="fas fa-pulse mr-1"></i>Ping</button>
+                        </div>
+                        <div class="flex-1 overflow-auto p-4 flex flex-col gap-3">
+                            <div class="bg-black/40 border border-cyan-900/50 rounded-lg p-3 font-mono text-xs text-cyan-300 overflow-auto h-48" id="reactor-output">
+                                [Lumenis Reactor] Connecting to ws://localhost:8000/ws...
+                            </div>
+                            <div class="flex gap-2">
+                                <input id="reactor-msg" type="text" class="flex-1 bg-black/30 border border-cyan-800/50 text-cyan-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-500/40 placeholder-cyan-700" placeholder="Message Lumenis..." onkeypress="if(event.key==='Enter')reactorSend()">
+                                <button onclick="reactorSend()" class="bg-cyan-700 hover:bg-cyan-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"><i class="fas fa-paper-plane"></i></button>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button onclick="reactorStatus()" class="bg-cyan-900/50 hover:bg-cyan-800/50 text-cyan-300 px-2 py-1.5 rounded text-xs border border-cyan-800/30 transition-colors"><i class="fas fa-heartbeat mr-1"></i>Health</button>
+                                <button onclick="reactorTools()" class="bg-cyan-900/50 hover:bg-cyan-800/50 text-cyan-300 px-2 py-1.5 rounded text-xs border border-cyan-800/30 transition-colors"><i class="fas fa-tools mr-1"></i>Tools (21)</button>
+                                <button onclick="reactorCouncil()" class="bg-cyan-900/50 hover:bg-cyan-800/50 text-cyan-300 px-2 py-1.5 rounded text-xs border border-cyan-800/30 transition-colors"><i class="fas fa-users mr-1"></i>Council</button>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                onOpen: () => setTimeout(() => reactorStatus(), 500)
+            },
+            'network-mgr': {
+                name: 'Network Manager',
+                icon: 'fas fa-network-wired',
+                color: 'text-teal-400',
+                width: 720,
+                height: 560,
+                content: `
+                    <div class="h-full flex flex-col bg-white">
+                        <div class="bg-gradient-to-r from-teal-600 to-cyan-600 text-white p-4 shadow-lg flex-shrink-0">
+                            <h2 class="text-lg font-bold flex items-center gap-2"><i class="fas fa-network-wired"></i> One2lvOS Network Manager</h2>
+                            <p class="text-teal-200 text-xs mt-0.5">Static Connections · Mesh Routing · WebDAV/FTP</p>
+                        </div>
+                        <iframe src="http://localhost:3003/network-manager.html" class="flex-1 w-full border-none" id="network-iframe"
+                            onerror="document.getElementById('network-fallback').style.display='flex'"></iframe>
+                        <div id="network-fallback" class="flex-1 hidden flex-col items-center justify-center text-gray-400 p-6 text-center bg-gray-50" style="display:none">
+                            <i class="fas fa-network-wired text-4xl mb-3 text-teal-400"></i>
+                            <div class="font-medium mb-1 text-gray-700">Network Service Offline</div>
+                            <div class="text-sm text-gray-500 mb-3">Start with: <code class="bg-gray-100 px-1.5 py-0.5 rounded font-mono">node server/network-api.js</code></div>
+                            <div class="text-xs text-gray-400">Default port: 3003</div>
+                        </div>
+                    </div>
+                `
+            },
+            'lumenis-v7': {
+                name: 'Lumenis v7 Cosmic',
+                icon: 'fas fa-star',
+                color: 'text-pink-400',
+                width: 820,
+                height: 620,
+                content: `
+                    <div class="h-full flex flex-col bg-[#0d0019]">
+                        <iframe src="${LUMENIS_V7}" class="flex-1 w-full border-none" id="lumenis-v7-iframe"></iframe>
+                        <div class="bg-[#0d0019] text-gray-500 text-xs px-3 py-1.5 flex items-center justify-between flex-shrink-0 border-t border-pink-900/40">
+                            <span><i class="fas fa-star mr-1 text-pink-400"></i> Lumenis v7 Cosmic · port 8005</span>
+                            <button onclick="document.getElementById('lumenis-v7-iframe').src=LUMENIS_V7" class="hover:text-pink-400 transition-colors"><i class="fas fa-redo-alt"></i></button>
+                        </div>
+                    </div>
+                `
             }
         };
 
@@ -407,12 +634,19 @@
                 } else if (mainCmd === 'services') {
                     response = `<div class="text-cyan-400">One2lvOS Services:</div>
 <div class="text-gray-300 mt-2">
-  AI Lobby        - Port 8787
-  AI Arcade       - Port 8080
-  Unified Gateway - Port 8888
-  LumenisOS       - Port 8001
-  Council         - Port 3001
-  Aetherix        - Port 9003
+  Lumenis Reactor  - Port 8000  (FastAPI + WS, ITT Council)
+  Witness Proxy    - Port 3001  (Minimax NVIDIA NIM proxy)
+  One2lvOS Core    - Port 3002  (Flask core)
+  Sovereign Core   - Port 3003  (FastAPI control-plane)
+  AI Arcade MCP    - Port 8003  (Python MCP server)
+  Lumenis v7       - Port 8005  (Node.js Cosmic)
+  AI Lobby         - Port 8006  (Agent hub/registry)
+  Minimax Core     - Port 8080  (Node.js minimax/minimax-01)
+  SteamOS Dash     - Port 8081  (Python dashboard)
+  Unified Gateway  - Port 8888  (FastAPI gateway)
+  Lumenis UI       - Port 9001  (Static frontend)
+  LumenisOS API    - Port 9002  (Node.js API server)
+  Aetherix         - Port 9003  (Master terminal)
 </div>`;
                 } else if (mainCmd === 'version') {
                     response = `<div class="text-cyan-400">One2lvOS Version 2.0.0</div>
@@ -482,17 +716,28 @@
 
         async function checkAllServices() {
             const services = [
-                {name: 'AI Arcade', port: 8080, url: `${ARCADE}/`},
-                {name: 'Gateway', port: 8888, url: `${GW}/status`}
+                {name: 'Lumenis Reactor', port: 8000, url: `${LUMENIS_RC}/health`},
+                {name: 'Witness Proxy',   port: 3001, url: `${WITNESS}/api/health`},
+                {name: 'One2lvOS Core',   port: 3002, url: `${OS_CORE}/health`},
+                {name: 'Sovereign Core',  port: 3003, url: `${SOVEREIGN}/api/status`},
+                {name: 'AI Lobby',        port: 8006, url: `${LOBBY}/agents`},
+                {name: 'Minimax Core',    port: 8080, url: `${MINIMAX}/health`},
+                {name: 'SteamOS Dash',    port: 8081, url: `${STEAMOS}`},
+                {name: 'AI Arcade MCP',   port: 8003, url: `${ARCADE}/`},
+                {name: 'Lumenis v7',      port: 8005, url: `${LUMENIS_V7}`},
+                {name: 'Unified Gateway', port: 8888, url: `${GW}/status`},
+                {name: 'Lumenis UI',      port: 9001, url: `${LUMENIS_UI}`},
+                {name: 'LumenisOS API',   port: 9002, url: `${LUMENIS_OS}/api/healthz`},
+                {name: 'Aetherix',        port: 9003, url: `${AETHERIX}/health`}
             ];
 
             let html = '<div class="text-gray-300 mt-2">';
             for (const svc of services) {
                 try {
-                    const res = await fetch(svc.url, {timeout: 2000});
-                    html += `\n  ${svc.name.padEnd(15)} [<span class="text-green-400">UP</span>] :${svc.port}`;
+                    await fetch(svc.url, {signal: AbortSignal.timeout(2000)});
+                    html += `\n  ${svc.name.padEnd(18)} [<span class="text-green-400">UP</span>] :${svc.port}`;
                 } catch {
-                    html += `\n  ${svc.name.padEnd(15)} [<span class="text-red-400">DOWN</span>] :${svc.port}`;
+                    html += `\n  ${svc.name.padEnd(18)} [<span class="text-red-400">DOWN</span>] :${svc.port}`;
                 }
             }
             html += '</div>';
@@ -504,12 +749,19 @@
             list.innerHTML = '<div class="text-center text-gray-400 py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Checking...</div>';
 
             const services = [
-                {name: 'AI Lobby', icon: 'fas fa-users', port: 8787, url: 'http://localhost:8787/api/whoami'},
-                {name: 'AI Arcade', icon: 'fas fa-gamepad', port: 8080, url: `${ARCADE}/`},
-                {name: 'Gateway', icon: 'fas fa-server', port: 8888, url: `${GW}/status`},
-                {name: 'LumenisOS', icon: 'fas fa-cube', port: 8001, url: 'http://localhost:8001/health'},
-                {name: 'Council', icon: 'fas fa-brain', port: 3001, url: 'http://localhost:3001/health'},
-                {name: 'Aetherix', icon: 'fas fa-terminal', port: 9003, url: 'http://localhost:9003/health'}
+                {name: 'Lumenis Reactor', icon: 'fas fa-atom',          port: 8000, url: `${LUMENIS_RC}/health`},
+                {name: 'Witness Proxy',   icon: 'fas fa-eye',            port: 3001, url: `${WITNESS}/api/health`},
+                {name: 'One2lvOS Core',   icon: 'fas fa-laptop-code',    port: 3002, url: `${OS_CORE}/health`},
+                {name: 'Sovereign Core',  icon: 'fas fa-crown',          port: 3003, url: `${SOVEREIGN}/api/status`},
+                {name: 'AI Arcade MCP',   icon: 'fas fa-gamepad',        port: 8003, url: `${ARCADE}/`},
+                {name: 'Lumenis v7',      icon: 'fas fa-star',           port: 8005, url: `${LUMENIS_V7}`},
+                {name: 'AI Lobby',        icon: 'fas fa-satellite-dish', port: 8006, url: `${LOBBY}/agents`},
+                {name: 'Minimax Core',    icon: 'fas fa-robot',          port: 8080, url: `${MINIMAX}/health`},
+                {name: 'SteamOS Dash',    icon: 'fas fa-gamepad',        port: 8081, url: `${STEAMOS}`},
+                {name: 'Unified Gateway', icon: 'fas fa-server',         port: 8888, url: `${GW}/status`},
+                {name: 'Lumenis UI',      icon: 'fas fa-window-maximize',port: 9001, url: `${LUMENIS_UI}`},
+                {name: 'LumenisOS API',   icon: 'fas fa-cube',           port: 9002, url: `${LUMENIS_OS}/api/healthz`},
+                {name: 'Aetherix',        icon: 'fas fa-satellite',      port: 9003, url: `${AETHERIX}/health`}
             ];
 
             let html = '';
@@ -855,6 +1107,160 @@
                 output.textContent = 'Registered:\n' + JSON.stringify(d, null, 2);
             } catch (e) {
                 output.textContent = '[Lobby offline] ' + e.message + '\nStart lobby: python3 ai_lobby.py';
+            }
+        }
+
+        // ── Witness Proxy functions ──────────────────────────────────────
+        async function witnessCmd(cmd) {
+            const out = document.getElementById('witness-output');
+            if (!out) return;
+            out.textContent = 'Loading...';
+            const urls = { health: WITNESS + '/api/health', status: WITNESS + '/api/status' };
+            try {
+                const r = await fetch(urls[cmd] || WITNESS + '/api/health', {signal: AbortSignal.timeout(5000)});
+                const d = await r.json();
+                out.textContent = JSON.stringify(d, null, 2);
+            } catch(e) {
+                out.textContent = '[Witness Proxy offline] ' + e.message + '\n\nStart: node minimax/one2lv-witness-v8/proxy/server.js';
+            }
+        }
+
+        async function witnessChat() {
+            const out = document.getElementById('witness-output');
+            const inp = document.getElementById('witness-msg');
+            if (!out || !inp) return;
+            const msg = inp.value.trim() || 'Hello MiniMax! Tell me about minimax/minimax-01.';
+            out.textContent = 'Sending to MiniMax via Witness Proxy...';
+            inp.value = '';
+            try {
+                const r = await fetch(WITNESS + '/api/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({message: msg, model: 'minimax/minimax-01'}),
+                    signal: AbortSignal.timeout(30000)
+                });
+                const d = await r.json();
+                out.textContent = d.response || d.content || JSON.stringify(d, null, 2);
+            } catch(e) {
+                out.textContent = '[Chat error] ' + e.message;
+            }
+        }
+
+        // ── LumenisOS API functions ──────────────────────────────────────
+        async function lumenosCmd(cmd) {
+            const out = document.getElementById('lumenos-output');
+            if (!out) return;
+            out.textContent = 'Loading...';
+            const urls = {
+                health: LUMENIS_OS + '/api/healthz',
+                api:    LUMENIS_OS + '/api',
+                status: LUMENIS_OS + '/api/status'
+            };
+            try {
+                const r = await fetch(urls[cmd] || LUMENIS_OS + '/api/healthz', {signal: AbortSignal.timeout(5000)});
+                const d = await r.json();
+                out.textContent = JSON.stringify(d, null, 2);
+            } catch(e) {
+                out.textContent = '[LumenisOS API offline] ' + e.message + '\n\nStart: node lumenis-os/artifacts/api-server/dist/index.mjs';
+            }
+        }
+
+        // ── Sovereign Core functions ─────────────────────────────────────
+        async function sovereignCmd(cmd) {
+            const out = document.getElementById('sovereign-output');
+            if (!out) return;
+            out.textContent = 'Loading...';
+            const urls = {
+                status:  SOVEREIGN + '/api/status',
+                agents:  SOVEREIGN + '/api/agents',
+                health:  SOVEREIGN + '/health',
+                compile: SOVEREIGN + '/api/compile'
+            };
+            try {
+                const r = await fetch(urls[cmd] || SOVEREIGN + '/api/status', {signal: AbortSignal.timeout(5000)});
+                const d = await r.json();
+                out.textContent = JSON.stringify(d, null, 2);
+            } catch(e) {
+                out.textContent = '[Sovereign Core offline] ' + e.message + '\n\nStart: uvicorn main:app --port 3003 --app-dir sovereign-agentic-core';
+            }
+        }
+
+        // ── Lumenis Reactor functions ────────────────────────────────────
+        async function reactorStatus() {
+            const out = document.getElementById('reactor-output');
+            if (!out) return;
+            try {
+                const r = await fetch(LUMENIS_RC + '/health', {signal: AbortSignal.timeout(5000)});
+                const d = await r.json();
+                out.textContent = '[Health]\n' + JSON.stringify(d, null, 2);
+            } catch(e) {
+                out.textContent = '[Lumenis Reactor offline] ' + e.message + '\n\nStart: python3 One2lvos/core_service.py or check start-all.sh';
+            }
+        }
+
+        async function reactorTools() {
+            const out = document.getElementById('reactor-output');
+            if (!out) return;
+            try {
+                const r = await fetch(LUMENIS_RC + '/tools', {signal: AbortSignal.timeout(5000)});
+                const d = await r.json();
+                out.textContent = '[Tools]\n' + JSON.stringify(d, null, 2);
+            } catch(e) {
+                out.textContent = '[Reactor tools offline] ' + e.message;
+            }
+        }
+
+        async function reactorCouncil() {
+            const out = document.getElementById('reactor-output');
+            if (!out) return;
+            try {
+                const r = await fetch(LUMENIS_RC + '/council', {signal: AbortSignal.timeout(5000)});
+                const d = await r.json();
+                out.textContent = '[ITT Council of Nine]\n' + JSON.stringify(d, null, 2);
+            } catch(e) {
+                out.textContent = '[Council offline] ' + e.message;
+            }
+        }
+
+        async function reactorSend() {
+            const out = document.getElementById('reactor-output');
+            const inp = document.getElementById('reactor-msg');
+            if (!out || !inp) return;
+            const msg = inp.value.trim();
+            if (!msg) return;
+            inp.value = '';
+            out.textContent = 'Sending to Lumenis Reactor...';
+            try {
+                const r = await fetch(LUMENIS_RC + '/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({message: msg}),
+                    signal: AbortSignal.timeout(30000)
+                });
+                const d = await r.json();
+                out.textContent = d.response || d.content || d.message || JSON.stringify(d, null, 2);
+            } catch(e) {
+                out.textContent = '[Reactor send error] ' + e.message;
+            }
+        }
+
+        // ── MiniMax Hub status ───────────────────────────────────────────
+        async function mmCheckStatus() {
+            const out = document.getElementById('mm-status-out');
+            if (!out) return;
+            try {
+                const r = await fetch(MINIMAX + '/health', {signal: AbortSignal.timeout(5000)});
+                const d = await r.json();
+                if(out) out.textContent = JSON.stringify(d, null, 2);
+            } catch(e) {
+                if(out) out.textContent = '[Minimax Core offline :8080] ' + e.message;
+            }
+            // Also show fallback if iframe failed
+            const fr = document.getElementById('minimax-iframe');
+            const fb = document.getElementById('minimax-fallback');
+            if (fr && fb && fr.contentDocument && !fr.contentDocument.body.innerHTML) {
+                fr.style.display = 'none';
+                fb.style.display = 'flex';
             }
         }
 
