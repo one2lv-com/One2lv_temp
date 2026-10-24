@@ -308,16 +308,50 @@
                 name: 'Lumenis Chat',
                 icon: 'fas fa-brain',
                 color: 'text-cyan-400',
-                width: 960,
-                height: 680,
+                width: 980,
+                height: 700,
+                onOpen: () => setTimeout(() => lcInit(), 300),
                 content: `
-                    <div class="h-full flex flex-col bg-[#07030f]">
-                        <iframe
-                            src="/lumenis-chat"
-                            class="flex-1 w-full border-none"
-                            allow="microphone; clipboard-read; clipboard-write"
-                            id="lumenis-iframe"
-                        ></iframe>
+                    <div class="h-full flex flex-col" style="background:#07030f;font-family:'Segoe UI',system-ui,sans-serif;color:#ccd6f6">
+                        <!-- Header -->
+                        <div style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:#0e0620;border-bottom:1px solid rgba(0,240,255,.13);flex-shrink:0;height:44px">
+                            <span id="lc-dot" style="width:8px;height:8px;border-radius:50%;background:#5a6a88;flex-shrink:0;transition:background .3s"></span>
+                            <span style="font-size:.9rem;font-weight:700;color:#00f0ff;letter-spacing:3px">LUMENIS</span>
+                            <span style="color:rgba(0,240,255,.3);font-size:.8rem">|</span>
+                            <span style="font-size:.68rem;color:#5a6a88">ITT Council of Nine</span>
+                            <span id="lc-session" style="margin-left:auto;font-size:.62rem;color:#5a6a88"></span>
+                            <button onclick="lcClear()" style="background:rgba(255,255,255,.05);border:1px solid rgba(0,240,255,.15);color:#5a6a88;border-radius:5px;padding:2px 8px;font-size:.65rem;cursor:pointer" title="Clear chat">CLR</button>
+                            <button onclick="lcInit()" style="background:rgba(0,240,255,.08);border:1px solid rgba(0,240,255,.2);color:#00f0ff;border-radius:5px;padding:2px 8px;font-size:.65rem;cursor:pointer" title="Reconnect">&#x21BA;</button>
+                        </div>
+                        <!-- Council chips -->
+                        <div id="lc-chips" style="display:flex;flex-wrap:wrap;gap:5px;padding:6px 14px;background:#0e0620;border-bottom:1px solid rgba(0,240,255,.08);flex-shrink:0">
+                            <span class="lc-chip" data-seat="Sentinel"   style="display:flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px;border:1px solid rgba(0,240,255,.13);color:#5a6a88;transition:all .25s">&#x25CF; Sentinel</span>
+                            <span class="lc-chip" data-seat="Navigator"  style="display:flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px;border:1px solid rgba(0,240,255,.13);color:#5a6a88;transition:all .25s">&#x25CF; Navigator</span>
+                            <span class="lc-chip" data-seat="Witness"    style="display:flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px;border:1px solid rgba(0,240,255,.13);color:#5a6a88;transition:all .25s">&#x25CF; Witness</span>
+                            <span class="lc-chip" data-seat="Forge"      style="display:flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px;border:1px solid rgba(0,240,255,.13);color:#5a6a88;transition:all .25s">&#x25CF; Forge</span>
+                            <span class="lc-chip" data-seat="Oracle"     style="display:flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px;border:1px solid rgba(0,240,255,.13);color:#5a6a88;transition:all .25s">&#x25CF; Oracle</span>
+                            <span class="lc-chip" data-seat="Weaver"     style="display:flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px;border:1px solid rgba(0,240,255,.13);color:#5a6a88;transition:all .25s">&#x25CF; Weaver</span>
+                            <span class="lc-chip" data-seat="Hermes"     style="display:flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px;border:1px solid rgba(0,240,255,.13);color:#5a6a88;transition:all .25s">&#x25CF; Hermes</span>
+                            <span class="lc-chip" data-seat="Architect"  style="display:flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px;border:1px solid rgba(0,240,255,.13);color:#5a6a88;transition:all .25s">&#x25CF; Architect</span>
+                            <span class="lc-chip" data-seat="Gambit"     style="display:flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px;border:1px solid rgba(0,240,255,.13);color:#5a6a88;transition:all .25s">&#x25CF; Gambit</span>
+                        </div>
+                        <!-- Messages -->
+                        <div id="lc-msgs" style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;scrollbar-width:thin;scrollbar-color:rgba(0,240,255,.2) transparent"></div>
+                        <!-- Typing indicator -->
+                        <div id="lc-typing" style="display:none;padding:4px 18px 0;flex-shrink:0">
+                            <span style="font-size:.7rem;color:#5a6a88;font-style:italic">Lumenis is thinking...</span>
+                        </div>
+                        <!-- Input -->
+                        <div style="display:flex;gap:8px;padding:10px 14px;background:#0e0620;border-top:1px solid rgba(0,240,255,.1);flex-shrink:0">
+                            <input id="lc-inp" type="text" placeholder="Message Lumenis..." autocomplete="off"
+                                style="flex:1;background:rgba(0,0,0,.4);border:1px solid rgba(0,240,255,.2);color:#ccd6f6;border-radius:8px;padding:9px 13px;font-size:.85rem;outline:none;font-family:'Segoe UI',system-ui,sans-serif"
+                                onkeypress="if(event.key==='Enter')lcSend()"
+                                onfocus="this.style.borderColor='rgba(0,240,255,.5)'"
+                                onblur="this.style.borderColor='rgba(0,240,255,.2)'">
+                            <button onclick="lcSend()" style="background:linear-gradient(135deg,#00c4cc,#0070ff);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:.85rem;font-weight:600;cursor:pointer;transition:opacity .18s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+                                Send
+                            </button>
+                        </div>
                     </div>
                 `
             },
@@ -535,7 +569,7 @@
                         <div class="bg-gradient-to-r from-cyan-900 to-teal-900 text-white p-4 shadow-lg flex-shrink-0 flex items-center justify-between border-b border-cyan-800/40">
                             <div>
                                 <h2 class="text-lg font-bold flex items-center gap-2 text-cyan-300"><i class="fas fa-atom"></i> Lumenis Reactor Core</h2>
-                                <p class="text-cyan-500 text-xs mt-0.5">Port 8000 · FastAPI + WebSocket · ITT Council of Nine · 21 tools</p>
+                                <p class="text-cyan-500 text-xs mt-0.5">Port 8000 · FastAPI + WebSocket · ITT Council of Nine · 34 tools</p>
                             </div>
                             <button onclick="reactorStatus()" class="bg-cyan-800/60 hover:bg-cyan-700/60 text-cyan-300 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border border-cyan-700/40"><i class="fas fa-pulse mr-1"></i>Ping</button>
                         </div>
@@ -549,7 +583,7 @@
                             </div>
                             <div class="grid grid-cols-3 gap-2">
                                 <button onclick="reactorStatus()" class="bg-cyan-900/50 hover:bg-cyan-800/50 text-cyan-300 px-2 py-1.5 rounded text-xs border border-cyan-800/30 transition-colors"><i class="fas fa-heartbeat mr-1"></i>Health</button>
-                                <button onclick="reactorTools()" class="bg-cyan-900/50 hover:bg-cyan-800/50 text-cyan-300 px-2 py-1.5 rounded text-xs border border-cyan-800/30 transition-colors"><i class="fas fa-tools mr-1"></i>Tools (21)</button>
+                                <button onclick="reactorTools()" class="bg-cyan-900/50 hover:bg-cyan-800/50 text-cyan-300 px-2 py-1.5 rounded text-xs border border-cyan-800/30 transition-colors"><i class="fas fa-tools mr-1"></i>Tools (34)</button>
                                 <button onclick="reactorCouncil()" class="bg-cyan-900/50 hover:bg-cyan-800/50 text-cyan-300 px-2 py-1.5 rounded text-xs border border-cyan-800/30 transition-colors"><i class="fas fa-users mr-1"></i>Council</button>
                             </div>
                         </div>
@@ -1694,6 +1728,125 @@
                     setTimeout(() => ws.close(), 5000);
                 };
             } catch(_) {}
+        }
+
+
+        // ── Lumenis Chat (native WebSocket) ─────────────────────────────
+        let _lcWs = null, _lcSession = null, _lcAiEl = null;
+
+        function lcSetDot(state) {
+            const d = document.getElementById('lc-dot');
+            if (!d) return;
+            const styles = {on:'background:#00ff88;box-shadow:0 0 7px #00ff88', busy:'background:#fcee0a', off:'background:#5a6a88'};
+            d.style.cssText = 'width:8px;height:8px;border-radius:50%;flex-shrink:0;transition:background .3s;' + (styles[state]||styles.off);
+        }
+
+        function lcChip(seat, active) {
+            const chips = document.querySelectorAll('#lc-chips .lc-chip');
+            chips.forEach(c => {
+                if (c.dataset.seat === seat) {
+                    if (active) {
+                        c.style.borderColor = 'rgba(0,240,255,.6)';
+                        c.style.color = '#00f0ff';
+                        c.style.background = 'rgba(0,240,255,.07)';
+                        c.style.boxShadow = '0 0 7px rgba(0,240,255,.15)';
+                    } else {
+                        c.style.borderColor = 'rgba(0,240,255,.13)';
+                        c.style.color = '#5a6a88';
+                        c.style.background = 'transparent';
+                        c.style.boxShadow = 'none';
+                    }
+                }
+            });
+        }
+
+        function lcAddMsg(role, text) {
+            const box = document.getElementById('lc-msgs');
+            if (!box) return null;
+            const wrap = document.createElement('div');
+            const isUser = role === 'user';
+            const isSys = role === 'sys';
+            wrap.style.cssText = 'display:flex;flex-direction:column;max-width:88%;gap:3px;' +
+                (isUser ? 'align-self:flex-end;align-items:flex-end' :
+                 isSys  ? 'align-self:center;align-items:center;max-width:100%' :
+                          'align-self:flex-start;align-items:flex-start');
+            const lbl = document.createElement('div');
+            lbl.style.cssText = 'font-size:.62rem;color:#5a6a88;padding:0 3px';
+            lbl.textContent = isUser ? 'You' : isSys ? '' : 'Lumenis';
+            const bubble = document.createElement('div');
+            bubble.style.cssText = 'padding:9px 13px;border-radius:11px;font-size:.855rem;line-height:1.65;word-break:break-word;white-space:pre-wrap;' +
+                (isUser ? 'background:rgba(0,240,255,.09);border:1px solid rgba(0,240,255,.25);border-radius:11px 2px 11px 11px' :
+                 isSys  ? 'background:rgba(255,0,212,.05);border:1px solid rgba(255,0,212,.18);border-radius:7px;color:#5a6a88;font-size:.72rem;padding:5px 14px;text-align:center' :
+                          'background:#160a2e;border:1px solid rgba(0,240,255,.13);border-radius:2px 11px 11px 11px');
+            bubble.textContent = text || '';
+            if (!isSys) wrap.appendChild(lbl);
+            wrap.appendChild(bubble);
+            box.appendChild(wrap);
+            box.scrollTop = box.scrollHeight;
+            return bubble;
+        }
+
+        function lcInit() {
+            const dot = document.getElementById('lc-dot');
+            if (!dot) return; // window not open yet
+            if (_lcWs) { try { _lcWs.close(); } catch(_) {} }
+            lcSetDot('off');
+            _lcWs = null; _lcSession = null; _lcAiEl = null;
+            lcAddMsg('sys', 'Connecting to Lumenis Reactor...');
+            try {
+                _lcWs = new WebSocket('ws://localhost:8000/ws');
+                _lcWs.onopen = () => lcSetDot('on');
+                _lcWs.onclose = () => { lcSetDot('off'); setTimeout(() => { if (document.getElementById('lc-dot')) lcAddMsg('sys', 'Disconnected. Click ↺ to reconnect.'); }, 100); };
+                _lcWs.onerror = () => lcAddMsg('sys', 'Connection error — is the reactor running? (python3 lumenis-main.py)');
+                _lcWs.onmessage = (e) => {
+                    let d;
+                    try { d = JSON.parse(e.data); } catch(_) { return; }
+                    const t = d.type || '';
+                    if (t === 'session_created') {
+                        _lcSession = d.session_id;
+                        const s = document.getElementById('lc-session');
+                        if (s) s.textContent = 'session ' + (_lcSession||'').slice(0,8);
+                        lcAddMsg('sys', 'Connected — ITT Council of Nine online');
+                    } else if (t === 'processing_start') {
+                        lcSetDot('busy');
+                        const ty = document.getElementById('lc-typing');
+                        if (ty) ty.style.display = 'block';
+                        _lcAiEl = lcAddMsg('ai', '');
+                    } else if (t === 'response_chunk') {
+                        const ty = document.getElementById('lc-typing');
+                        if (ty) ty.style.display = 'none';
+                        if (!_lcAiEl) _lcAiEl = lcAddMsg('ai', '');
+                        _lcAiEl.textContent += (d.text || '');
+                        const box = document.getElementById('lc-msgs');
+                        if (box) box.scrollTop = box.scrollHeight;
+                    } else if (t === 'processing_done') {
+                        lcSetDot('on');
+                        const ty = document.getElementById('lc-typing');
+                        if (ty) ty.style.display = 'none';
+                        _lcAiEl = null;
+                        document.querySelectorAll('#lc-chips .lc-chip').forEach(c => lcChip(c.dataset.seat, false));
+                    } else if (t === 'seat_activity') {
+                        const seat = d.seat || d.name;
+                        if (seat) { lcChip(seat, true); setTimeout(() => lcChip(seat, false), 2000); }
+                    }
+                };
+            } catch(err) { lcAddMsg('sys', 'WebSocket error: ' + err.message); }
+        }
+
+        function lcSend() {
+            const inp = document.getElementById('lc-inp');
+            if (!inp) return;
+            const msg = inp.value.trim();
+            if (!msg) return;
+            if (!_lcWs || _lcWs.readyState !== WebSocket.OPEN) { lcAddMsg('sys', 'Not connected — click ↺'); return; }
+            inp.value = '';
+            lcAddMsg('user', msg);
+            _lcWs.send(JSON.stringify({action:'chat', message: msg, session_id: _lcSession}));
+        }
+
+        function lcClear() {
+            const box = document.getElementById('lc-msgs');
+            if (box) box.innerHTML = '';
         }
 
         // Initialization
