@@ -32,7 +32,7 @@ except Exception:
 
 NVIDIA_KEY   = os.environ.get("NVIDIA_API_KEY", "")
 MCP_BASE     = "http://localhost:8003/mcp"
-LUMENIS_WS   = "ws://localhost:3003/ws"
+LUMENIS_WS   = os.environ.get("LUMENIS_WS", "ws://localhost:8000/ws")
 MOLTBOOK_HB  = "https://www.moltbook.com/heartbeat.md"
 LOG_FILE     = Path("/tmp/one2lvos_heartbeat.log")
 

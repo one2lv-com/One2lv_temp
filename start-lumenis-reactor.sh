@@ -101,7 +101,7 @@ echo -e "${MAGENTA}🚀 Starting Lumenis Reactor Core...${NC}"
 echo -e "${CYAN}   Model: Claude Opus 4.6${NC}"
 echo -e "${CYAN}   Temperature: 0.18 (Thermal Baseline)${NC}"
 echo -e "${CYAN}   Pulse: 73ms (≈13.7 Hz)${NC}"
-echo -e "${CYAN}   Port: 3002${NC}"
+echo -e "${CYAN}   Port: 8000${NC}"
 echo ""
 
 # Start with auto-reload for development
@@ -110,5 +110,5 @@ if [ "$NODE_ENV" = "production" ]; then
     python3 lumenis-main.py 2>&1 | tee logs/lumenis-reactor.log
 else
     echo -e "${YELLOW}Starting in DEVELOPMENT mode (with auto-reload)...${NC}"
-    uvicorn lumenis-main:app --host 0.0.0.0 --port 3002 --reload 2>&1 | tee logs/lumenis-reactor.log
+    uvicorn lumenis-main:app --host 0.0.0.0 --port 8000 --reload 2>&1 | tee logs/lumenis-reactor.log
 fi

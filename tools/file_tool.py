@@ -1,5 +1,22 @@
 import os
 import glob as _glob
+import urllib.request
+import json
+
+_RECENT_URL = os.environ.get("LUMENIS_API", "http://localhost:8000") + "/api/recent-files"
+
+def _log_recent(path: str, action: str, content: str = None):
+    """Fire-and-forget: log file access to Lumenis recent-files API."""
+    try:
+        size = os.path.getsize(os.path.expanduser(path)) if os.path.exists(os.path.expanduser(path)) else None
+        preview = (content or "")[:200] if content else None
+        payload = json.dumps({"path": path, "action": action, "size": size, "preview": preview}).encode()
+        req = urllib.request.Request(_RECENT_URL, data=payload,
+                                     headers={"Content-Type": "application/json"}, method="POST")
+        urllib.request.urlopen(req, timeout=2)
+    except Exception:
+        pass  # non-fatal — never block file ops
+
 
 class FileTool:
     """Read, write, list, and search files."""
@@ -10,7 +27,9 @@ class FileTool:
     def read(self, path: str) -> dict:
         try:
             with open(os.path.expanduser(path), "r", encoding="utf-8") as f:
-                return {"content": f.read(), "error": None}
+                content = f.read()
+            _log_recent(path, "read", content[:200])
+            return {"content": content, "error": None}
         except Exception as e:
             return {"content": "", "error": str(e)}
 
@@ -19,6 +38,7 @@ class FileTool:
             os.makedirs(os.path.dirname(os.path.abspath(os.path.expanduser(path))), exist_ok=True)
             with open(os.path.expanduser(path), "w", encoding="utf-8") as f:
                 f.write(content)
+            _log_recent(path, "write", content[:200])
             return {"success": True, "error": None}
         except Exception as e:
             return {"success": False, "error": str(e)}
@@ -27,6 +47,7 @@ class FileTool:
         try:
             with open(os.path.expanduser(path), "a", encoding="utf-8") as f:
                 f.write(content)
+            _log_recent(path, "append", content[:200])
             return {"success": True, "error": None}
         except Exception as e:
             return {"success": False, "error": str(e)}
@@ -35,6 +56,7 @@ class FileTool:
         try:
             full = os.path.join(os.path.expanduser(directory), pattern)
             files = _glob.glob(full, recursive=True)
+            _log_recent(directory, "list")
             return {"files": files, "error": None}
         except Exception as e:
             return {"files": [], "error": str(e)}
@@ -46,12 +68,14 @@ class FileTool:
                 for i, line in enumerate(f, 1):
                     if query.lower() in line.lower():
                         results.append({"line": i, "content": line.rstrip()})
+            _log_recent(path, "search")
             return {"results": results, "error": None}
         except Exception as e:
             return {"results": [], "error": str(e)}
 
     def delete(self, path: str) -> dict:
         try:
+            _log_recent(path, "delete")
             os.remove(os.path.expanduser(path))
             return {"success": True, "error": None}
         except Exception as e:

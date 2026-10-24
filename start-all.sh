@@ -55,6 +55,13 @@ else
     echo -e "  ${RED}✗ Reactor not responding — check logs/reactor.log${NC}"
 fi
 echo ""
+# ── Watchdog ──────────────────────────────────────────────────────────────────
+echo -e "${CYAN}[watchdog] Starting reactor watchdog...${NC}"
+pkill -f "watchdog.py" 2>/dev/null || true
+nohup python3 "$ROOT_DIR/watchdog.py" > "$ROOT_DIR/logs/watchdog.log" 2>&1 &
+echo -e "  ${GREEN}\u2713 Watchdog PID: $!${NC}"
+echo ""
+
 
 # ── [4] AI Lobby ─────────────────────────────────────────────────────────────
 echo -e "${CYAN}[4/5] Starting AI Lobby (port 8006)...${NC}"

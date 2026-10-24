@@ -1619,3 +1619,92 @@ TOOL_REGISTRY.extend([
     {"id": "infra.change",       "label": "Infra Change (GRANT)",   "method": "POST",   "path": "/api/infra/change",       "category": "Infra",      "icon": "⚙️",  "params": ["action","target","description"]},
     {"id": "infra.log",          "label": "Infra Change Log",       "method": "GET",    "path": "/api/infra/log",          "category": "Infra",      "icon": "📜", "params": []},
 ])
+
+# =============================================================================
+#  RECENT FILES — Lumenis directive: track all file operations
+# =============================================================================
+
+def _rf_db():
+    conn = sqlite3.connect(_DB_PATH)
+    conn.execute("""CREATE TABLE IF NOT EXISTS recent_files (
+        id         TEXT PRIMARY KEY,
+        path       TEXT NOT NULL,
+        action     TEXT NOT NULL,
+        opened_at  REAL NOT NULL,
+        size       INTEGER,
+        preview    TEXT
+    )""")
+    conn.commit()
+    return conn
+
+
+@app.get("/api/recent-files")
+async def recent_files_list(limit: int = 20):
+    """Return most recently accessed files across all One2lvOS tools."""
+    try:
+        conn = _rf_db()
+        rows = conn.execute(
+            "SELECT id, path, action, opened_at, size, preview FROM recent_files "
+            "ORDER BY opened_at DESC LIMIT ?", (limit,)
+        ).fetchall()
+        conn.close()
+        return JSONResponse({"files": [
+            {"id": r[0], "path": r[1], "action": r[2],
+             "opened_at": r[3], "size": r[4], "preview": r[5]}
+            for r in rows
+        ], "count": len(rows)})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/api/recent-files")
+async def recent_files_log(body: dict):
+    """Log a file access event. Called by FileTool and any file-aware subsystem."""
+    path    = body.get("path", "").strip()
+    action  = body.get("action", "read").strip()   # read|write|append|delete|list
+    size    = body.get("size")
+    preview = body.get("preview", "")
+    if not path:
+        return JSONResponse({"error": "path required"}, status_code=400)
+    try:
+        conn = _rf_db()
+        # Keep only 200 most recent entries
+        count = conn.execute("SELECT COUNT(*) FROM recent_files").fetchone()[0]
+        if count >= 200:
+            oldest = conn.execute(
+                "SELECT id FROM recent_files ORDER BY opened_at ASC LIMIT ?",
+                (count - 199,)
+            ).fetchall()
+            for (oid,) in oldest:
+                conn.execute("DELETE FROM recent_files WHERE id=?", (oid,))
+        conn.execute(
+            "INSERT OR REPLACE INTO recent_files (id,path,action,opened_at,size,preview) VALUES (?,?,?,?,?,?)",
+            (str(uuid.uuid4()), path, action, datetime.now().timestamp(),
+             size, (preview or "")[:300])
+        )
+        conn.commit()
+        conn.close()
+        return JSONResponse({"logged": True, "path": path, "action": action})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.delete("/api/recent-files")
+async def recent_files_clear():
+    """Clear the recent files history."""
+    try:
+        conn = _rf_db()
+        conn.execute("DELETE FROM recent_files")
+        conn.commit()
+        conn.close()
+        return JSONResponse({"cleared": True})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+TOOL_REGISTRY.extend([
+    {"id": "recent.list",  "label": "Recent Files",        "method": "GET",    "path": "/api/recent-files", "category": "Files", "icon": "🕐", "params": ["limit"]},
+    {"id": "recent.log",   "label": "Log File Access",     "method": "POST",   "path": "/api/recent-files", "category": "Files", "icon": "📁", "params": ["path","action","size","preview"]},
+    {"id": "recent.clear", "label": "Clear Recent Files",  "method": "DELETE", "path": "/api/recent-files", "category": "Files", "icon": "🗑️", "params": []},
+    {"id": "watchdog.ping","label": "Watchdog Status",     "method": "GET",    "path": "/api/facts/all",    "category": "System","icon": "🐕", "params": []},
+])
