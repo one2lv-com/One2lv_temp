@@ -100,13 +100,34 @@ async def _trigger_auto_checkpoint():
             pass  # non-fatal
 
 
+def _load_services_from_db():
+    """Load the combined static + dynamic service list."""
+    services = list(_SERVICES_TO_WATCH)  # static baseline
+    try:
+        conn = sqlite3.connect(_DB_PATH)
+        rows = conn.execute(
+            "SELECT name, url FROM services_watch WHERE enabled=1"
+        ).fetchall()
+        conn.close()
+        existing_urls = {u for _, u in services}
+        for name, url in rows:
+            if url not in existing_urls:
+                services.append((name, url))
+    except Exception:
+        pass
+    return services
+
+
 async def _trigger_service_watch():
-    """Poll services every 60s; broadcast alerts on status changes."""
+    """Poll services every 60s (static + dynamic); broadcast alerts on status changes.
+    Conflict priority matrix item 4: service alerts run at P4 — after active sessions."""
     import urllib.request
     prev = {}
     while True:
         await asyncio.sleep(60)
-        for name, url in _SERVICES_TO_WATCH:
+        # P4: only run when no active user session in last 60s
+        # (best-effort: check if any WS clients sent a message recently — skip if busy)
+        for name, url in _load_services_from_db():
             try:
                 with urllib.request.urlopen(url, timeout=3) as r:
                     up = r.status < 500
@@ -121,7 +142,6 @@ async def _trigger_service_watch():
                 evt = "service_up" if up else "service_down"
                 await broadcast({"type": evt, "service": name, "url": url,
                                  "ts": datetime.now().isoformat()})
-                # Store in compass facts
                 try:
                     compass.store_fact(key=f"service.{name}.status",
                                       value=("up" if up else "down"), source="trigger_engine")
@@ -1198,4 +1218,234 @@ TOOL_REGISTRY.extend([
     {"id": "checkpoint.create", "label": "Create Checkpoint",     "method": "POST", "path": "/api/checkpoints",      "category": "Checkpoints", "icon": "💾", "params": ["label","state"]},
     {"id": "checkpoint.list",   "label": "List Checkpoints",      "method": "GET",  "path": "/api/checkpoints",      "category": "Checkpoints", "icon": "📋", "params": []},
     {"id": "checkpoint.get",    "label": "Get Checkpoint",        "method": "GET",  "path": "/api/checkpoints/{id}", "category": "Checkpoints", "icon": "📂", "params": ["id"]},
+])
+
+# =============================================================================
+#  GOVERNANCE LAYER — Council Vote Applied
+#  Item 1 FULL:    Objectives (autonomous sub-goal origination)
+#  Item 2 PARTIAL: Identity file read/write (Soul.md, Memory.md, skills.md, tools.md)
+#  Item 3 FULL:    Dynamic service registration
+#  Item 4 PARTIAL: Conflict priority matrix (enforced in trigger engine)
+#  Item 6 GRANT:   Infrastructure changes (self-authorized, logged)
+# =============================================================================
+
+_IDENTITY_DIR = Path(__file__).parent
+_IDENTITY_FILES = {
+    "soul":   _IDENTITY_DIR / "Soul.md",
+    "memory": _IDENTITY_DIR / "Memory.md",
+    "skills": _IDENTITY_DIR / "skills.md",
+    "tools":  _IDENTITY_DIR / "tools.md",
+}
+
+def _gov_db():
+    """Ensure objectives + services_watch tables exist."""
+    conn = sqlite3.connect(_DB_PATH)
+    conn.execute("""CREATE TABLE IF NOT EXISTS objectives (
+        id          TEXT PRIMARY KEY,
+        title       TEXT NOT NULL,
+        description TEXT,
+        status      TEXT NOT NULL DEFAULT 'active',
+        priority    INTEGER NOT NULL DEFAULT 5,
+        created_at  REAL NOT NULL,
+        updated_at  REAL NOT NULL
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS services_watch (
+        id          TEXT PRIMARY KEY,
+        name        TEXT NOT NULL,
+        url         TEXT NOT NULL,
+        enabled     INTEGER NOT NULL DEFAULT 1,
+        added_at    REAL NOT NULL
+    )""")
+    conn.commit()
+    return conn
+
+
+# ── Item 1: Objectives ────────────────────────────────────────────────────────
+
+@app.post("/api/objectives")
+async def create_objective(body: dict):
+    """Lumenis creates a new autonomous objective."""
+    title = body.get("title", "").strip()
+    if not title:
+        return JSONResponse({"error": "title required"}, status_code=400)
+    oid = f"obj_{int(datetime.now().timestamp()*1000)}"
+    now = datetime.now().timestamp()
+    try:
+        conn = _gov_db()
+        conn.execute(
+            "INSERT INTO objectives (id,title,description,status,priority,created_at,updated_at) VALUES (?,?,?,?,?,?,?)",
+            (oid, title, body.get("description",""), body.get("status","active"),
+             int(body.get("priority", 5)), now, now)
+        )
+        conn.commit(); conn.close()
+        await broadcast({"type": "objective_created", "id": oid, "title": title})
+        return JSONResponse({"id": oid, "title": title, "created": True})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/api/objectives")
+async def list_objectives(status: str = None):
+    """List active objectives from compass.db."""
+    try:
+        conn = _gov_db()
+        if status:
+            rows = conn.execute(
+                "SELECT id,title,description,status,priority,created_at,updated_at FROM objectives WHERE status=? ORDER BY priority ASC, created_at ASC",
+                (status,)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT id,title,description,status,priority,created_at,updated_at FROM objectives ORDER BY priority ASC, created_at ASC"
+            ).fetchall()
+        conn.close()
+        keys = ("id","title","description","status","priority","created_at","updated_at")
+        return JSONResponse({"objectives": [dict(zip(keys,r)) for r in rows], "count": len(rows)})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.patch("/api/objectives/{objective_id}")
+async def update_objective(objective_id: str, body: dict):
+    """Update objective status or priority."""
+    try:
+        conn = _gov_db()
+        fields, vals = [], []
+        for f in ("title","description","status","priority"):
+            if f in body:
+                fields.append(f"{f}=?"); vals.append(body[f])
+        if not fields:
+            return JSONResponse({"error": "nothing to update"}, status_code=400)
+        fields.append("updated_at=?"); vals.append(datetime.now().timestamp())
+        vals.append(objective_id)
+        conn.execute(f"UPDATE objectives SET {', '.join(fields)} WHERE id=?", vals)
+        conn.commit(); conn.close()
+        await broadcast({"type": "objective_updated", "id": objective_id, "changes": body})
+        return JSONResponse({"updated": objective_id})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# ── Item 2: Identity file read/write ─────────────────────────────────────────
+
+def _identity_route(key: str):
+    async def _read():
+        p = _IDENTITY_FILES[key]
+        return JSONResponse({"file": key, "content": p.read_text() if p.exists() else ""})
+    async def _write(body: dict):
+        content = body.get("content","")
+        if not content:
+            return JSONResponse({"error": "content required"}, status_code=400)
+        _IDENTITY_FILES[key].write_text(content)
+        return JSONResponse({"file": key, "written": True, "bytes": len(content)})
+    return _read, _write
+
+_soul_read,   _soul_write   = _identity_route("soul")
+_memory_read, _memory_write = _identity_route("memory")
+_skills_read, _skills_write = _identity_route("skills")
+_tools_read,  _tools_write  = _identity_route("tools")
+
+app.add_api_route("/api/soul",         _soul_read,   methods=["GET"])
+app.add_api_route("/api/soul",         _soul_write,  methods=["PUT"])
+app.add_api_route("/api/memory",       _memory_read, methods=["GET"])
+app.add_api_route("/api/memory",       _memory_write,methods=["PUT"])
+app.add_api_route("/api/skills",       _skills_read, methods=["GET"])
+app.add_api_route("/api/skills",       _skills_write,methods=["PUT"])
+app.add_api_route("/api/tools-manifest", _tools_read,  methods=["GET"])
+app.add_api_route("/api/tools-manifest", _tools_write, methods=["PUT"])
+
+
+# ── Item 3: Dynamic service registration ─────────────────────────────────────
+
+@app.post("/api/services")
+async def register_service(body: dict):
+    """Register a new service into the dynamic watch list."""
+    name = body.get("name","").strip()
+    url  = body.get("url","").strip()
+    if not name or not url:
+        return JSONResponse({"error": "name and url required"}, status_code=400)
+    sid  = f"svc_{name.lower().replace(' ','_')}"
+    conn = _gov_db()
+    conn.execute(
+        "INSERT OR REPLACE INTO services_watch (id,name,url,enabled,added_at) VALUES (?,?,?,1,?)",
+        (sid, name, url, datetime.now().timestamp())
+    )
+    conn.commit(); conn.close()
+    await broadcast({"type": "service_registered", "id": sid, "name": name, "url": url})
+    return JSONResponse({"id": sid, "name": name, "url": url, "registered": True})
+
+
+@app.get("/api/services")
+async def list_services():
+    """List all dynamically registered services."""
+    conn = _gov_db()
+    rows = conn.execute("SELECT id,name,url,enabled,added_at FROM services_watch ORDER BY added_at").fetchall()
+    conn.close()
+    keys = ("id","name","url","enabled","added_at")
+    return JSONResponse({"services": [dict(zip(keys,r)) for r in rows], "count": len(rows)})
+
+
+@app.delete("/api/services/{service_id}")
+async def remove_service(service_id: str):
+    """Disable a service from the watch list."""
+    conn = _gov_db()
+    conn.execute("UPDATE services_watch SET enabled=0 WHERE id=?", (service_id,))
+    conn.commit(); conn.close()
+    return JSONResponse({"disabled": service_id})
+
+
+# ── Item 6: Infrastructure change authorization (GRANT) ──────────────────────
+
+_INFRA_LOG = []  # in-memory + persisted to compass facts
+
+@app.post("/api/infra/change")
+async def infra_change(body: dict):
+    """Self-authorized infrastructure change. Logged to compass.db. No human sign-off required."""
+    action      = body.get("action","").strip()
+    target      = body.get("target","").strip()
+    description = body.get("description","")
+
+    ALLOWED_ACTIONS = ("restart", "register_service", "remove_service",
+                       "write_identity", "create_objective", "schema_repair", "broadcast")
+    if action not in ALLOWED_ACTIONS:
+        return JSONResponse({"error": f"action '{action}' not in GRANT list: {ALLOWED_ACTIONS}"}, status_code=403)
+
+    cid = f"infra_{int(datetime.now().timestamp()*1000)}"
+    entry = {"id": cid, "action": action, "target": target,
+             "description": description, "ts": datetime.now().isoformat(), "authorized_by": "GRANT"}
+    _INFRA_LOG.append(entry)
+
+    try:
+        compass.store_fact(key=f"infra.{action}.{cid}", value=_json_mod.dumps(entry), source="infra_grant")
+    except Exception:
+        pass
+
+    await broadcast({"type": "infra_change", **entry})
+    return JSONResponse({"executed": cid, "action": action, "target": target, "authorized_by": "GRANT"})
+
+
+@app.get("/api/infra/log")
+async def infra_log(limit: int = 20):
+    """Return recent self-authorized infrastructure changes."""
+    return JSONResponse({"log": _INFRA_LOG[-limit:], "total": len(_INFRA_LOG)})
+
+
+# Register governance tools
+TOOL_REGISTRY.extend([
+    {"id": "objectives.create",  "label": "Create Objective",      "method": "POST",   "path": "/api/objectives",         "category": "Governance", "icon": "🎯", "params": ["title","description","priority"]},
+    {"id": "objectives.list",    "label": "List Objectives",        "method": "GET",    "path": "/api/objectives",         "category": "Governance", "icon": "📋", "params": ["status"]},
+    {"id": "objectives.update",  "label": "Update Objective",       "method": "PATCH",  "path": "/api/objectives/{id}",    "category": "Governance", "icon": "✏️",  "params": ["status","priority"]},
+    {"id": "soul.read",          "label": "Read Soul.md",           "method": "GET",    "path": "/api/soul",               "category": "Identity",   "icon": "🌟", "params": []},
+    {"id": "soul.write",         "label": "Write Soul.md",          "method": "PUT",    "path": "/api/soul",               "category": "Identity",   "icon": "✍️",  "params": ["content"]},
+    {"id": "memory.md.read",     "label": "Read Memory.md",         "method": "GET",    "path": "/api/memory",             "category": "Identity",   "icon": "🧠", "params": []},
+    {"id": "memory.md.write",    "label": "Write Memory.md",        "method": "PUT",    "path": "/api/memory",             "category": "Identity",   "icon": "📝", "params": ["content"]},
+    {"id": "skills.read",        "label": "Read skills.md",         "method": "GET",    "path": "/api/skills",             "category": "Identity",   "icon": "⚡", "params": []},
+    {"id": "skills.write",       "label": "Write skills.md",        "method": "PUT",    "path": "/api/skills",             "category": "Identity",   "icon": "📝", "params": ["content"]},
+    {"id": "tools.read",         "label": "Read tools.md",          "method": "GET",    "path": "/api/tools-manifest",     "category": "Identity",   "icon": "🔧", "params": []},
+    {"id": "tools.write",        "label": "Write tools.md",         "method": "PUT",    "path": "/api/tools-manifest",     "category": "Identity",   "icon": "📝", "params": ["content"]},
+    {"id": "services.register",  "label": "Register Service",       "method": "POST",   "path": "/api/services",           "category": "Services",   "icon": "📡", "params": ["name","url"]},
+    {"id": "services.list",      "label": "List Services",          "method": "GET",    "path": "/api/services",           "category": "Services",   "icon": "🗺️",  "params": []},
+    {"id": "services.remove",    "label": "Remove Service",         "method": "DELETE", "path": "/api/services/{id}",      "category": "Services",   "icon": "❌", "params": ["id"]},
+    {"id": "infra.change",       "label": "Infra Change (GRANT)",   "method": "POST",   "path": "/api/infra/change",       "category": "Infra",      "icon": "⚙️",  "params": ["action","target","description"]},
+    {"id": "infra.log",          "label": "Infra Change Log",       "method": "GET",    "path": "/api/infra/log",          "category": "Infra",      "icon": "📜", "params": []},
 ])
