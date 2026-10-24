@@ -1,0 +1,20 @@
+{
+  "name": "ai-lobby",
+  "version": "1.0.0",
+  "description": "Visually stunning AI chat lobby with NVIDIA backend, agentic AI, voice, file manager, terminal, vector memory, and skills.",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "ws": "^8.18.0",
+    "multer": "^1.4.5-lts.1",
+    "cookie-parser": "^1.4.6"
+  }
+}

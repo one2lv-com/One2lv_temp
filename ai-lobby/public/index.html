@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AI Lobby · NVIDIA Agentic Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237c3aed'/%3E%3Cstop offset='1' stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ctext x='50%25' y='58%25' text-anchor='middle' font-family='Inter' font-weight='700' font-size='32' fill='white'%3E%E2%9C%A8%3C/text%3E%3C/svg%3E" />
+</head>
+<body>
+  <canvas id="starfield" aria-hidden="true"></canvas>
+  <div class="aurora" aria-hidden="true">
+    <span></span><span></span><span></span>
+  </div>
+
+  <!-- Top bar -->
+  <header class="topbar glass">
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
+          <defs>
+            <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#a855f7"/>
+              <stop offset="1" stop-color="#06b6d4"/>
+            </linearGradient>
+          </defs>
+          <rect x="2" y="2" width="28" height="28" rx="8" fill="url(#lg)"/>
+          <path d="M9 21V11h2.7l5 7.2V11H19v10h-2.7l-5-7.2V21z" fill="white"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title">AI Lobby</div>
+        <div class="brand-sub">NVIDIA · Agentic · Vector Memory</div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <button class="nav-btn active" data-view="chat">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M4 4h16v12H6l-2 2z"/></svg>
+        <span>Chat</span>
+      </button>
+      <button class="nav-btn" data-view="skills">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 2l3 6 6 .9-4.5 4.4 1 6.2L12 16.8 6.5 19.5l1-6.2L3 8.9 9 8z"/></svg>
+        <span>Skills</span>
+      </button>
+      <button class="nav-btn" data-view="memory">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 3a9 9 0 0 0-9 9c0 4 3 8 6 9l3-9c-2 0-3-1-3-3s1-3 3-3 3 1 3 3l3 9c3-1 6-5 6-9a9 9 0 0 0-9-9z"/></svg>
+        <span>Memory</span>
+      </button>
+      <button class="nav-btn admin-only" data-view="files" hidden>
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8z"/></svg>
+        <span>Files</span>
+      </button>
+      <button class="nav-btn admin-only" data-view="terminal" hidden>
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M3 4h18v16H3zm2 2v12h14V6zm2 3l3 3-3 3 1 1 4-4-4-4zm6 6h5v-1h-5z"/></svg>
+        <span>Terminal</span>
+      </button>
+      <button class="nav-btn" data-view="settings">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19.4 13a7.5 7.5 0 0 0 0-2l2-1.5-2-3.5-2.4 1a7.5 7.5 0 0 0-1.7-1L15 3h-4l-.3 3a7.5 7.5 0 0 0-1.7 1l-2.4-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2 1.5 2 3.5 2.4-1c.5.4 1.1.7 1.7 1L11 21h4l.3-3c.6-.3 1.2-.6 1.7-1l2.4 1 2-3.5zM13 15.5A3.5 3.5 0 1 1 13 8.5a3.5 3.5 0 0 1 0 7z"/></svg>
+        <span>Settings</span>
+      </button>
+      <button class="nav-btn" data-view="hub">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 2l3 6 6 .9-4.5 4.4 1 6.2L12 16.8 6.5 19.5l1-6.2L3 8.9 9 8z"/></svg>
+        <span>∆Hub</span>
+      </button>
+    </nav>
+
+    <div class="user-area">
+      <div class="user-pill" id="userPill">
+        <span class="dot"></span>
+        <span id="userLabel">guest</span>
+      </div>
+      <button class="icon-btn" id="loginBtn" title="Admin login">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M11 7L9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5zM20 19h-8v2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-8v2h8z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- CHAT -->
+    <section class="view view-chat" data-view="chat">
+      <aside class="sidebar glass">
+        <div class="sidebar-section">
+          <div class="label">Model</div>
+          <div class="model-tabs" id="modelTabs"></div>
+        </div>
+        <div class="sidebar-section">
+          <div class="label">Conversation</div>
+          <button class="ghost-btn full" id="newChatBtn">+ New chat</button>
+          <div class="thread-list" id="threadList"></div>
+        </div>
+        <div class="sidebar-section">
+          <div class="label">Quick actions</div>
+          <button class="ghost-btn" data-insert="Summarize the latest 5 news headlines from the web.">🌐 Web summary</button>
+          <button class="ghost-btn" data-insert="Remember: my project name is Lattice and the launch date is July 12.">🧠 Save a memory</button>
+          <button class="ghost-btn" data-insert="Plan a 5-step launch checklist for a SaaS product and store it.">📋 Plan a task</button>
+          <button class="ghost-btn admin-only" data-insert="List all files in the workspace, then read README.md if it exists." hidden>📁 Inspect workspace</button>
+        </div>
+        <div class="sidebar-footer">
+          <div class="status-pill" id="connStatus"><span class="dot"></span> connecting…</div>
+        </div>
+      </aside>
+
+      <div class="chat-area">
+        <div class="chat-header">
+          <div class="model-pill" id="activeModelPill">
+            <span class="dot"></span><span>…</span>
+          </div>
+          <div class="chat-tools">
+            <button class="icon-btn" id="voiceOverlayBtn" title="Voice overlay">
+              <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 1 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11z"/></svg>
+            </button>
+            <button class="icon-btn" id="exportBtn" title="Export chat">
+              <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M5 20h14v-2H5zM19 9h-4V3H9v6H5l7 7z"/></svg>
+            </button>
+            <button class="icon-btn" id="clearBtn" title="Clear memory">
+              <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M6 7h12v2H6zm2 3h8l-1 11H9zM9 4h6l1 2H8z"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="messages" id="messages">
+          <div class="empty-state">
+            <div class="empty-glyph">✦</div>
+            <h1>Welcome to the Lobby</h1>
+            <p>Two NVIDIA models · agentic tools · vector memory · voice overlay · web scrape · file ops · terminal access.</p>
+            <div class="empty-chips">
+              <button class="chip" data-insert="Give me a 3-bullet briefing on today's weather in Tokyo.">Weather in Tokyo</button>
+              <button class="chip" data-insert="Scrape https://example.com and tell me what's on it.">Scrape example.com</button>
+              <button class="chip" data-insert="Remember: my favorite color is ultraviolet. Then recall it.">Test memory</button>
+              <button class="chip admin-only" data-insert="Run `uname -a` and `ls -la` in the workspace." hidden>Run a command</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="composer glass">
+          <div class="persona-chips" id="personaChips">
+            <span class="persona-chip-label">persona</span>
+            <button class="persona-chip" data-persona="default">✦ default</button>
+            <button class="persona-chip" data-persona="witness">◉ witness</button>
+            <button class="persona-chip" data-persona="coach">◈ coach</button>
+            <button class="persona-chip" data-persona="broadcaster">◊ broadcaster</button>
+            <button class="persona-chip" data-persona="second_player">◇ 2p</button>
+          </div>
+          <button class="icon-btn" id="micBtn" title="Hold to talk">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 1 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11z"/></svg>
+          </button>
+          <textarea id="input" rows="1" placeholder="Ask anything. Try: 'scrape https://…', 'remember X', 'plan a launch', or use /voice to talk."></textarea>
+          <button class="send-btn" id="sendBtn">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SKILLS -->
+    <section class="view view-skills" data-view="skills" hidden>
+      <div class="panel glass">
+        <div class="panel-head">
+          <h2>Skills</h2>
+          <p>All the agentic capabilities wired into the AI. Click a card to inject a starter prompt.</p>
+        </div>
+        <div class="skill-grid" id="skillGrid"></div>
+      </div>
+    </section>
+
+    <!-- MEMORY -->
+    <section class="view view-memory" data-view="memory" hidden>
+      <div class="panel glass">
+        <div class="panel-head">
+          <h2>Vector Memory</h2>
+          <p>Persistent semantic memory. The AI recalls relevant items on every turn.</p>
+        </div>
+        <div class="memory-tools">
+          <input id="memQuery" placeholder="Search memories…" />
+          <button class="primary-btn" id="memSearch">Search</button>
+          <button class="ghost-btn" id="memClear">Wipe all (admin)</button>
+        </div>
+        <div class="memory-list" id="memoryList"></div>
+      </div>
+    </section>
+
+    <!-- FILES -->
+    <section class="view view-files" data-view="files" hidden>
+      <div class="panel glass files-panel">
+        <div class="panel-head">
+          <h2>File Manager</h2>
+          <p>Admin sandbox: <code id="workspacePath">/workspace</code></p>
+        </div>
+        <div class="files-bar">
+          <button class="ghost-btn" id="filesUp">↑ Up</button>
+          <div class="crumb" id="filesCrumb">/</div>
+          <button class="primary-btn" id="filesNew">+ New file</button>
+          <label class="primary-btn file-label">
+            Upload
+            <input type="file" id="filesUpload" hidden />
+          </label>
+          <button class="ghost-btn" id="filesMkdir">+ Folder</button>
+        </div>
+        <div class="files-split">
+          <div class="file-list" id="fileList"></div>
+          <div class="file-view" id="fileView">
+            <div class="file-empty">Select a file to preview, or create a new one.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TERMINAL -->
+    <section class="view view-terminal" data-view="terminal" hidden>
+      <div class="panel glass">
+        <div class="panel-head">
+          <h2>Terminal <span class="badge danger">admin only</span></h2>
+          <p>Shell runs in <code id="termCwd">/workspace</code>. 30s timeout per command.</p>
+        </div>
+        <div class="term-grid">
+          <div class="term-output" id="termOutput"></div>
+          <form class="term-form" id="termForm">
+            <span class="term-prompt">$</span>
+            <input id="termInput" autocomplete="off" spellcheck="false" placeholder="type a command and press Enter…" />
+            <button type="submit" class="primary-btn">Run</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- HUB (∆One2lv∆) -->
+    <section class="view view-hub" data-view="hub" hidden>
+      <div class="panel glass">
+        <div class="panel-head hub-head">
+          <div>
+            <h2>∆One2lv∆ Hub <span class="badge soul">73.0 Hz</span></h2>
+            <p>Persona · Mesh · Evolution. Loaded from <code>github.com/one2lv-com/minimax</code>.</p>
+          </div>
+          <div class="hub-node">node <code id="hubNodeId">—</code></div>
+        </div>
+
+        <div class="hub-grid">
+          <div class="hub-card">
+            <div class="hub-card-h">Persona</div>
+            <div class="persona-grid" id="personaGrid"></div>
+            <div class="hub-card-sub" id="personaBlurb">—</div>
+          </div>
+
+          <div class="hub-card">
+            <div class="hub-card-h">Evolution <span class="badge">Second Player</span></div>
+            <div class="evo-meter" id="evoMeter">
+              <div class="evo-fill" id="evoFill"></div>
+              <div class="evo-label"><span id="evoName">Initiate</span> · L<span id="evoLevel">1</span></div>
+            </div>
+            <div class="evo-stats" id="evoStats">aggression 30% · reaction 800ms</div>
+            <div class="hub-row">
+              <button class="ghost-btn" id="evoDown">− Level</button>
+              <button class="ghost-btn" id="evoUp">+ Level</button>
+              <button class="primary-btn" id="evoMatch">Sim match</button>
+            </div>
+          </div>
+
+          <div class="hub-card wide">
+            <div class="hub-card-h">Mesh Network <span class="badge soul" id="meshBadge">0 peers</span></div>
+            <div class="mesh-status" id="meshStatus">standalone — no peers</div>
+            <div class="hub-row">
+              <input id="meshEventType" placeholder="event type" value="lobby_event" />
+              <input id="meshEventData" placeholder='data (JSON)' value='{"text":"ping from hub"}' />
+              <button class="primary-btn" id="meshBroadcast">Broadcast</button>
+              <button class="ghost-btn" id="meshRefresh">Refresh</button>
+            </div>
+            <div class="mesh-peers" id="meshPeers"></div>
+            <details class="mesh-help">
+              <summary>How to connect a peer</summary>
+              <code>ws://&lt;this-host&gt;:&lt;port&gt;/mesh</code>
+              <p>Send any JSON. You'll receive a <code>hello</code> with peerId, nodeId and freq, then every broadcast the lobby emits.</p>
+            </details>
+          </div>
+
+          <div class="hub-card wide">
+            <div class="hub-card-h">Soul Layer <span class="badge soul">L0</span></div>
+            <pre class="soul-pre" id="soulPre"></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="view view-settings" data-view="settings" hidden>
+      <div id="settingsGate" class="panel glass">
+        <div class="panel-head">
+          <h2>Settings · Admin</h2>
+          <p>Sign in as <strong>One2lv</strong> to manage API keys, models, and system prompt.</p>
+        </div>
+        <form class="login-form" id="loginForm">
+          <label>Username<input name="username" autocomplete="username" required /></label>
+          <label>Password<input name="password" type="password" autocomplete="current-password" required /></label>
+          <button class="primary-btn" type="submit">Sign in</button>
+          <div class="login-error" id="loginError" hidden></div>
+        </form>
+      </div>
+
+      <div id="settingsPanel" hidden>
+        <div class="panel glass">
+          <div class="panel-head">
+            <h2>Settings</h2>
+            <p>Manage API keys, models, system prompt, and overlay. Keys are hidden by default.</p>
+          </div>
+          <div class="settings-row">
+            <label class="switch">
+              <input type="checkbox" id="showKeys" />
+              <span>Show API keys</span>
+            </label>
+            <label class="switch">
+              <input type="checkbox" id="voiceToggle" />
+              <span>Voice overlay replies</span>
+            </label>
+            <label>
+              <span>Theme</span>
+              <select id="themeSel">
+                <option value="aurora">Aurora (default)</option>
+                <option value="midnight">Midnight</option>
+                <option value="sunset">Sunset</option>
+              </select>
+            </label>
+            <button class="primary-btn" id="saveSettings">Save</button>
+          </div>
+        </div>
+
+        <div class="panel glass">
+          <div class="panel-head">
+            <h2>Models & API Keys</h2>
+            <p>Edit any field. Save reloads the live config.</p>
+          </div>
+          <div id="modelsConfig"></div>
+          <button class="primary-btn" id="saveConfig">Save models</button>
+        </div>
+
+        <div class="panel glass">
+          <div class="panel-head">
+            <h2>System Prompt</h2>
+            <p>Defines the agentic behavior and tool protocol.</p>
+          </div>
+          <textarea id="systemPrompt" rows="14"></textarea>
+          <button class="primary-btn" id="savePrompt">Save prompt</button>
+        </div>
+
+        <div class="panel glass">
+          <div class="panel-head">
+            <h2>Admin Credentials</h2>
+            <p>Change the local admin username / password.</p>
+          </div>
+          <div class="settings-row">
+            <label>Username<input id="adminUser" /></label>
+            <label>Password<input id="adminPass" type="password" /></label>
+            <button class="primary-btn" id="saveAdmin">Save credentials</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Witness frequency footer (shown only when persona=witness) -->
+  <div class="witness-footer glass" id="witnessFooter" hidden>
+    <span>[</span><span class="freq">FREQ: <span id="wfFreq">73.0 Hz</span></span>
+    <span class="bar">|</span>
+    <span>LAYER: <span id="wfLayer">L0</span></span>
+    <span class="bar">|</span>
+    <span>STATUS: <span id="wfStatus">STABLE</span></span>
+    <span class="bar">|</span>
+    <span>NODE: <span id="wfNode">—</span></span>
+    <span>]</span>
+  </div>
+
+  <!-- Voice overlay -->
+  <div class="voice-overlay" id="voiceOverlay" hidden>
+    <div class="voice-orb">
+      <div class="voice-ring r1"></div>
+      <div class="voice-ring r2"></div>
+      <div class="voice-ring r3"></div>
+      <div class="voice-core" id="voiceCore">🎙️</div>
+    </div>
+    <div class="voice-caption" id="voiceCaption">Tap to start · say "stop" to end</div>
+    <div class="voice-transcript" id="voiceTranscript"></div>
+    <button class="voice-close" id="voiceClose">×</button>
+  </div>
+
+  <!-- Toast container -->
+  <div class="toasts" id="toasts"></div>
+
+  <!-- Login modal (also reachable from top right) -->
+  <div class="modal" id="loginModal" hidden>
+    <div class="modal-card glass">
+      <h3>Admin Sign-in</h3>
+      <form id="loginFormModal">
+        <label>Username<input name="username" autocomplete="username" required /></label>
+        <label>Password<input name="password" type="password" autocomplete="current-password" required /></label>
+        <div class="modal-actions">
+          <button type="button" class="ghost-btn" id="loginCancel">Cancel</button>
+          <button type="submit" class="primary-btn">Sign in</button>
+        </div>
+        <div class="login-error" id="loginErrorModal" hidden></div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

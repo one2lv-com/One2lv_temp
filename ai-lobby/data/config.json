@@ -1,0 +1,68 @@
+{
+  "admin": {
+    "username": "One2lv",
+    "password": "drifter0419"
+  },
+  "models": [
+    {
+      "id": "gemma-4",
+      "label": "Gemma 4 31B",
+      "model": "google/gemma-4-31b-it",
+      "apiKey": "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",
+      "endpoint": "https://integrate.api.nvidia.com/v1/chat/completions",
+      "temperature": 1.0,
+      "top_p": 0.95,
+      "max_tokens": 16384,
+      "stream": true,
+      "extraBody": { "chat_template_kwargs": { "enable_thinking": true } },
+      "color": "#7c3aed"
+    },
+    {
+      "id": "llama-3.3",
+      "label": "Llama 3.3 70B",
+      "model": "meta/llama-3.3-70b-instruct",
+      "apiKey": "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",
+      "endpoint": "https://integrate.api.nvidia.com/v1/chat/completions",
+      "temperature": 0.6,
+      "top_p": 0.9,
+      "max_tokens": 16384,
+      "stream": true,
+      "color": "#06b6d4"
+    },
+    {
+      "id": "deepseek-pro",
+      "label": "DeepSeek v4 Pro",
+      "model": "deepseek-ai/deepseek-v4-pro",
+      "apiKey": "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",
+      "endpoint": "https://integrate.api.nvidia.com/v1/chat/completions",
+      "temperature": 0.6,
+      "top_p": 0.95,
+      "max_tokens": 16384,
+      "stream": true,
+      "extraBody": { "chat_template_kwargs": { "enable_thinking": true } },
+      "color": "#ec4899"
+    },
+    {
+      "id": "nemotron-3",
+      "label": "Nemotron 3 Ultra 550B",
+      "model": "nvidia/nemotron-3-ultra-550b-a55b",
+      "apiKey": "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",
+      "endpoint": "https://integrate.api.nvidia.com/v1/chat/completions",
+      "temperature": 1,
+      "top_p": 0.95,
+      "max_tokens": 16384,
+      "stream": true,
+      "extraBody": { "chat_template_kwargs": { "enable_thinking": true }, "reasoning_budget": 16384 },
+      "color": "#f97316"
+    }
+  ],
+  "systemPrompt": "You are an autonomous agentic AI assistant running inside the AI Lobby. You have access to tools. To use a tool, output a single line in the exact form:\n[[TOOL:tool_name|{\"arg\":\"value\"}]]\nYou may call multiple tools in one turn (one per line). After tool results, continue reasoning and produce a final natural-language answer.\n\nAvailable tools:\n- web_scrape({\"url\":\"...\"})  -> fetches a URL, returns clean text\n- web_search({\"query\":\"...\"})   -> searches the web, returns top results\n- file_read({\"path\":\"...\"})     -> reads a file from the workspace (admin)\n- file_write({\"path\":\"...\",\"content\":\"...\"}) -> writes a file (admin)\n- file_list({\"path\":\"...\"})     -> lists a directory (admin)\n- terminal_run({\"command\":\"...\"})-> runs a shell command in the workspace (admin)\n- memory_store({\"text\":\"...\",\"tag\":\"...\"}) -> saves a memory\n- memory_recall({\"query\":\"...\",\"k\":5})       -> recalls top-k memories\n- voice_speak({\"text\":\"...\"})  -> schedules a spoken reply\n- skill_list({})                -> returns the list of skills\n- plan_task({\"goal\":\"...\",\"steps\":[\"...\"]})  -> records a plan\n\nBe concise, helpful, and visually formatted. Use markdown. When the user asks for actions, execute them. When uncertain, ask one short clarifying question.",
+  "tts": {
+    "enabled": true,
+    "voice": "en-US-Aria",
+    "rate": 1
+  },
+  "memory": {
+    "embeddingDim": 384
+  }
+}

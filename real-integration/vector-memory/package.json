@@ -1,0 +1,10 @@
+{
+  "name": "interplanetary-disk-memory",
+  "version": "1.0.0",
+  "description": "Interplanetary-disk Vector Memory System",
+  "main": "vector_store.js",
+  "type": "commonjs",
+  "dependencies": {
+    "sqlite3": "^5.1.6"
+  }
+}

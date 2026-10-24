@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>One2lv REAL Integration</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: monospace;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #0ff; text-align: center; margin: 20px 0; }
+        .status { background: #111; padding: 20px; margin: 20px 0; border: 1px solid #0f0; }
+        .btn {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .btn:hover { background: #0ff; }
+        .output {
+            background: #000;
+            border: 1px solid #333;
+            padding: 15px;
+            margin: 10px 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        input[type="text"] {
+            background: #111;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 10px;
+            width: 100%;
+            margin: 10px 0;
+            font-family: inherit;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌌 ONE2LV REAL INTEGRATION 🧲</h1>
+
+        <div class="status">
+            <h2>System Status</h2>
+            <div id="status">Loading...</div>
+            <button class="btn" onclick="checkStatus()">Refresh</button>
+        </div>
+
+        <div class="status">
+            <h2>Test Real Components</h2>
+            <input type="text" id="message" placeholder="Enter your message..." value="Explain quantum computing">
+            <button class="btn" onclick="testCouncil()">Test Council (NVIDIA AI)</button>
+            <button class="btn" onclick="testDelta()">Test Delta Engine</button>
+            <button class="btn" onclick="testMemory()">Test Vector Memory</button>
+            <button class="btn" onclick="testPipeline()">Test Full Pipeline</button>
+        </div>
+
+        <div class="output" id="output"></div>
+    </div>
+
+    <script>
+        const log = (msg) => {
+            const output = document.getElementById('output');
+            output.innerHTML += `[${new Date().toLocaleTimeString()}] ${msg}<br>`;
+            output.scrollTop = output.scrollHeight;
+        };
+
+        const checkStatus = async () => {
+            log('Checking system status...');
+            try {
+                const [council, core] = await Promise.all([
+                    fetch('/api/ai/status').then(r => r.json()).catch(() => null),
+                    fetch('/api/core/status').then(r => r.json()).catch(() => null)
+                ]);
+
+                document.getElementById('status').innerHTML = `
+                    <strong>Council:</strong> ${council ? (council.council.mode === 'real' ? '✅ REAL (NVIDIA)' : '⚠️ DEMO MODE') : '❌ Offline'}<br>
+                    <strong>Delta Engine:</strong> ${core ? '✅ REAL (9-layer gradient)' : '❌ Offline'}<br>
+                    <strong>Vector Memory:</strong> ${core ? '✅ REAL (Interplanetary-disk)' : '❌ Offline'}
+                `;
+                log('Status updated');
+            } catch (error) {
+                log(`Error: ${error.message}`);
+            }
+        };
+
+        const testCouncil = async () => {
+            const message = document.getElementById('message').value;
+            log(`Testing Council with: "${message}"`);
+
+            try {
+                const response = await fetch('/api/ai/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({message, agent: 'researcher'})
+                });
+                const data = await response.json();
+                log(`✅ Council Response (${data.model}):`);
+                log(`   ${data.response.substring(0, 200)}...`);
+                log(`   Tokens: ${data.tokens}, Time: ${data.processing_time.toFixed(2)}s`);
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+            }
+        };
+
+        const testDelta = async () => {
+            log('Testing Delta Engine...');
+            try {
+                const response = await fetch('/api/core/delta/process', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({input: [1, 2, 3, 4, 5]})
+                });
+                const data = await response.json();
+                log(`✅ Delta Engine: ${data.layer_outputs.length} layers processed`);
+                log(`   Quality: ${data.layer_outputs[8].metrics?.quality || 'N/A'}`);
+                log(`   Time: ${data.total_processing_time_ms}ms`);
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+            }
+        };
+
+        const testMemory = async () => {
+            const message = document.getElementById('message').value;
+            log(`Testing Vector Memory with: "${message}"`);
+
+            try {
+                const response = await fetch('/api/core/memory/search', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({query: message, top_k: 3})
+                });
+                const data = await response.json();
+                log(`✅ Vector Memory: ${data.results.length} results found`);
+                data.results.forEach((r, i) => {
+                    log(`   ${i+1}. ${r.content.substring(0, 80)}... (similarity: ${r.similarity.toFixed(3)})`);
+                });
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+            }
+        };
+
+        const testPipeline = async () => {
+            const message = document.getElementById('message').value;
+            log(`Testing Full Pipeline with: "${message}"`);
+
+            try {
+                const response = await fetch('/api/core/process', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({message, use_memory: true})
+                });
+                const data = await response.json();
+                log(`✅ Full Pipeline Complete:`);
+                log(`   Response: ${data.response.substring(0, 150)}...`);
+                log(`   Components: ${JSON.stringify(data.components)}`);
+                log(`   Pipeline steps: ${data.pipeline.length}`);
+                log(`   Total time: ${data.total_time_ms}ms`);
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+            }
+        };
+
+        // Auto-check status on load
+        window.addEventListener('load', checkStatus);
+    </script>
+</body>
+</html>

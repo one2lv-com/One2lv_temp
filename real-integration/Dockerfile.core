@@ -1,0 +1,35 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install curl for health checks
+RUN apk add --no-cache curl
+
+# Copy all package files
+COPY core/package.json ./core/
+COPY delta-engine/package.json ./delta-engine/
+COPY vector-memory/package.json ./vector-memory/
+
+# Install dependencies
+RUN cd core && npm install && \
+    cd ../delta-engine && npm install && \
+    cd ../vector-memory && npm install
+
+# Copy source code
+COPY core/ ./core/
+COPY delta-engine/ ./delta-engine/
+COPY vector-memory/ ./vector-memory/
+
+# Create data directory
+RUN mkdir -p /app/data
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:3000/health || exit 1
+
+# Start server
+WORKDIR /app/core
+CMD ["node", "server.js"]

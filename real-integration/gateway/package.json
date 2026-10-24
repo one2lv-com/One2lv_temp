@@ -1,0 +1,15 @@
+{
+  "name": "one2lv-gateway-real",
+  "version": "1.0.0",
+  "description": "One2lv Gateway - Real Integration",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "http-proxy-middleware": "^2.0.6"
+  }
+}
