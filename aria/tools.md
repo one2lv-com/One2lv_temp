@@ -40,3 +40,23 @@
 
 ## Dynamic Tools
 <!-- Auto-registered when agent learns new tools -->
+
+### VisionTool
+- **Module**: tools/vision_tool.py
+- **Description**: Image analysis using NVIDIA NIM vision models
+- **Operations**: analyze(image_url, query), analyze_local, list_models
+- **Models**: phi-3-vision, phi-3.5-vision, nemotron-3b-vision, llama-3.2-90b-vision, cosmos-1.0-vision
+
+### MatonTool
+- **Module**: tools/maton_tool.py
+- **Description**: Universal gateway to 12+ apps via Maton API (single key)
+- **Apps**: Slack, GitHub, Gmail, Notion, Salesforce, Jira, Linear, Supabase, Stripe, X/Twitter, LinkedIn, Discord
+- **Operations**: list_connections, create_connection, call_app_api, slack_post_message, github_create_issue, gmail_send_message, notion_create_page, linear_create_issue, stripe_list_customers, x_post_tweet, discord_send_message
+- **Dispatch**: maton_tool_dispatch(action, args)
+
+### LobbyTool (BuildLobby)
+- **Module**: tools/build_lobby.py
+- **Description**: File-backed multi-agent build lobby with cross-process locking
+- **Operations**: register_agent, send_message, broadcast, direct_message, update_build_state, add_blocker, remove_blocker, add_patch, add_artifact, heartbeat, get_messages, get_state
+- **Roles**: orchestrator, builder, watcher, reviewer, tester
+- **Message types**: handoff, status, error, warning, chat, command, artifact, heartbeat, phase_change

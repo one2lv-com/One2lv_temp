@@ -12,8 +12,8 @@ import asyncio, json, os, sqlite3, sys, time, urllib.request, urllib.parse, uuid
 import websockets
 
 MATON_API_KEY = os.environ.get("MATON_API_KEY", "")
-COMPASS_DB    = "/home/vercel-sandbox/One2lvos-build/compass.db"
-LUMENIS_WS    = "ws://localhost:3003/ws"
+COMPASS_DB    = os.environ.get("COMPASS_DB", os.path.join(os.path.dirname(os.path.abspath(__file__)), "compass.db"))
+LUMENIS_WS    = os.environ.get("LUMENIS_WS", "ws://localhost:8000/ws")
 GV_FROM       = "voice-noreply@google.com"
 
 

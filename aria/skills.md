@@ -41,3 +41,23 @@
 
 ## Learned Skills
 <!-- Dynamically added by agent -->
+
+### vision_analysis
+- **Description**: Analyze images and visual content using NVIDIA NIM vision models
+- **Trigger**: "analyze image", "what's in this picture", "describe this image", "vision", "look at this"
+
+### maton_integration
+- **Description**: Connect and interact with external apps (Slack, GitHub, Gmail, Notion, etc.) via Maton gateway
+- **Trigger**: "send slack", "post to github", "check gmail", "update notion", "post tweet", "maton"
+
+### lobby_coordination
+- **Description**: Coordinate multi-agent build sessions with file-backed lobby and cross-process state
+- **Trigger**: "coordinate agents", "build lobby", "multi-agent", "handoff to", "agent coordination"
+
+### delta_engine
+- **Description**: Run gradient-based optimization cycles via the Delta Engine subsystem
+- **Trigger**: "delta cycle", "optimize", "gradient step", "delta engine"
+
+### real_integration
+- **Description**: Orchestrate real-integration subsystem (council, delta-engine, vector-memory, gateway)
+- **Trigger**: "real integration", "spin up services", "docker compose", "integration stack"

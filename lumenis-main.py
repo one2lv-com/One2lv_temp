@@ -560,7 +560,7 @@ async def terminal_exec(body: dict):
     try:
         result = subprocess.run(
             cmd, shell=True, capture_output=True, text=True, timeout=15,
-            cwd="/home/vercel-sandbox/One2lvos"
+            cwd=os.path.dirname(os.path.abspath(__file__))
         )
         return JSONResponse({
             "command": cmd,
@@ -612,7 +612,7 @@ async def terminal_ws(ws: WebSocket):
                     cmd,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.STDOUT,
-                    cwd="/home/vercel-sandbox/One2lvos",
+                    cwd=os.path.dirname(os.path.abspath(__file__)),
                 )
                 async for chunk in process.stdout:
                     await ws.send_text(json.dumps({"type": "output", "data": chunk.decode("utf-8", errors="replace")}))

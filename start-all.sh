@@ -94,7 +94,7 @@ echo ""
 
 # ── [6] Aetherix Browser OS (port 8086) ──────────────────────────────────────
 echo -e "${CYAN}[6/9] Starting Aetherix Browser OS (port 8086)...${NC}"
-AETHERIX_DIR="/home/vercel-sandbox/Aetherix"
+AETHERIX_DIR="$ROOT_DIR/Aetherix"
 if [ -f "$AETHERIX_DIR/server.py" ]; then
     cd "$AETHERIX_DIR"
     nohup python3 server.py > "$ROOT_DIR/logs/aetherix.log" 2>&1 &
@@ -113,7 +113,7 @@ echo ""
 
 # ── [7] ARIA Agent (port 8088) ────────────────────────────────────────────────
 echo -e "${CYAN}[7/9] Starting ARIA Agent (port 8088)...${NC}"
-ARIA_DIR="/home/vercel-sandbox/aria"
+ARIA_DIR="$ROOT_DIR/aria"
 if [ -f "$ARIA_DIR/main.py" ]; then
     cd "$ARIA_DIR"
     pip3 install -q -r requirements.txt 2>/dev/null
@@ -133,7 +133,7 @@ echo ""
 
 # ── [8] Control Plane Compilers (port 8084) ───────────────────────────────────
 echo -e "${CYAN}[8/9] Starting Control Plane Compilers (port 8084)...${NC}"
-CPC_DIR="/home/vercel-sandbox/control-plane-compilers"
+CPC_DIR="$ROOT_DIR/control-plane-compilers"
 if [ -f "$CPC_DIR/setup.py" ]; then
     cd "$CPC_DIR"
     pip3 install -q -e . 2>/dev/null
@@ -146,7 +146,7 @@ echo ""
 
 # ── [9] Sovereign Agentic Core (port 8081) ────────────────────────────────────
 echo -e "${CYAN}[9/9] Starting Sovereign Agentic Core (port 8081)...${NC}"
-SAC_DIR="/home/vercel-sandbox/sovereign-agentic-core"
+SAC_DIR="$ROOT_DIR/sovereign-agentic-core"
 if [ -f "$SAC_DIR/main.py" ]; then
     cd "$SAC_DIR"
     nohup python3 -m uvicorn main:app --host 0.0.0.0 --port 8081 \
