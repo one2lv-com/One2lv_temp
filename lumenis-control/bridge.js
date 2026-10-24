@@ -11,7 +11,7 @@
 const axios = require('axios');
 const WebSocket = require('ws');
 
-const PYTHON_API_URL = process.env.PYTHON_API_URL || 'http://localhost:3002';
+const PYTHON_API_URL = process.env.PYTHON_API_URL || 'http://localhost:8000'; // Lumenis Reactor Core
 
 class SovereignBridge {
     constructor() {

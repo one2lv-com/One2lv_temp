@@ -1,7 +1,7 @@
 const path = require('path');
 
 const rootDir = __dirname;
-const pythonPort = process.env.PYTHON_PORT || '3002';
+const pythonPort = process.env.PYTHON_PORT || '8000'; // Lumenis Reactor Core port
 const nodePort = process.env.NODE_PORT || '3000';
 
 module.exports = {

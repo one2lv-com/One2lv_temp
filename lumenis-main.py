@@ -1461,6 +1461,145 @@ async def infra_log(limit: int = 20):
     return JSONResponse({"log": _INFRA_LOG[-limit:], "total": len(_INFRA_LOG)})
 
 
+# =============================================================================
+#  REVIVAL LAYER — lumenis_v7 + lumenis-control + minmax/Phase 9
+# =============================================================================
+
+# ── v7 Revival: lowdb-compatible JSON memory export ──────────────────────────
+@app.get("/api/memory/json")
+async def memory_json_export():
+    """Export FluxCompass as lowdb-compatible JSON (lumenis_v7 format)."""
+    import time as _time
+    conn = sqlite3.connect(_DB_PATH)
+    cur  = conn.cursor()
+    cur.execute("SELECT key, value, source, created_at FROM facts ORDER BY created_at DESC")
+    facts_rows = [{"key": r[0], "value": r[1], "source": r[2], "created_at": r[3]} for r in cur.fetchall()]
+    cur.execute("SELECT id, role, content, seat, created_at FROM messages ORDER BY created_at DESC LIMIT 200")
+    msgs = [{"id": r[0], "role": r[1], "content": r[2], "seat": r[3], "created_at": r[4]} for r in cur.fetchall()]
+    conn.close()
+    return JSONResponse({
+        "councilLogs": msgs,
+        "facts":       facts_rows,
+        "meta": {"format": "lowdb-compat", "source": "FluxCompass SQLite", "exported": _time.time(), "version": "lumenis_v8+"},
+    })
+
+# ── lumenis-control Revival: 9-model AI suite registry ───────────────────────
+_AI_SUITE = [
+    {"id": 1, "name": "Claude Opus 4.6",      "provider": "Anthropic", "model": "claude-opus-4-6",                     "speed_ms": None, "thinking": True,  "key_env": "ANTHROPIC_API_KEY",             "status": "needs_key", "use_case": "Highest quality reasoning"},
+    {"id": 2, "name": "Nemotron-Mini-4B",      "provider": "NVIDIA",    "model": "nvidia/nemotron-mini-4b-instruct",    "speed_ms": 500,  "thinking": False, "key_env": "NVIDIA_API_KEY",                "status": "active",    "use_case": "Fast responses, simple tasks"},
+    {"id": 3, "name": "Gemma-4-31B-IT",        "provider": "NVIDIA",    "model": "google/gemma-4-31b-it",              "speed_ms": 1200, "thinking": True,  "key_env": "NVIDIA_API_KEY_SECONDARY",      "status": "active",    "use_case": "Code generation, complex reasoning"},
+    {"id": 4, "name": "Nemotron-Super-120B",    "provider": "NVIDIA",    "model": "nvidia/nemotron-3-super-120b-a12b",  "speed_ms": 3000, "thinking": True,  "key_env": "NVIDIA_API_KEY_NEMOTRON_SUPER", "status": "active",    "use_case": "Ultra reasoning, deep analysis"},
+    {"id": 5, "name": "MiniMax-M2.7",          "provider": "NVIDIA",    "model": "minimax/minimax-01",                 "speed_ms": 1000, "thinking": False, "key_env": "NVIDIA_API_KEY_MINIMAX",        "status": "active",    "use_case": "Balanced performance"},
+    {"id": 6, "name": "StepFun-3.5-Flash",     "provider": "NVIDIA",    "model": "stepfun/step-3.5-flash",             "speed_ms": 800,  "thinking": True,  "key_env": "NVIDIA_API_KEY_STEPFUN",        "status": "active",    "use_case": "Fast reasoning tasks"},
+    {"id": 7, "name": "Kimi-K2.6",             "provider": "NVIDIA",    "model": "moonshotai/kimi-k2-instruct-0905",   "speed_ms": 1200, "thinking": True,  "key_env": "NVIDIA_API_KEY_KIMI",           "status": "active",    "use_case": "Complex multi-step tasks"},
+    {"id": 8, "name": "UnifiedReactor",         "provider": "Lumenis",   "model": "lumenis/unified-reactor",            "speed_ms": None, "thinking": True,  "key_env": "NVIDIA_API_KEY",                "status": "active",    "use_case": "Routes across all models dynamically"},
+    {"id": 9, "name": "ITT Council of Nine",    "provider": "Lumenis",   "model": "lumenis/itt-council-v9",             "speed_ms": None, "thinking": True,  "key_env": None,                            "status": "active",    "use_case": "Full 9-seat agent orchestration"},
+]
+
+@app.get("/api/models")
+async def list_models():
+    """9-model AI suite registry (lumenis-control revival)."""
+    active  = sum(1 for m in _AI_SUITE if m["status"] == "active")
+    pending = sum(1 for m in _AI_SUITE if m["status"] != "active")
+    return JSONResponse({"suite": _AI_SUITE, "active": active, "pending": pending, "primary": reactor.get_status().get("model"), "source": "lumenis-control-revival"})
+
+# ── Phase 9 Revival: DeltaEngine — ∆⁹ 9-layer gradient tracking ──────────────
+_DELTA_LAYERS = 9
+
+class _DeltaLayer:
+    def __init__(self, name: str, weight: float = 1.0):
+        self.name = name; self.weight = weight
+        self.value = 0.0; self.velocity = 0.0; self.acceleration = 0.0
+        self.history: list = []
+
+class _DeltaEngine:
+    """∆⁹ 9-layer gradient stack — ported from minmax/Phase 9."""
+    LR = 0.01; MOMENTUM = 0.9
+    _NAMES = ["thermal", "pulse", "tokens", "nodes", "errors", "sessions", "facts", "vectors", "council"]
+
+    def __init__(self):
+        self.layers = [_DeltaLayer(n) for n in self._NAMES]
+
+    def ingest(self, metrics: dict):
+        mapping = {
+            "thermal":  metrics.get("temperature", 0.18),
+            "pulse":    metrics.get("pulse_count", 0) % 1000 / 1000,
+            "tokens":   min(metrics.get("tokens_streamed", 0) / 10000, 1.0),
+            "nodes":    min(metrics.get("active_nodes", 0) / 10, 1.0),
+            "errors":   0.0,
+            "sessions": min(metrics.get("sessions", 0) / 100, 1.0),
+            "facts":    min(metrics.get("facts", 0) / 500, 1.0),
+            "vectors":  min(metrics.get("vectors", 0) / 100, 1.0),
+            "council":  min(metrics.get("tokens_streamed", 0) / 5000, 1.0),
+        }
+        for layer in self.layers:
+            target = mapping.get(layer.name, 0.0)
+            grad   = target - layer.value
+            layer.velocity     = self.MOMENTUM * layer.velocity + self.LR * grad
+            layer.acceleration = layer.velocity - (layer.history[-1] if layer.history else 0.0)
+            layer.value       += layer.velocity
+            layer.history      = (layer.history + [layer.value])[-50:]
+        return [{"name": l.name, "value": round(l.value, 4), "velocity": round(l.velocity, 6), "weight": l.weight} for l in self.layers]
+
+_delta_engine = _DeltaEngine()
+
+@app.get("/api/delta")
+async def delta_snapshot():
+    """∆⁹ Delta Engine — 9-layer gradient state (minmax/Phase 9 revival)."""
+    metrics = reactor.get_status()
+    metrics["sessions"] = len(compass.list_sessions())
+    metrics["facts"]    = compass.get_stats().get("total_facts", 0)
+    layers = _delta_engine.ingest(metrics)
+    dominant = max(layers, key=lambda l: abs(l["velocity"]))
+    return JSONResponse({"delta9": layers, "dominant": dominant, "layers": _DELTA_LAYERS, "symbol": "∆⁹", "source": "minmax-Phase9-revival"})
+
+# ── Phase 9 Revival: Autonomous execution cycle ───────────────────────────────
+_CYCLE_LOG: list = []
+
+@app.post("/api/autonomous/cycle")
+async def autonomous_cycle(body: dict = None):
+    """Trigger one autonomous ITT Council decision cycle (Phase 9 revival)."""
+    import time as _time, aiohttp as _aiohttp
+    body      = body or {}
+    directive = body.get("directive", "evaluate system state and propose next action")
+    metrics   = reactor.get_status()
+    metrics["sessions"] = len(compass.list_sessions())
+    metrics["facts"]    = compass.get_stats().get("total_facts", 0)
+    layers    = _delta_engine.ingest(metrics)
+    dominant  = max(layers, key=lambda l: abs(l["velocity"]))
+    system_prompt = (
+        "You are Lumenis, sovereign AI reactor of One2lvOS. "
+        "Running autonomous cycle — self-directed, no human prompt. "
+        f"Delta Engine dominant layer: '{dominant['name']}' velocity={dominant['velocity']:+.6f}. "
+        "Emit ONE concrete autonomous action or goal. One sentence only."
+    )
+    api_key  = os.environ.get("NVIDIA_API_KEY", "")
+    model    = os.environ.get("LLM_PRIMARY_MODEL", "meta/llama-3.2-11b-vision-instruct")
+    decision = "autonomous cycle: no API key configured"
+    if api_key:
+        try:
+            async with _aiohttp.ClientSession() as session:
+                async with session.post(
+                    "https://integrate.api.nvidia.com/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                    json={"model": model, "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": directive}], "max_tokens": 128, "temperature": 0.18},
+                    timeout=_aiohttp.ClientTimeout(total=30),
+                ) as resp:
+                    data = await resp.json()
+                    decision = data["choices"][0]["message"]["content"].strip()
+        except Exception as e:
+            decision = f"cycle error: {e}"
+    entry = {"cycle": len(_CYCLE_LOG) + 1, "dominant_layer": dominant["name"], "directive": directive, "decision": decision, "timestamp": _time.time()}
+    _CYCLE_LOG.append(entry)
+    await broadcast({"type": "autonomous_cycle", **entry})
+    return JSONResponse(entry)
+
+@app.get("/api/autonomous/log")
+async def autonomous_log(limit: int = 20):
+    """Return recent autonomous cycle decisions."""
+    return JSONResponse({"log": _CYCLE_LOG[-limit:], "total": len(_CYCLE_LOG)})
+
+
 # Register governance tools
 TOOL_REGISTRY.extend([
     {"id": "objectives.create",  "label": "Create Objective",      "method": "POST",   "path": "/api/objectives",         "category": "Governance", "icon": "🎯", "params": ["title","description","priority"]},
