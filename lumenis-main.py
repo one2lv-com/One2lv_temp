@@ -60,11 +60,95 @@ async def on_pulse(status):
     )
 
 
+# =============================================================================
+#  Trigger Engine — autonomous background loop (action layer)
+# =============================================================================
+_SERVICES_TO_WATCH = [
+    ("ai-arcade",    "http://localhost:8003"),
+    ("os-core",      "http://localhost:3002/health"),
+    ("ai-lobby",     "http://localhost:8006"),
+    ("lumenis-v7",   "http://localhost:8005"),
+    ("lumenis-ui",   "http://localhost:9001"),
+    ("lumenis-os",   "http://localhost:9002/api/healthz"),
+    ("aetherix",     "http://localhost:9003/health"),
+]
+
+async def _trigger_auto_checkpoint():
+    """Create a periodic checkpoint saved to compass.db every 5 minutes."""
+    while True:
+        await asyncio.sleep(300)
+        try:
+            cid = f"auto_{int(datetime.now().timestamp()*1000)}"
+            conn = _vec_db()
+            conn.execute(
+                "INSERT INTO checkpoints (id, label, state_json, created_at) VALUES (?,?,?,?)",
+                (cid, "auto", json.dumps({
+                    "reactor": compass.get_stats(),
+                    "timestamp": datetime.now().isoformat()
+                }), datetime.now().timestamp())
+            )
+            # Keep only last 50 auto checkpoints
+            rows = conn.execute(
+                "SELECT id FROM checkpoints ORDER BY created_at DESC LIMIT -1 OFFSET 50"
+            ).fetchall()
+            if rows:
+                conn.executemany("DELETE FROM checkpoints WHERE id=?", rows)
+            conn.commit(); conn.close()
+            await broadcast({"type": "checkpoint", "id": cid, "label": "auto",
+                             "ts": datetime.now().isoformat()})
+        except Exception as e:
+            pass  # non-fatal
+
+
+async def _trigger_service_watch():
+    """Poll services every 60s; broadcast alerts on status changes."""
+    import urllib.request
+    prev = {}
+    while True:
+        await asyncio.sleep(60)
+        for name, url in _SERVICES_TO_WATCH:
+            try:
+                with urllib.request.urlopen(url, timeout=3) as r:
+                    up = r.status < 500
+            except Exception:
+                up = False
+            was_up = prev.get(name)
+            if was_up is None:
+                prev[name] = up
+                continue
+            if up != was_up:
+                prev[name] = up
+                evt = "service_up" if up else "service_down"
+                await broadcast({"type": evt, "service": name, "url": url,
+                                 "ts": datetime.now().isoformat()})
+                # Store in compass facts
+                try:
+                    compass.store_fact(key=f"service.{name}.status",
+                                      value=("up" if up else "down"), source="trigger_engine")
+                except Exception:
+                    pass
+
+
+async def _trigger_self_heal():
+    """Watch compass.db for schema drift; re-create missing tables."""
+    while True:
+        await asyncio.sleep(600)  # every 10 minutes
+        try:
+            conn = _vec_db()
+            conn.close()
+        except Exception:
+            pass  # _vec_db() creates tables on access — this is enough
+
+
 # ── Lifespan ──────────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await reactor.start()
-    print("✦ Sovereign Core online — Thermal Baseline 0.18°C")
+    # Launch autonomous background tasks
+    asyncio.create_task(_trigger_auto_checkpoint())
+    asyncio.create_task(_trigger_service_watch())
+    asyncio.create_task(_trigger_self_heal())
+    print("✦ Sovereign Core online — Thermal Baseline 0.18°C | Trigger Engine active")
     yield
     await reactor.stop()
 
