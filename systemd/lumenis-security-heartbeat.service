@@ -1,0 +1,29 @@
+[Unit]
+Description=Lumenis Security Heartbeat - Integrated Monitoring
+Documentation=file:///home/vercel-sandbox/One2lvos/SECURITY_INCIDENT_RESPONSE.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=vercel-sandbox
+WorkingDirectory=/home/vercel-sandbox/One2lvos
+EnvironmentFile=/home/vercel-sandbox/One2lvos/.env
+
+# Run Lumenis integrated security monitoring
+ExecStart=/usr/bin/python3 /home/vercel-sandbox/One2lvos/lumenis_security_heartbeat.py
+
+# Restart on failure
+Restart=on-failure
+RestartSec=300
+
+# Logging
+StandardOutput=append:/home/vercel-sandbox/One2lvos/logs/lumenis_heartbeat.log
+StandardError=append:/home/vercel-sandbox/One2lvos/logs/lumenis_heartbeat_error.log
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

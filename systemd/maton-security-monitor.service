@@ -1,0 +1,29 @@
+[Unit]
+Description=Maton Security Monitor - API Key Exposure Response
+Documentation=file:///home/vercel-sandbox/One2lvos/SECURITY_INCIDENT_RESPONSE.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=vercel-sandbox
+WorkingDirectory=/home/vercel-sandbox/One2lvos
+EnvironmentFile=/home/vercel-sandbox/One2lvos/.env
+
+# Run the security monitor
+ExecStart=/usr/bin/python3 /home/vercel-sandbox/One2lvos/maton_security_monitor.py
+
+# Restart on failure
+Restart=on-failure
+RestartSec=300
+
+# Logging
+StandardOutput=append:/home/vercel-sandbox/One2lvos/logs/maton_monitor.log
+StandardError=append:/home/vercel-sandbox/One2lvos/logs/maton_monitor_error.log
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
