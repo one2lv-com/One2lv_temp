@@ -15,21 +15,14 @@ from typing import Optional
 
 MATON_API_BASE = "https://api.maton.ai"
 
-# Active connection IDs (loaded at startup)
+# Active connection IDs (loaded at startup from maton connection list)
 CONNECTIONS: dict[str, str] = {
-    "google-mail":              "004ea73d-ba8a-4722-aa5d-3ff7c861c9bf",
-    "google-drive":             "ea5e1faa-c7b4-4821-99a0-9297874356df",
-    "google-docs":              "1c732f8d-58a5-41f7-82c5-23c7a5e8db21",
-    "google-contacts":          "d007612f-02ec-4b5a-a9df-8bbcd89e4f09",
-    "google-meet":              "94c2e75d-80b6-4872-a4fb-5223149de90a",
-    "google-search-console":    "7a942de6-f36a-4833-a7c0-7710fe586981",
-    "google-workspace-admin":   "81b40862-3b05-476e-a29f-02fdc9af76a9",
-    "google-play":              "d28e8680-7982-495b-9992-25d625664086",
-    "youtube":                  "0bb17955-13d5-4d4f-b6cd-b919410128f9",
-    "github":                   "d90fadc6-6d5d-4e53-acea-453f262b7706",
-    "dropbox":                  "722c0bb3-8786-4bf4-9122-26310c43c633",
-    "one-drive":                "3ca80c51-8728-4c76-bad3-2f2aba6c580b",
-    "firebase":                 "003b5e86-b6ba-4b94-9ab4-4763fec5fc89",
+    "google-mail":              "f5d9df2d-6f0e-40e4-a140-a3589187c3dc",  # exf0000000@gmail.com ACTIVE
+    "google-drive":             "4a1e79ca-1d08-4089-9ab6-a2b94fa95e86",  # exf0000000@gmail.com ACTIVE
+    "google-docs":              "ab74d17b-b192-4bfb-8f13-4fff4c699942",  # exf0000000@gmail.com ACTIVE
+    "google-meet":              "aff106c5-8389-45b2-ade4-3e4cdbd4b6bc",  # exf0000000@gmail.com ACTIVE
+    "google-play":              "8c802b05-eade-4006-b485-55ef9205403e",  # exf0000000@gmail.com ACTIVE
+    "github":                   "ac0fbe17-0a48-4395-8bdf-6c1371cd50b8",  # PENDING - needs OAuth completion
 }
 
 # Human-readable service labels
@@ -37,16 +30,9 @@ SERVICE_LABELS: dict[str, str] = {
     "google-mail":              "Gmail",
     "google-drive":             "Google Drive",
     "google-docs":              "Google Docs",
-    "google-contacts":          "Google Contacts",
     "google-meet":              "Google Meet",
-    "google-search-console":    "Search Console",
-    "google-workspace-admin":   "Workspace Admin",
     "google-play":              "Google Play",
-    "youtube":                  "YouTube",
     "github":                   "GitHub",
-    "dropbox":                  "Dropbox",
-    "one-drive":                "OneDrive",
-    "firebase":                 "Firebase",
 }
 
 # Native API path prefixes per service (for Hermes to build correct URLs)
@@ -54,16 +40,9 @@ API_GUIDES: dict[str, str] = {
     "google-mail":              "Gmail REST: /gmail/v1/users/me/messages, /gmail/v1/users/me/threads, /gmail/v1/users/me/labels",
     "google-drive":             "Drive REST: /drive/v3/files, /drive/v3/files/{fileId}, /drive/v3/files/{fileId}/export",
     "google-docs":              "Docs REST: /v1/documents/{documentId}",
-    "google-contacts":          "People REST: /v1/people/me/connections, /v1/people:searchContacts",
     "google-meet":              "Meet REST: /v2/spaces, /v2/conferenceRecords",
-    "google-search-console":    "Search Console REST: /webmasters/v3/sites, /webmasters/v3/sites/{siteUrl}/searchAnalytics/query",
-    "google-workspace-admin":   "Admin REST: /admin/directory/v1/users, /admin/directory/v1/groups",
     "google-play":              "Play REST: /androidpublisher/v3/applications/{packageName}/reviews",
-    "youtube":                  "YouTube Data v3: /youtube/v3/channels?part=snippet&mine=true, /youtube/v3/videos?part=snippet&myRating=like",
     "github":                   "GitHub REST: /user, /user/repos, /repos/{owner}/{repo}/issues, /repos/{owner}/{repo}/pulls",
-    "dropbox":                  "Dropbox API: /2/files/list_folder (POST), /2/files/get_metadata (POST)",
-    "one-drive":                "Graph REST: /v1.0/me/drive/root/children, /v1.0/me/drive/items/{item-id}",
-    "firebase":                 "Firebase REST: /v1/projects, /v1/projects/{project}/databases",
 }
 
 

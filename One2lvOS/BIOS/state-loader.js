@@ -6,6 +6,7 @@
 class StateLoader {
     constructor() {
         this.sources = [
+            { name: 'Supabase reactor state', load: () => this.loadFromSupabase() },
             { name: 'localStorage autosave', load: () => this.loadFromLocalStorage() },
             { name: 'Registry snapshot', load: () => this.loadFromRegistry() },
             { name: 'snapshot.json', load: () => this.loadFromJSON() },
@@ -105,6 +106,14 @@ class StateLoader {
         }
     }
 
+    async loadFromSupabase() {
+        if (!window.SupabaseBridge) return null;
+        if (!window.SupabaseBridge.ready) {
+            await window.SupabaseBridge.init();
+        }
+        return await window.SupabaseBridge.loadReactorState();
+    }
+
     async loadFromImage() {
         // Steganographic image payload (advanced feature)
         // This would decode state data hidden in an image using LSB steganography
@@ -158,6 +167,16 @@ class StateLoader {
             console.log('[StateLoader] Saved to Registry');
         } catch (error) {
             console.error('[StateLoader] Registry save failed:', error);
+        }
+
+        // Save to Supabase
+        if (window.SupabaseBridge?.ready) {
+            try {
+                await window.SupabaseBridge.saveReactorState(state);
+                console.log('[StateLoader] Saved to Supabase');
+            } catch (error) {
+                console.error('[StateLoader] Supabase save failed:', error);
+            }
         }
     }
 

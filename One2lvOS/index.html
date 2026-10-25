@@ -475,6 +475,17 @@
         </div>
     </div>
 
+    <!-- Supabase Runtime Config (injected from .env at deploy time) -->
+    <script>
+        window.__ONE2LVOS_CONFIG__ = {
+            SUPABASE_URL: 'https://pplbxjguhmfeuptyamic.supabase.co',
+            SUPABASE_ANON_KEY: 'sb_publishable_7jgbj0ijKOwPRq1oeymFVQ_Ags_rIjr'
+        };
+    </script>
+
+    <!-- Supabase Bridge — must load before reactor modules -->
+    <script src="reactor/supabase-bridge.js"></script>
+
     <!-- BIOS -->
     <script src="BIOS/boot.js"></script>
 

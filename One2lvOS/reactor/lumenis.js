@@ -17,6 +17,26 @@
 
             Logger.info('Lumenis', 'Initializing Cognitive Reactor');
 
+            // Connect Supabase bridge
+            if (window.SupabaseBridge) {
+                await window.SupabaseBridge.init();
+                // Hydrate tasks from Supabase
+                const remoteTasks = await window.SupabaseBridge.loadTasks();
+                if (remoteTasks.length > 0) {
+                    this.tasks = remoteTasks;
+                    Logger.info('Lumenis', `Loaded ${remoteTasks.length} tasks from Supabase`);
+                }
+                // Subscribe to realtime reactor state changes
+                window.SupabaseBridge.subscribeToReactorChanges((payload) => {
+                    EventBus.emit('reactor:remote:update', payload);
+                });
+            }
+
+            // Hydrate long-term memory from Supabase
+            if (window.ReactorMemory?.hydrateFromSupabase) {
+                await window.ReactorMemory.hydrateFromSupabase();
+            }
+
             // Initialize scheduler
             if (window.Scheduler) {
                 this.scheduler = new Scheduler();
@@ -50,6 +70,13 @@
             };
 
             this.tasks.push(reactorTask);
+
+            // Persist task to Supabase
+            if (window.SupabaseBridge?.ready) {
+                window.SupabaseBridge.saveTask(reactorTask).catch(e =>
+                    console.error('[Lumenis] Supabase task save failed:', e)
+                );
+            }
 
             if (this.scheduler) {
                 await this.scheduler.schedule(reactorTask);
